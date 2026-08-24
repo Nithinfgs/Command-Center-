@@ -385,42 +385,141 @@ export const FlightCanvas: React.FC = () => {
       }
 
       // ==========================================
-      // GROUND SURFACE & LAUNCHPAD (SFS WORLD)
+      // GROUND SURFACE & SLEEK LAUNCH PAD
       // ==========================================
       const groundOrigin = worldToScreen(0, 0);
+      const cellSize = GRID_CELL_SIZE;
+
+      // Calculate lowest part boundary (engine nozzle base) in vehicle local pixels
+      let maxLocalY = 0;
+      for (const part of blueprint.parts) {
+        const def = PARTS_CATALOG[part.partType];
+        if (def) {
+          const partBottomY = part.y * cellSize + (def.height * cellSize) / 2;
+          if (partBottomY > maxLocalY) {
+            maxLocalY = partBottomY;
+          }
+        }
+      }
+      const rocketBaseOffset = maxLocalY;
 
       if (groundOrigin.sy < height + 400) {
         // Flat Earth ground terrain
-        ctx.fillStyle = '#172131';
+        ctx.fillStyle = '#111827';
         ctx.fillRect(0, groundOrigin.sy, width, height - groundOrigin.sy + 400);
 
-        ctx.strokeStyle = '#263548';
+        ctx.strokeStyle = '#1F2937';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(0, groundOrigin.sy);
         ctx.lineTo(width, groundOrigin.sy);
         ctx.stroke();
 
-        // Launchpad structures at (0, 0)
+        // Sleek Launch Pad Base & Mount at (0, 0)
         const padScreen = worldToScreen(0, 0);
-        const padWidthPx = 40 * currentZoom * 12;
-        const towerHeightPx = 60 * currentZoom * 12;
+        const padScale = currentZoom * 12;
+        const padWidthPx = 16 * padScale;
+        const padHeightPx = 4 * padScale;
 
-        if (padScreen.sx > -200 && padScreen.sx < width + 200) {
-          // Launch pad base
+        if (padScreen.sx > -300 && padScreen.sx < width + 300) {
+          // Flame Trench Hole Deflector
+          ctx.fillStyle = '#0B0F17';
+          ctx.fillRect(padScreen.sx - padWidthPx * 0.35, groundOrigin.sy, padWidthPx * 0.7, padHeightPx * 2);
+
+          // Angled Flame Deflector Ramp
           ctx.fillStyle = '#1E293B';
-          ctx.fillRect(padScreen.sx - padWidthPx / 2, padScreen.sy - 4, padWidthPx, 8);
+          ctx.beginPath();
+          ctx.moveTo(padScreen.sx, groundOrigin.sy + 2);
+          ctx.lineTo(padScreen.sx - padWidthPx * 0.45, groundOrigin.sy + padHeightPx * 1.8);
+          ctx.lineTo(padScreen.sx + padWidthPx * 0.45, groundOrigin.sy + padHeightPx * 1.8);
+          ctx.closePath();
+          ctx.fill();
+
+          // Main Launch Table Stand
+          ctx.fillStyle = '#1E293B';
+          ctx.fillRect(padScreen.sx - padWidthPx / 2, groundOrigin.sy - padHeightPx, padWidthPx, padHeightPx);
           ctx.strokeStyle = '#38BDF8';
           ctx.lineWidth = 1.5;
-          ctx.strokeRect(padScreen.sx - padWidthPx / 2, padScreen.sy - 4, padWidthPx, 8);
+          ctx.strokeRect(padScreen.sx - padWidthPx / 2, groundOrigin.sy - padHeightPx, padWidthPx, padHeightPx);
 
-          // Tower structure
-          if (towerHeightPx > 6) {
-            ctx.fillStyle = '#0F172A';
-            ctx.fillRect(padScreen.sx - padWidthPx * 0.45, padScreen.sy - towerHeightPx, 16, towerHeightPx);
+          // Yellow/Black Hazard Striping on pad deck
+          ctx.fillStyle = '#FBBF24';
+          for (let hx = padScreen.sx - padWidthPx / 2; hx < padScreen.sx + padWidthPx / 2 - 4; hx += 8) {
+            ctx.fillRect(hx, groundOrigin.sy - padHeightPx, 3, 2);
+          }
+
+          // Hold-down Support Clamps (left & right)
+          const clampOpenAngle = flightState.isLaunched ? 0.45 : 0;
+          
+          // Left clamp
+          ctx.save();
+          ctx.translate(padScreen.sx - 8 * padScale * 0.4, groundOrigin.sy - padHeightPx);
+          ctx.rotate(-clampOpenAngle);
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(-2, -8 * padScale * 0.35, 4, 8 * padScale * 0.35);
+          ctx.fillStyle = '#94A3B8';
+          ctx.fillRect(-3, -8 * padScale * 0.35, 6, 2);
+          ctx.restore();
+
+          // Right clamp
+          ctx.save();
+          ctx.translate(padScreen.sx + 8 * padScale * 0.4, groundOrigin.sy - padHeightPx);
+          ctx.rotate(clampOpenAngle);
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(-2, -8 * padScale * 0.35, 4, 8 * padScale * 0.35);
+          ctx.fillStyle = '#94A3B8';
+          ctx.fillRect(-3, -8 * padScale * 0.35, 6, 2);
+          ctx.restore();
+
+          // Umbilical Service Tower (Standing to the left)
+          const towerX = padScreen.sx - padWidthPx * 0.7;
+          const towerW = 4 * padScale;
+          const towerH = 22 * padScale;
+
+          if (towerH > 8) {
+            // Steel truss tower column
+            ctx.fillStyle = '#1E293B';
+            ctx.fillRect(towerX - towerW / 2, groundOrigin.sy - towerH, towerW, towerH);
             ctx.strokeStyle = '#334155';
             ctx.lineWidth = 1;
-            ctx.strokeRect(padScreen.sx - padWidthPx * 0.45, padScreen.sy - towerHeightPx, 16, towerHeightPx);
+            ctx.strokeRect(towerX - towerW / 2, groundOrigin.sy - towerH, towerW, towerH);
+
+            // Truss cross bracing lines
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 0.75;
+            for (let ty = groundOrigin.sy - towerH; ty < groundOrigin.sy - 6; ty += 10) {
+              ctx.beginPath();
+              ctx.moveTo(towerX - towerW / 2, ty);
+              ctx.lineTo(towerX + towerW / 2, ty + 10);
+              ctx.stroke();
+            }
+
+            // Swing Umbilical Arms (Upper & Lower)
+            const armAngle = flightState.isLaunched ? -0.8 : 0;
+            
+            // Lower arm
+            ctx.save();
+            ctx.translate(towerX + towerW / 2, groundOrigin.sy - towerH * 0.45);
+            ctx.rotate(armAngle);
+            ctx.strokeStyle = '#38BDF8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(padWidthPx * 0.6, 0);
+            ctx.stroke();
+            ctx.restore();
+
+            // Upper arm
+            ctx.save();
+            ctx.translate(towerX + towerW / 2, groundOrigin.sy - towerH * 0.82);
+            ctx.rotate(armAngle);
+            ctx.strokeStyle = '#38BDF8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(padWidthPx * 0.55, 0);
+            ctx.stroke();
+            ctx.restore();
           }
         }
 
@@ -482,8 +581,7 @@ export const FlightCanvas: React.FC = () => {
       ctx.translate(rocketScreen.sx, rocketScreen.sy);
       ctx.rotate(pitchRad);
       ctx.scale(currentZoom * 0.9, currentZoom * 0.9);
-
-      const cellSize = GRID_CELL_SIZE;
+      ctx.translate(0, -rocketBaseOffset);
 
       for (const part of blueprint.parts) {
         const partStage = part.stage || 1;
