@@ -384,12 +384,22 @@ export const RocketBuilderCanvas: React.FC = () => {
         ctx.lineWidth = isSelected ? 2 : 1;
         ctx.stroke();
       } else if (def.texturePattern === 'fin') {
+        const isRightSide = part.x > 0;
         ctx.fillStyle = def.color;
         ctx.beginPath();
-        ctx.moveTo(-pw / 2, -ph / 2);
-        ctx.lineTo(pw / 2, 0);
-        ctx.lineTo(pw / 2, ph / 2);
-        ctx.lineTo(-pw / 2, ph / 2);
+        if (isRightSide) {
+          // Right fin: root at left (-pw/2), tip at right (+pw/2)
+          ctx.moveTo(-pw / 2, -ph / 2);
+          ctx.lineTo(pw / 2, ph * 0.2);
+          ctx.lineTo(pw / 2, ph / 2);
+          ctx.lineTo(-pw / 2, ph / 2);
+        } else {
+          // Left fin: root at right (+pw/2), tip at left (-pw/2)
+          ctx.moveTo(pw / 2, -ph / 2);
+          ctx.lineTo(-pw / 2, ph * 0.2);
+          ctx.lineTo(-pw / 2, ph / 2);
+          ctx.lineTo(pw / 2, ph / 2);
+        }
         ctx.closePath();
         ctx.fill();
 

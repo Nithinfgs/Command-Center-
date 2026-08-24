@@ -680,12 +680,22 @@ export const WindTunnelCanvas: React.FC = () => {
             ctx.rotate((windTunnelState.finDeflectionAngle * Math.PI) / 180);
           }
 
+          const isRightSide = part.x > 0;
           ctx.fillStyle = partSurfaceGrad;
           ctx.beginPath();
-          ctx.moveTo(-pw / 2, -ph / 2);
-          ctx.lineTo(pw / 2, 0);
-          ctx.lineTo(pw / 2, ph / 2);
-          ctx.lineTo(-pw / 2, ph / 2);
+          if (isRightSide) {
+            // Right / bottom fin: root attached at inner (-pw/2), tip extending (+pw/2)
+            ctx.moveTo(-pw / 2, -ph / 2);
+            ctx.lineTo(pw / 2, ph * 0.2);
+            ctx.lineTo(pw / 2, ph / 2);
+            ctx.lineTo(-pw / 2, ph / 2);
+          } else {
+            // Left / top fin: root attached at inner (+pw/2), tip extending (-pw/2)
+            ctx.moveTo(pw / 2, -ph / 2);
+            ctx.lineTo(-pw / 2, ph * 0.2);
+            ctx.lineTo(-pw / 2, ph / 2);
+            ctx.lineTo(pw / 2, ph / 2);
+          }
           ctx.closePath();
           ctx.fill();
 

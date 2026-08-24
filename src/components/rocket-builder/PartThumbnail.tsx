@@ -97,13 +97,13 @@ export const PartThumbnail: React.FC<Props> = ({ part, size = 64 }) => {
         {texturePattern === 'fin' && (
           <g>
             <path
-              d={`M ${cx - w/2} ${cy - h/2} L ${cx + w/2} ${cy} L ${cx + w/2} ${cy + h/2} L ${cx - w/2} ${cy + h/2} Z`}
+              d={`M ${cx + w/2} ${cy - h/2} L ${cx - w/2} ${cy + h*0.2} L ${cx - w/2} ${cy + h/2} L ${cx + w/2} ${cy + h/2} Z`}
               fill={`url(#grad_${type})`}
-              stroke="#00e5ff"
+              stroke="#38bdf8"
               strokeWidth="1.5"
             />
-            {/* Structural rib */}
-            <line x1={cx - w/2} y1={cy} x2={cx + w/2} y2={cy} stroke="#38bdf8" strokeWidth="1" />
+            {/* Structural spar */}
+            <line x1={cx + w/2} y1={cy} x2={cx - w/2} y2={cy + h*0.2} stroke="rgba(255,255,255,0.4)" strokeWidth="1" strokeDasharray="2 2" />
           </g>
         )}
 
