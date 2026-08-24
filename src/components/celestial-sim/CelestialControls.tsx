@@ -37,45 +37,46 @@ export const CelestialControls: React.FC = () => {
     : null;
 
   return (
-    <div className="w-84 bg-[#0c121d] border-r border-[#1e293b] flex flex-col h-full select-none text-xs font-mono">
-      <div className="p-3 border-b border-[#1e293b] flex items-center justify-between">
+    <aside className="w-[300px] bg-[#121A26] border-r border-[#1C2938] flex flex-col h-full select-none text-xs shrink-0 z-20">
+      <div className="p-3 border-b border-[#1C2938] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Orbit className="w-4 h-4 text-[#38bdf8]" />
-          <span className="font-bold text-slate-200 uppercase tracking-wider">N-BODY GRAVITATION</span>
+          <Orbit className="w-4 h-4 text-[#38BDF8]" />
+          <h2 className="font-semibold text-[#E8EDF2] text-xs tracking-tight">N-Body Gravitation</h2>
         </div>
-        <span className="text-[10px] text-cyan-400 bg-cyan-950/60 border border-cyan-500/40 px-2 py-0.5 rounded font-semibold">
-          RK4 ACTIVE
+        <span className="text-[10px] text-[#38BDF8] bg-[#38BDF8]/10 px-2 py-0.5 rounded font-medium">
+          RK4 Active
         </span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        <div className="bg-[#090d16] border border-[#1e293b] rounded p-3 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-400 font-bold uppercase text-[10px]">TIME ACCELERATION</span>
-            <span className="text-[#38bdf8] font-bold">{timeWarp}x WARP</span>
+        {/* Time Control */}
+        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2.5">
+          <div className="flex items-center justify-between text-xs font-medium">
+            <span className="text-[#9AA9B8]">Time Warp</span>
+            <span className="text-[#38BDF8] font-mono-num font-semibold">{timeWarp}x</span>
           </div>
 
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsCelestialPaused(!isCelestialPaused)}
-              className={`p-2 rounded font-bold border transition-colors flex-1 flex items-center justify-center gap-1.5 ${
+              className={`p-2 rounded-md font-medium border transition-colors flex-1 flex items-center justify-center gap-1.5 ${
                 isCelestialPaused
-                  ? 'bg-amber-950/70 border-amber-500 text-amber-300'
-                  : 'bg-[#182334] border-[#1e293b] text-slate-300 hover:bg-[#22324b]'
+                  ? 'bg-[#FBBF24]/15 border-[#FBBF24]/40 text-[#FBBF24]'
+                  : 'bg-[#121A26] border-[#263548] text-[#E8EDF2] hover:bg-[#1B2838]'
               }`}
             >
               {isCelestialPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-              <span>{isCelestialPaused ? 'RESUME' : 'PAUSE'}</span>
+              <span>{isCelestialPaused ? 'Resume' : 'Pause'}</span>
             </button>
 
             {[1, 5, 25, 100].map(warp => (
               <button
                 key={warp}
                 onClick={() => { setTimeWarp(warp); setIsCelestialPaused(false); }}
-                className={`px-2 py-2 rounded font-bold text-[10px] border transition-colors ${
+                className={`px-2 py-1.5 rounded-md font-mono-num text-xs border transition-colors ${
                   timeWarp === warp && !isCelestialPaused
-                    ? 'bg-[#38bdf8] text-slate-950 border-[#38bdf8]'
-                    : 'bg-[#090d16] border-[#1e293b] text-slate-400 hover:text-slate-200'
+                    ? 'bg-[#38BDF8] text-[#0B0F17] border-[#38BDF8] font-semibold'
+                    : 'bg-[#121A26] border-[#263548]/60 text-[#9AA9B8] hover:text-[#E8EDF2]'
                 }`}
               >
                 {warp}x
@@ -84,52 +85,54 @@ export const CelestialControls: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-[#090d16] border border-[#1e293b] rounded p-3 space-y-2">
-          <label className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block mb-1">
-            RELATIVISTIC DIAGNOSTICS
+        {/* Diagnostic Overlays */}
+        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2">
+          <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block mb-1">
+            Display Diagnostics
           </label>
           <button
             onClick={() => setShowSpacetimeGrid(!showSpacetimeGrid)}
-            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded border transition-colors ${
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md border transition-colors ${
               showSpacetimeGrid
-                ? 'bg-[#182334] border-[#38bdf8] text-[#38bdf8]'
-                : 'bg-[#0c121d] border-[#1e293b] text-slate-400'
+                ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#38BDF8]'
+                : 'bg-[#121A26] border-[#263548]/40 text-[#9AA9B8]'
             }`}
           >
             <div className="flex items-center gap-2">
               <Grid className="w-3.5 h-3.5" />
-              <span>3D Spacetime Metric Grid</span>
+              <span>3D Spacetime Grid</span>
             </div>
-            <span className="text-[10px] font-bold">{showSpacetimeGrid ? 'ON' : 'OFF'}</span>
+            <span className="text-[10px] font-medium">{showSpacetimeGrid ? 'ON' : 'OFF'}</span>
           </button>
 
           <button
             onClick={() => setShowOrbitalTrails(!showOrbitalTrails)}
-            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded border transition-colors ${
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md border transition-colors ${
               showOrbitalTrails
-                ? 'bg-[#182334] border-[#38bdf8] text-[#38bdf8]'
-                : 'bg-[#0c121d] border-[#1e293b] text-slate-400'
+                ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#38BDF8]'
+                : 'bg-[#121A26] border-[#263548]/40 text-[#9AA9B8]'
             }`}
           >
             <div className="flex items-center gap-2">
               <Orbit className="w-3.5 h-3.5" />
-              <span>Keplerian Trajectory Trails</span>
+              <span>Keplerian Trails</span>
             </div>
-            <span className="text-[10px] font-bold">{showOrbitalTrails ? 'ON' : 'OFF'}</span>
+            <span className="text-[10px] font-medium">{showOrbitalTrails ? 'ON' : 'OFF'}</span>
           </button>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-              BODIES IN SYSTEM ({celestialBodies.length})
-            </span>
+        {/* Celestial Bodies List */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider">
+              Bodies in System ({celestialBodies.length})
+            </label>
             <button
               onClick={() => setShowForgeModal(true)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-[10px] transition-colors"
+              className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#38BDF8] text-[#0B0F17] font-semibold text-[10px] transition-colors"
             >
               <Plus className="w-3 h-3" />
-              <span>FORGE BODY</span>
+              <span>Forge Body</span>
             </button>
           </div>
 
@@ -140,10 +143,10 @@ export const CelestialControls: React.FC = () => {
                 <div
                   key={body.id}
                   onClick={() => setSelectedBodyId(body.id)}
-                  className={`flex items-center justify-between px-2.5 py-1.5 rounded border cursor-pointer transition-colors ${
+                  className={`flex items-center justify-between px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-[#182334] border-[#38bdf8] text-slate-100'
-                      : 'bg-[#090d16] border-[#1e293b] text-slate-400 hover:text-slate-200'
+                      ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#E8EDF2]'
+                      : 'bg-[#172131] border-[#263548]/40 text-[#9AA9B8] hover:text-[#E8EDF2] hover:bg-[#1B2838]'
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
@@ -151,18 +154,18 @@ export const CelestialControls: React.FC = () => {
                       className="w-2.5 h-2.5 rounded-full shrink-0" 
                       style={{ backgroundColor: body.color }} 
                     />
-                    <span className="font-bold truncate">{body.name}</span>
+                    <span className="font-medium truncate">{body.name}</span>
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <span className="text-[10px] text-slate-500 uppercase">{body.type.replace('_', ' ')}</span>
+                    <span className="text-[10px] text-[#64748B] capitalize">{body.type.replace('_', ' ')}</span>
                     {!body.isFixed && celestialBodies.length > 2 && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           removeCelestialBody(body.id);
                         }}
-                        className="p-0.5 text-slate-500 hover:text-rose-400 ml-1"
+                        className="p-0.5 text-[#64748B] hover:text-[#F43F5E] ml-1"
                         title="Delete body"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -175,40 +178,41 @@ export const CelestialControls: React.FC = () => {
           </div>
         </div>
 
+        {/* Selected Body Inspector */}
         {selectedBody && (
-          <div className="bg-[#090d16] border border-[#1e293b] rounded p-3 space-y-2">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#1e293b]">
-              <span className="font-bold text-slate-200">{selectedBody.name}</span>
-              <span className="text-[10px] text-[#38bdf8] uppercase">ORBITAL METRICS</span>
+          <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between pb-1.5 border-b border-[#1C2938]">
+              <span className="font-semibold text-[#E8EDF2] text-xs">{selectedBody.name}</span>
+              <span className="text-[10px] text-[#38BDF8]">Orbital Parameters</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-              <div className="bg-[#0c121d] p-1.5 rounded border border-[#1e293b]">
-                <div className="text-slate-500">MASS</div>
-                <div className="text-slate-200 font-bold mt-0.5">{(selectedBody.mass).toExponential(2)} kg</div>
+            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+              <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
+                <span className="text-[#64748B] block">Mass</span>
+                <span className="text-[#E8EDF2] font-mono-num font-medium text-xs mt-0.5 block">{(selectedBody.mass).toExponential(2)} kg</span>
               </div>
-              <div className="bg-[#0c121d] p-1.5 rounded border border-[#1e293b]">
-                <div className="text-slate-500">RADIUS</div>
-                <div className="text-amber-400 font-bold mt-0.5">{selectedBody.radius.toLocaleString()} km</div>
+              <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
+                <span className="text-[#64748B] block">Radius</span>
+                <span className="text-[#FBBF24] font-mono-num font-medium text-xs mt-0.5 block">{selectedBody.radius.toLocaleString()} km</span>
               </div>
 
               {orbital && (
                 <>
-                  <div className="bg-[#0c121d] p-1.5 rounded border border-[#1e293b]">
-                    <div className="text-slate-500">SEMI-MAJOR (a)</div>
-                    <div className="text-[#38bdf8] font-bold mt-0.5">{orbital.semiMajorAxis} AU</div>
+                  <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
+                    <span className="text-[#64748B] block">Semi-Major (a)</span>
+                    <span className="text-[#38BDF8] font-mono-num font-medium text-xs mt-0.5 block">{orbital.semiMajorAxis} AU</span>
                   </div>
-                  <div className="bg-[#0c121d] p-1.5 rounded border border-[#1e293b]">
-                    <div className="text-slate-500">ECCENTRICITY (e)</div>
-                    <div className="text-emerald-400 font-bold mt-0.5">{orbital.eccentricity}</div>
+                  <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
+                    <span className="text-[#64748B] block">Eccentricity (e)</span>
+                    <span className="text-[#34D399] font-mono-num font-medium text-xs mt-0.5 block">{orbital.eccentricity}</span>
                   </div>
-                  <div className="bg-[#0c121d] p-1.5 rounded border border-[#1e293b]">
-                    <div className="text-slate-500">VELOCITY</div>
-                    <div className="text-cyan-400 font-bold mt-0.5">{orbital.currentSpeed} km/s</div>
+                  <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
+                    <span className="text-[#64748B] block">Velocity</span>
+                    <span className="text-[#E8EDF2] font-mono-num font-medium text-xs mt-0.5 block">{orbital.currentSpeed} km/s</span>
                   </div>
-                  <div className="bg-[#0c121d] p-1.5 rounded border border-[#1e293b]">
-                    <div className="text-slate-500">ESCAPE VEL</div>
-                    <div className="text-rose-400 font-bold mt-0.5">{orbital.escapeVelocity} km/s</div>
+                  <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
+                    <span className="text-[#64748B] block">Escape Velocity</span>
+                    <span className="text-[#F43F5E] font-mono-num font-medium text-xs mt-0.5 block">{orbital.escapeVelocity} km/s</span>
                   </div>
                 </>
               )}
@@ -216,16 +220,17 @@ export const CelestialControls: React.FC = () => {
           </div>
         )}
 
-        <div>
-          <label className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block mb-1.5">
-            CALIBRATED GRAVITATIONAL SYSTEMS
+        {/* System Presets */}
+        <div className="space-y-1.5">
+          <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block">
+            Calibrated Systems
           </label>
           <div className="space-y-1">
             {CELESTIAL_PRESETS.map(preset => (
               <button
                 key={preset.id}
                 onClick={() => loadCelestialPreset(preset.id)}
-                className="w-full text-left px-2.5 py-1.5 rounded bg-[#090d16] hover:bg-[#131b2b] border border-[#1e293b] text-slate-300 text-[11px] truncate transition-colors"
+                className="w-full text-left px-2.5 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548]/40 text-[#9AA9B8] hover:text-[#E8EDF2] text-xs truncate transition-colors"
               >
                 {preset.name}
               </button>
@@ -238,6 +243,6 @@ export const CelestialControls: React.FC = () => {
         isOpen={showForgeModal}
         onClose={() => setShowForgeModal(false)}
       />
-    </div>
+    </aside>
   );
 };
