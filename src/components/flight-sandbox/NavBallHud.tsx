@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Compass, 
   RotateCcw, 
   Play, 
   Layers,
   Flame,
-  Sparkles
+  Sparkles,
+  FileText,
+  AlertOctagon
 } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { calculateCurrentStageMassAndThrust } from '../../physics/flight-dynamics';
+import { FlightReportModal } from './FlightReportModal';
 
 export const NavBallHud: React.FC = () => {
   const {
@@ -24,6 +27,15 @@ export const NavBallHud: React.FC = () => {
     resetFlight
   } = useSimulation();
 
+  const [isReportOpen, setIsReportOpen] = useState(false);
+
+  // Automatically open report modal when mission is aborted
+  useEffect(() => {
+    if (flightState.aborted) {
+      setIsReportOpen(true);
+    }
+  }, [flightState.aborted]);
+
   const currentStageInfo = calculateCurrentStageMassAndThrust(
     blueprint,
     flightState.currentStageIndex,
@@ -35,70 +47,112 @@ export const NavBallHud: React.FC = () => {
   const hasMoreStages = flightState.currentStageIndex < maxStage;
 
   return (
-    <aside className="w-[300px] bg-[#121A26] border-r border-[#1C2938] flex flex-col h-full select-none text-xs shrink-0 z-20">
-      <div className="p-3 border-b border-[#1C2938] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Compass className="w-4 h-4 text-[#38BDF8]" />
-          <h2 className="font-semibold text-[#E8EDF2] text-xs tracking-tight">Flight Telemetry</h2>
-        </div>
-        <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-          flightState.inOrbit 
-            ? 'bg-[#34D399]/15 text-[#34D399]' 
-            : flightState.isLaunched 
-            ? 'bg-[#FBBF24]/15 text-[#FBBF24]' 
-            : 'bg-[#172131] text-[#9AA9B8]'
-        }`}>
-          {flightState.inOrbit ? 'Stable Orbit' : flightState.isLaunched ? 'Ascent Phase' : 'Pad Standby'}
-        </span>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        {/* Launch / Staging Primary Action */}
-        <div className="space-y-2">
-          {!flightState.isLaunched ? (
-            <button
-              onClick={launchFlight}
-              className="w-full py-2.5 rounded-md bg-[#34D399] hover:bg-[#2fc08a] text-[#0B0F17] font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 shadow-sm"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Ignition & Launch (Space)</span>
-            </button>
-          ) : (
-            <button
-              onClick={triggerStaging}
-              disabled={!hasMoreStages}
-              className={`w-full py-2.5 rounded-md font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 ${
-                hasMoreStages
-                  ? 'bg-[#38BDF8] hover:bg-[#2ea8dd] text-[#0B0F17]'
-                  : 'bg-[#172131] text-[#64748B] border border-[#263548] cursor-not-allowed'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>
-                {hasMoreStages 
-                  ? `Stage ${flightState.currentStageIndex} → ${flightState.currentStageIndex + 1} (Space)` 
-                  : 'Final Stage Active'}
-              </span>
-            </button>
-          )}
-
+    <>
+      <aside className="w-[300px] bg-[#121A26] border-r border-[#1C2938] flex flex-col h-full select-none text-xs shrink-0 z-20">
+        <div className="p-3 border-b border-[#1C2938] flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <Compass className="w-4 h-4 text-[#38BDF8]" />
+            <h2 className="font-semibold text-[#E8EDF2] text-xs tracking-tight">Flight Telemetry</h2>
+          </div>
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={resetFlight}
-              className="flex-1 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2] flex items-center justify-center gap-1.5 transition-colors"
+              onClick={() => setIsReportOpen(true)}
+              className="p-1 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2]"
+              title="Mission Report / Incident Telemetry"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Pad</span>
+              <FileText className="w-3.5 h-3.5 text-[#38BDF8]" />
             </button>
-            <button
-              onClick={abortFlight}
-              className="px-3 py-1.5 rounded-md bg-[#F43F5E]/15 hover:bg-[#F43F5E] text-[#F43F5E] hover:text-[#0B0F17] border border-[#F43F5E]/30 font-medium transition-colors"
-              title="Abort Mission"
-            >
-              Abort
-            </button>
+            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+              flightState.aborted
+                ? 'bg-[#F43F5E]/15 text-[#F43F5E]'
+                : flightState.inOrbit 
+                ? 'bg-[#34D399]/15 text-[#34D399]' 
+                : flightState.isLaunched 
+                ? 'bg-[#FBBF24]/15 text-[#FBBF24]' 
+                : 'bg-[#172131] text-[#9AA9B8]'
+            }`}>
+              {flightState.aborted 
+                ? 'Aborted' 
+                : flightState.inOrbit 
+                ? 'Stable Orbit' 
+                : flightState.isLaunched 
+                ? 'Ascent Phase' 
+                : 'Pad Standby'}
+            </span>
           </div>
         </div>
+
+        <div className="flex-1 overflow-y-auto p-3 space-y-4">
+          {/* Abort Banner Notice */}
+          {flightState.aborted && (
+            <div className="p-2.5 bg-[#F43F5E]/10 border border-[#F43F5E]/30 rounded-lg flex items-center justify-between text-[#F43F5E]">
+              <span className="flex items-center gap-1.5 font-semibold text-xs">
+                <AlertOctagon className="w-4 h-4" />
+                <span>Mission Aborted</span>
+              </span>
+              <button
+                onClick={() => setIsReportOpen(true)}
+                className="px-2 py-1 rounded bg-[#F43F5E] hover:bg-[#e11d48] text-[#0B0F17] font-semibold text-[11px] transition-colors"
+              >
+                View Report
+              </button>
+            </div>
+          )}
+
+          {/* Launch / Staging Primary Action */}
+          <div className="space-y-2">
+            {!flightState.isLaunched ? (
+              <button
+                onClick={launchFlight}
+                className="w-full py-2.5 rounded-md bg-[#34D399] hover:bg-[#2fc08a] text-[#0B0F17] font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 shadow-sm"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Ignition & Launch (Space)</span>
+              </button>
+            ) : (
+              <button
+                onClick={triggerStaging}
+                disabled={!hasMoreStages || flightState.aborted}
+                className={`w-full py-2.5 rounded-md font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 ${
+                  hasMoreStages && !flightState.aborted
+                    ? 'bg-[#38BDF8] hover:bg-[#2ea8dd] text-[#0B0F17]'
+                    : 'bg-[#172131] text-[#64748B] border border-[#263548] cursor-not-allowed'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>
+                  {hasMoreStages 
+                    ? `Stage ${flightState.currentStageIndex} → ${flightState.currentStageIndex + 1} (Space)` 
+                    : 'Final Stage Active'}
+                </span>
+              </button>
+            )}
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={resetFlight}
+                className="flex-1 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2] flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Pad</span>
+              </button>
+              <button
+                onClick={() => {
+                  abortFlight();
+                  setIsReportOpen(true);
+                }}
+                disabled={!flightState.isLaunched || flightState.aborted}
+                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+                  flightState.isLaunched && !flightState.aborted
+                    ? 'bg-[#F43F5E]/15 hover:bg-[#F43F5E] text-[#F43F5E] hover:text-[#0B0F17] border border-[#F43F5E]/30 cursor-pointer'
+                    : 'bg-[#172131] text-[#64748B] border border-[#263548] cursor-not-allowed'
+                }`}
+                title="Abort Mission"
+              >
+                Abort
+              </button>
+            </div>
+          </div>
 
         {/* Guidance Mode Selector */}
         <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-2.5 space-y-2">
@@ -280,5 +334,12 @@ export const NavBallHud: React.FC = () => {
         </div>
       </div>
     </aside>
+
+      {/* Post-Flight Incident & Mission Telemetry Report Modal */}
+      <FlightReportModal
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+      />
+    </>
   );
 };

@@ -219,8 +219,8 @@ export const FlightCanvas: React.FC = () => {
       ctx.fillRect(0, 0, width, height);
 
       // Starfield in upper atmosphere & space
-      if (altNorm > 0.2) {
-        const starAlpha = Math.min(1, (altNorm - 0.2) * 2.5);
+      if (altNorm > 0.15) {
+        const starAlpha = Math.min(1, (altNorm - 0.15) * 2.5);
         ctx.fillStyle = `rgba(255, 255, 255, ${starAlpha * 0.85})`;
         for (let i = 0; i < 180; i++) {
           const sx = (Math.sin(i * 127.1) * 0.5 + 0.5) * width;
@@ -228,6 +228,142 @@ export const FlightCanvas: React.FC = () => {
           const sz = (i % 3 === 0) ? 1.5 : 1.0;
           ctx.fillRect(sx, sy, sz, sz);
         }
+
+        // ==========================================
+        // PLANETS IN THE SKY (Moon, Mars, Jupiter, Saturn)
+        // ==========================================
+        const planetAlpha = Math.min(1, (altNorm - 0.15) * 3.0);
+
+        // 1. The Moon (Top Right)
+        const moonX = width * 0.82;
+        const moonY = height * 0.18;
+        const moonR = 26;
+
+        ctx.save();
+        ctx.globalAlpha = planetAlpha;
+
+        // Lunar glow
+        const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.6, moonX, moonY, moonR * 2.2);
+        moonGlow.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+        moonGlow.addColorStop(0.5, 'rgba(226, 232, 240, 0.15)');
+        moonGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = moonGlow;
+        ctx.beginPath();
+        ctx.arc(moonX, moonY, moonR * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Moon Body with Craters
+        ctx.fillStyle = '#E2E8F0';
+        ctx.beginPath();
+        ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Craters
+        ctx.fillStyle = '#CBD5E1';
+        [
+          { cx: moonX - 8, cy: moonY - 6, r: 5 },
+          { cx: moonX + 6, cy: moonY + 7, r: 6 },
+          { cx: moonX + 9, cy: moonY - 9, r: 4 },
+          { cx: moonX - 5, cy: moonY + 9, r: 4.5 },
+          { cx: moonX, cy: moonY, r: 3 }
+        ].forEach(c => {
+          ctx.beginPath();
+          ctx.arc(c.cx, c.cy, c.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Crescent shadow
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
+        ctx.beginPath();
+        ctx.arc(moonX + 7, moonY, moonR * 0.95, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#94A3B8';
+        ctx.font = '500 9px monospace';
+        ctx.fillText('MOON (384,400 km)', moonX - 42, moonY + moonR + 14);
+
+        // 2. Mars (Red Planet, Top Left)
+        const marsX = width * 0.22;
+        const marsY = height * 0.15;
+        const marsR = 10;
+
+        const marsGlow = ctx.createRadialGradient(marsX, marsY, marsR * 0.4, marsX, marsY, marsR * 2.0);
+        marsGlow.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
+        marsGlow.addColorStop(1, 'rgba(239, 68, 68, 0)');
+        ctx.fillStyle = marsGlow;
+        ctx.beginPath();
+        ctx.arc(marsX, marsY, marsR * 2.0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#DC2626';
+        ctx.beginPath();
+        ctx.arc(marsX, marsY, marsR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Polar ice cap
+        ctx.fillStyle = '#F8FAFC';
+        ctx.beginPath();
+        ctx.arc(marsX, marsY - marsR + 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#EF4444';
+        ctx.font = '500 8.5px monospace';
+        ctx.fillText('MARS', marsX - 10, marsY + marsR + 12);
+
+        // 3. Jupiter & Moons (Far Upper Center)
+        const jupX = width * 0.48;
+        const jupY = height * 0.08;
+        const jupR = 14;
+
+        ctx.fillStyle = '#D97706';
+        ctx.beginPath();
+        ctx.arc(jupX, jupY, jupR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bands
+        ctx.fillStyle = '#92400E';
+        ctx.fillRect(jupX - jupR + 1, jupY - 3, jupR * 2 - 2, 2.5);
+        ctx.fillRect(jupX - jupR + 2, jupY + 3, jupR * 2 - 4, 2);
+
+        // Great Red Spot
+        ctx.fillStyle = '#B45309';
+        ctx.beginPath();
+        ctx.arc(jupX + 4, jupY + 4, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Galilean moons
+        ctx.fillStyle = '#FEF3C7';
+        ctx.fillRect(jupX - 22, jupY - 1, 1.5, 1.5);
+        ctx.fillRect(jupX - 16, jupY + 1, 1.5, 1.5);
+        ctx.fillRect(jupX + 18, jupY, 1.5, 1.5);
+        ctx.fillRect(jupX + 26, jupY - 2, 1.5, 1.5);
+
+        ctx.fillStyle = '#F59E0B';
+        ctx.font = '500 8.5px monospace';
+        ctx.fillText('JUPITER', jupX - 18, jupY + jupR + 12);
+
+        // 4. Saturn with Rings (Mid Right)
+        const satX = width * 0.92;
+        const satY = height * 0.38;
+        const satR = 8;
+
+        // Rings behind
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(satX, satY, satR * 2.4, satR * 0.7, -Math.PI / 6, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#FDE68A';
+        ctx.beginPath();
+        ctx.arc(satX, satY, satR, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#FBBF24';
+        ctx.font = '500 8px monospace';
+        ctx.fillText('SATURN', satX - 14, satY + satR + 12);
+
+        ctx.restore();
       }
 
       // Atmospheric Edge / Karman Line Curve in Space
