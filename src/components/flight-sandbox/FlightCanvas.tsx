@@ -86,17 +86,17 @@ export const FlightCanvas: React.FC = () => {
       const droppedStage = lastStageRef.current;
       const droppedParts = blueprint.parts.filter(p => (p.stage || 1) === droppedStage);
       
-      const pitchRad = ((flightState.pitch - 90) * Math.PI) / 180;
-      const vxAft = -Math.sin(pitchRad) * 12;
-      const vyAft = -Math.cos(pitchRad) * 12;
+      const truePitchRad = (flightState.pitch * Math.PI) / 180;
+      const vxAft = -Math.cos(truePitchRad) * 14;
+      const vyAft = -Math.sin(truePitchRad) * 14;
 
       droppedParts.forEach(p => {
         debrisRef.current.push({
           partType: p.partType,
           worldX: flightState.downrange + p.x * 0.5,
           worldY: flightState.altitude - p.y * 0.5,
-          vx: flightState.velocity.vx + vxAft + (Math.random() - 0.5) * 6,
-          vy: flightState.velocity.vy + vyAft + (Math.random() - 0.5) * 6,
+          vx: flightState.velocity.vx * 0.7 + vxAft + (Math.random() - 0.5) * 6,
+          vy: flightState.velocity.vy * 0.7 + vyAft + (Math.random() - 0.5) * 6,
           rotation: p.rotation || 0,
           rotSpeed: (Math.random() - 0.5) * 60,
           life: 0
@@ -104,7 +104,7 @@ export const FlightCanvas: React.FC = () => {
       });
     }
     lastStageRef.current = flightState.currentStageIndex;
-  }, [flightState.currentStageIndex, flightState.isLaunched, blueprint]);
+  }, [flightState.currentStageIndex, flightState.isLaunched, blueprint, flightState.pitch, flightState.downrange, flightState.altitude, flightState.velocity]);
 
   // Mouse wheel zoom
   const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
@@ -337,7 +337,10 @@ export const FlightCanvas: React.FC = () => {
       // RENDER ACTIVE ROCKET VEHICLE (SFS SPRITES)
       // ==========================================
       const rocketScreen = worldToScreen(rocketWorldX, rocketWorldY);
-      const pitchRad = ((flightState.pitch - 90) * Math.PI) / 180;
+      const pitchRad = ((90 - flightState.pitch) * Math.PI) / 180;
+      const truePitchRad = (flightState.pitch * Math.PI) / 180;
+      const exhaustDirX = -Math.cos(truePitchRad);
+      const exhaustDirY = -Math.sin(truePitchRad);
 
       ctx.save();
       ctx.translate(rocketScreen.sx, rocketScreen.sy);
@@ -447,10 +450,10 @@ export const FlightCanvas: React.FC = () => {
             // Spawn exhaust particles in world space
             if (flameParticlesRef.current.length < 160) {
               flameParticlesRef.current.push({
-                worldX: rocketWorldX - Math.sin(pitchRad) * (ph * 0.05),
-                worldY: rocketWorldY - Math.cos(pitchRad) * (ph * 0.05 + 1),
-                vx: -Math.sin(pitchRad) * (80 * flightState.throttle) + (Math.random() - 0.5) * 20,
-                vy: -Math.cos(pitchRad) * (80 * flightState.throttle) + (Math.random() - 0.5) * 20,
+                worldX: rocketWorldX + exhaustDirX * 3,
+                worldY: rocketWorldY + exhaustDirY * 3,
+                vx: exhaustDirX * (80 * flightState.throttle) + (Math.random() - 0.5) * 20,
+                vy: exhaustDirY * (80 * flightState.throttle) + (Math.random() - 0.5) * 20,
                 life: 0,
                 maxLife: 25 + Math.random() * 20,
                 size: 2 + Math.random() * 3,
