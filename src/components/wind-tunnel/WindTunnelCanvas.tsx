@@ -501,23 +501,72 @@ export const WindTunnelCanvas: React.FC = () => {
         };
       };
 
-      // 48 Continuous Flow Streamlines
-      const NUM_STREAMLINES = 48;
-      const rakeTop = 26;
-      const rakeBottom = height - 26;
-      const rakeSpacing = (rakeBottom - rakeTop) / (NUM_STREAMLINES - 1);
+      // =====================================================================
+      // FULL DOMAIN INFLOW STREAMLINE RAKE (100% vehicle coverage at all angles)
+      // =====================================================================
+      const NUM_STREAMLINES = 56;
+      const seedPoints: { x: number; y: number }[] = [];
+
+      if (Math.abs(windAngleDeg) < 0.5) {
+        const rakeTop = 24;
+        const rakeBottom = height - 24;
+        const rakeSpacing = (rakeBottom - rakeTop) / (NUM_STREAMLINES - 1);
+        for (let i = 0; i < NUM_STREAMLINES; i++) {
+          seedPoints.push({ x: 0, y: rakeTop + i * rakeSpacing });
+        }
+      } else if (windAngleDeg > 0) {
+        const leftHeight = height - 40;
+        const topWidth = Math.min(width * 0.95, leftHeight / Math.tan(windAngleRad));
+        const totalPerp = leftHeight * Math.cos(windAngleRad) + topWidth * Math.sin(windAngleRad);
+        const stepPerp = totalPerp / (NUM_STREAMLINES - 1);
+
+        for (let i = 0; i < NUM_STREAMLINES; i++) {
+          const s = i * stepPerp;
+          const sLeftMax = leftHeight * Math.cos(windAngleRad);
+          if (s <= sLeftMax) {
+            const y0 = 20 + s / Math.cos(windAngleRad);
+            seedPoints.push({ x: 0, y: y0 });
+          } else {
+            const sTop = s - sLeftMax;
+            const x0 = sTop / Math.sin(windAngleRad);
+            if (x0 <= width) {
+              seedPoints.push({ x: x0, y: 20 });
+            }
+          }
+        }
+      } else {
+        const leftHeight = height - 40;
+        const botWidth = Math.min(width * 0.95, leftHeight / Math.tan(-windAngleRad));
+        const totalPerp = leftHeight * Math.cos(-windAngleRad) + botWidth * Math.sin(-windAngleRad);
+        const stepPerp = totalPerp / (NUM_STREAMLINES - 1);
+
+        for (let i = 0; i < NUM_STREAMLINES; i++) {
+          const s = i * stepPerp;
+          const sLeftMax = leftHeight * Math.cos(-windAngleRad);
+          if (s <= sLeftMax) {
+            const y0 = height - 20 - s / Math.cos(-windAngleRad);
+            seedPoints.push({ x: 0, y: y0 });
+          } else {
+            const sBot = s - sLeftMax;
+            const x0 = sBot / Math.sin(-windAngleRad);
+            if (x0 <= width) {
+              seedPoints.push({ x: x0, y: height - 20 });
+            }
+          }
+        }
+      }
 
       const streamlines: { points: { x: number; y: number; speedNorm: number; tempK: number; cp: number }[] }[] = [];
 
-      for (let s = 0; s < NUM_STREAMLINES; s++) {
-        let currX = 0;
-        let currY = rakeTop + s * rakeSpacing;
+      for (let s = 0; s < seedPoints.length; s++) {
+        let currX = seedPoints[s].x;
+        let currY = seedPoints[s].y;
         const pts: { x: number; y: number; speedNorm: number; tempK: number; cp: number }[] = [];
 
-        const stepSize = 7.0;
+        const stepSize = 6.5;
         let steps = 0;
 
-        while (currX <= width + 15 && currY >= 20 && currY <= height - 20 && steps < 230) {
+        while (currX <= width + 25 && currX >= -10 && currY >= 18 && currY <= height - 18 && steps < 260) {
           steps++;
           const flow = getFlowVelocityAt(currX, currY);
           pts.push({
@@ -598,11 +647,29 @@ export const WindTunnelCanvas: React.FC = () => {
         p.y += p.vy * dt;
         p.life += dt * 30;
 
-        if (p.x > width + 10 || p.x < -10 || p.y < 20 || p.y > height - 20 || p.life >= p.maxLife) {
-          p.x = -5;
-          p.y = 25 + Math.random() * (height - 50);
+        if (p.x > width + 10 || p.x < -10 || p.y < 18 || p.y > height - 18 || p.life >= p.maxLife) {
           p.life = 0;
           p.maxLife = 60 + Math.random() * 80;
+          if (windAngleDeg > 5) {
+            if (Math.random() < 0.5) {
+              p.x = 0;
+              p.y = 22 + Math.random() * (height - 44);
+            } else {
+              p.x = Math.random() * (width * 0.85);
+              p.y = 21;
+            }
+          } else if (windAngleDeg < -5) {
+            if (Math.random() < 0.5) {
+              p.x = 0;
+              p.y = 22 + Math.random() * (height - 44);
+            } else {
+              p.x = Math.random() * (width * 0.85);
+              p.y = height - 21;
+            }
+          } else {
+            p.x = -5;
+            p.y = 25 + Math.random() * (height - 50);
+          }
         }
 
         const alpha = Math.min(1, Math.sin((p.life / p.maxLife) * Math.PI)) * p.alpha;
