@@ -8,7 +8,6 @@ export const CelestialCanvas3D: React.FC = () => {
   const {
     celestialBodies,
     selectedBodyId,
-    setSelectedBodyId,
     showSpacetimeGrid,
     showOrbitalTrails
   } = useSimulation();
@@ -19,7 +18,7 @@ export const CelestialCanvas3D: React.FC = () => {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const bodiesMeshesRef = useRef<Map<string, THREE.Group>>(new Map());
   const trailsLinesRef = useRef<Map<string, THREE.Line>>(new Map());
-  const gridMeshRef = useRef<THREE.LineSegments | null>(null);
+  const gridMeshRef = useRef<THREE.Mesh | null>(null);
 
   const cameraState = useRef({
     radius: 900,
@@ -51,10 +50,10 @@ export const CelestialCanvas3D: React.FC = () => {
     const height = container.clientHeight;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#030712');
+    scene.background = new THREE.Color('#090A0D');
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 20000);
+    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 30000);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -63,41 +62,43 @@ export const CelestialCanvas3D: React.FC = () => {
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    const starCount = 3000;
+    // Starfield Background
+    const starCount = 3500;
     const starGeo = new THREE.BufferGeometry();
     const starPos = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount * 3; i += 3) {
-      starPos[i] = (Math.random() - 0.5) * 8000;
-      starPos[i + 1] = (Math.random() - 0.5) * 8000;
-      starPos[i + 2] = (Math.random() - 0.5) * 8000;
+      starPos[i] = (Math.random() - 0.5) * 10000;
+      starPos[i + 1] = (Math.random() - 0.5) * 10000;
+      starPos[i + 2] = (Math.random() - 0.5) * 10000;
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-    const starMat = new THREE.PointsMaterial({ color: '#94a3b8', size: 1.8, transparent: true, opacity: 0.8 });
+    const starMat = new THREE.PointsMaterial({ color: '#A4ABB6', size: 1.6, transparent: true, opacity: 0.8 });
     const starField = new THREE.Points(starGeo, starMat);
     scene.add(starField);
 
-    const ambientLight = new THREE.AmbientLight('#334155', 0.8);
+    const ambientLight = new THREE.AmbientLight('#222733', 1.0);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.PointLight('#ffffff', 3.0, 10000);
+    const sunLight = new THREE.PointLight('#ffffff', 3.0, 15000);
     sunLight.position.set(0, 0, 0);
     scene.add(sunLight);
 
-    const gridSize = 1600;
-    const gridDivs = 40;
+    // Spacetime Metric Curvature Grid
+    const gridSize = 1800;
+    const gridDivs = 48;
     const gridPlaneGeo = new THREE.PlaneGeometry(gridSize, gridSize, gridDivs, gridDivs);
     gridPlaneGeo.rotateX(-Math.PI / 2);
 
     const gridWireMat = new THREE.MeshBasicMaterial({
-      color: '#1e3a8a',
+      color: '#79AFC1',
       wireframe: true,
       transparent: true,
-      opacity: 0.35
+      opacity: 0.25
     });
     const gridMesh = new THREE.Mesh(gridPlaneGeo, gridWireMat);
-    gridMesh.position.y = -60;
+    gridMesh.position.y = -70;
     scene.add(gridMesh);
-    gridMeshRef.current = gridMesh as any;
+    gridMeshRef.current = gridMesh;
 
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button === 0) cameraState.current.isDragging = true;
@@ -127,8 +128,11 @@ export const CelestialCanvas3D: React.FC = () => {
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const zoomFactor = e.deltaY > 0 ? 1.15 : 0.85;
-      cameraState.current.radius = Math.max(80, Math.min(4000, cameraState.current.radius * zoomFactor));
+      const zoomSpeed = 0.0015;
+      cameraState.current.radius = Math.max(
+        60,
+        Math.min(4500, cameraState.current.radius * (1 + e.deltaY * zoomSpeed))
+      );
     };
 
     const dom = renderer.domElement;
@@ -136,127 +140,73 @@ export const CelestialCanvas3D: React.FC = () => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     dom.addEventListener('wheel', handleWheel, { passive: false });
-    dom.addEventListener('contextmenu', e => e.preventDefault());
-
-    const raycaster = new THREE.Raycaster();
-    const mouseVec = new THREE.Vector2();
-
-    const handleClick = (e: MouseEvent) => {
-      const rect = dom.getBoundingClientRect();
-      mouseVec.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseVec.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycaster.setFromCamera(mouseVec, camera);
-      const meshes: THREE.Object3D[] = [];
-      bodiesMeshesRef.current.forEach(group => meshes.push(...group.children));
-
-      const intersects = raycaster.intersectObjects(meshes, true);
-      if (intersects.length > 0) {
-        let parentGroup: THREE.Object3D | null = intersects[0].object;
-        while (parentGroup && !parentGroup.userData.bodyId) {
-          parentGroup = parentGroup.parent;
-        }
-        if (parentGroup && parentGroup.userData.bodyId) {
-          setSelectedBodyId(parentGroup.userData.bodyId);
-        }
-      }
-    };
-    dom.addEventListener('click', handleClick);
-
-    const handleResize = () => {
-      if (!container || !renderer || !camera) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-    window.addEventListener('resize', handleResize);
 
     let animId: number;
+
     const animate = () => {
       animId = requestAnimationFrame(animate);
 
+      // Camera Orbit Position
       const { radius, theta, phi, target } = cameraState.current;
-      camera.position.x = target.x + radius * Math.cos(phi) * Math.sin(theta);
-      camera.position.y = target.y + radius * Math.sin(phi);
-      camera.position.z = target.z + radius * Math.cos(phi) * Math.cos(theta);
+      camera.position.x = target.x + radius * Math.sin(phi) * Math.sin(theta);
+      camera.position.y = target.y + radius * Math.cos(phi);
+      camera.position.z = target.z + radius * Math.sin(phi) * Math.cos(theta);
       camera.lookAt(target);
 
       const bodies = bodiesRef.current;
-      const existingMeshes = bodiesMeshesRef.current;
 
+      // Update Spacetime Deformation Grid
       if (gridMeshRef.current) {
         gridMeshRef.current.visible = showGridRef.current;
         if (showGridRef.current) {
-          const planeGeo = (gridMeshRef.current as any).geometry as THREE.PlaneGeometry;
-          const posAttr = planeGeo.attributes.position;
+          const geo = gridMeshRef.current.geometry as THREE.PlaneGeometry;
+          const posAttr = geo.attributes.position;
+          const v = new THREE.Vector3();
+
           for (let i = 0; i < posAttr.count; i++) {
-            const vx = posAttr.getX(i);
-            const vz = posAttr.getZ(i);
-            const depth = calculateSpacetimeDepression(vx, vz, bodies);
-            posAttr.setY(i, depth);
+            v.fromBufferAttribute(posAttr, i);
+            const dep = calculateSpacetimeDepression(v.x, v.z, bodies);
+            posAttr.setY(i, dep);
           }
           posAttr.needsUpdate = true;
         }
       }
 
-      for (const body of bodies) {
+      // Sync Body Meshes
+      const existingMeshes = bodiesMeshesRef.current;
+
+      bodies.forEach(body => {
         let group = existingMeshes.get(body.id);
-        const radiusScale = Math.max(3, Math.min(30, Math.log10(body.radius) * 4));
 
         if (!group) {
           group = new THREE.Group();
-          group.userData = { bodyId: body.id };
 
-          const sphereGeo = new THREE.SphereGeometry(radiusScale, 32, 32);
-          let sphereMat: THREE.Material;
+          const visualRadius = Math.max(3, Math.log10(body.radius) * 2.2);
+          const sphereGeo = new THREE.SphereGeometry(visualRadius, 32, 32);
+          const sphereMat = new THREE.MeshStandardMaterial({
+            color: body.color,
+            roughness: body.type === 'star' ? 0.1 : 0.7,
+            metalness: 0.1,
+            emissive: body.type === 'star' ? new THREE.Color(body.color) : new THREE.Color(0x000000),
+            emissiveIntensity: body.type === 'star' ? 0.8 : 0.0
+          });
+          const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+          group.add(sphereMesh);
 
-          if (body.type === 'star') {
-            sphereMat = new THREE.MeshBasicMaterial({ color: body.color });
-            const glowGeo = new THREE.SphereGeometry(radiusScale * 1.3, 16, 16);
-            const glowMat = new THREE.MeshBasicMaterial({
-              color: body.color,
-              transparent: true,
-              opacity: 0.35,
-              side: THREE.BackSide
-            });
-            const glow = new THREE.Mesh(glowGeo, glowMat);
-            group.add(glow);
-          } else if (body.type === 'black_hole') {
-            sphereMat = new THREE.MeshBasicMaterial({ color: '#000000' });
-            const diskGeo = new THREE.RingGeometry(radiusScale * 1.5, radiusScale * 4, 32);
-            diskGeo.rotateX(Math.PI / 2);
-            const diskMat = new THREE.MeshBasicMaterial({
-              color: '#38bdf8',
-              side: THREE.DoubleSide,
-              transparent: true,
-              opacity: 0.8
-            });
-            const disk = new THREE.Mesh(diskGeo, diskMat);
-            group.add(disk);
-          } else {
-            sphereMat = new THREE.MeshStandardMaterial({
-              color: body.color,
-              roughness: 0.7,
-              metalness: 0.1
-            });
-          }
-
-          const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-          group.add(sphere);
-
+          // Rings
           if (body.hasRings) {
-            const ringGeo = new THREE.RingGeometry(radiusScale * 1.5, radiusScale * 2.8, 32);
+            const ringMin = visualRadius * 1.5;
+            const ringMax = visualRadius * 2.5;
+            const ringGeo = new THREE.RingGeometry(ringMin, ringMax, 48);
             ringGeo.rotateX(Math.PI / 2);
             const ringMat = new THREE.MeshBasicMaterial({
-              color: body.ringColor || '#d97706',
+              color: body.ringColor || body.color,
               side: THREE.DoubleSide,
               transparent: true,
               opacity: 0.7
             });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            group.add(ring);
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            group.add(ringMesh);
           }
 
           scene.add(group);
@@ -265,13 +215,19 @@ export const CelestialCanvas3D: React.FC = () => {
 
         group.position.set(body.position.x, body.position.y, body.position.z);
 
+        // Sync Orbital Trail
         let trailLine = trailsLinesRef.current.get(body.id);
         if (!trailLine) {
+          const maxPts = 1200;
           const trailGeo = new THREE.BufferGeometry();
+          const positions = new Float32Array(maxPts * 3);
+          trailGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          trailGeo.setDrawRange(0, 0);
+
           const trailMat = new THREE.LineBasicMaterial({
             color: body.color,
             transparent: true,
-            opacity: 0.5
+            opacity: 0.6
           });
           trailLine = new THREE.Line(trailGeo, trailMat);
           scene.add(trailLine);
@@ -283,14 +239,28 @@ export const CelestialCanvas3D: React.FC = () => {
           const trailPts = body.trail.map(t => new THREE.Vector3(t.x, t.y, t.z));
           trailLine.geometry.setFromPoints(trailPts);
         }
-      }
+      });
 
+      // Cleanup disposed meshes & free GPU VRAM
       existingMeshes.forEach((mesh, id) => {
         if (!bodies.some(b => b.id === id)) {
+          mesh.traverse(obj => {
+            if (obj instanceof THREE.Mesh) {
+              obj.geometry.dispose();
+              if (Array.isArray(obj.material)) {
+                obj.material.forEach(m => m.dispose());
+              } else {
+                obj.material.dispose();
+              }
+            }
+          });
           scene.remove(mesh);
           existingMeshes.delete(id);
+
           const tLine = trailsLinesRef.current.get(id);
           if (tLine) {
+            tLine.geometry.dispose();
+            (tLine.material as THREE.Material).dispose();
             scene.remove(tLine);
             trailsLinesRef.current.delete(id);
           }
@@ -302,27 +272,49 @@ export const CelestialCanvas3D: React.FC = () => {
 
     animate();
 
+    const handleResize = () => {
+      if (!container) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+
+    window.addEventListener('resize', handleResize);
+
     return () => {
       cancelAnimationFrame(animId);
       dom.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
-      dom.removeEventListener('click', handleClick);
+      dom.removeEventListener('wheel', handleWheel);
       window.removeEventListener('resize', handleResize);
+
+      // Full Scene Disposal on Unmount
+      scene.traverse(obj => {
+        if (obj instanceof THREE.Mesh) {
+          obj.geometry.dispose();
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach(m => m.dispose());
+          } else {
+            obj.material.dispose();
+          }
+        }
+      });
       renderer.dispose();
       if (container.contains(dom)) container.removeChild(dom);
     };
   }, []);
 
   return (
-    <div className="relative flex-1 h-full bg-[#030712] overflow-hidden select-none">
+    <div className="relative flex-1 h-full bg-[#090A0D] overflow-hidden select-none">
       <div ref={mountRef} className="w-full h-full block" />
 
-      <div className="absolute bottom-3 left-3 bg-[#0c121d]/80 border border-[#1e293b] px-3 py-1.5 rounded text-[11px] font-mono text-slate-400 flex items-center gap-4">
-        <span>LEFT DRAG: <strong>Orbit 3D</strong></span>
-        <span>RIGHT DRAG: <strong>Pan</strong></span>
-        <span>SCROLL: <strong>Zoom</strong></span>
-        <span>CLICK: <strong>Select Body</strong></span>
+      <div className="absolute bottom-3 left-3 bg-[#151820]/80 border border-[#252B36] px-3 py-1.5 rounded text-[11px] font-mono-num text-[#A4ABB6] flex items-center gap-4">
+        <span>LEFT DRAG: <strong className="text-[#E6E8EB]">Orbit 3D</strong></span>
+        <span>RIGHT DRAG: <strong className="text-[#E6E8EB]">Pan</strong></span>
+        <span>SCROLL: <strong className="text-[#FF8A1F]">Zoom</strong></span>
       </div>
     </div>
   );

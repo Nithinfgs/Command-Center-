@@ -3,8 +3,8 @@ import { calculateRocketProperties, PARTS_CATALOG } from './rocket-math';
 import { calculateAtmosphere, STEFAN_BOLTZMANN } from './aerodynamics';
 
 export const G_EARTH = 9.80665;
-export const EARTH_RADIUS = 6371000; // meters (realistic scale)
-export const MU_EARTH = 3.986004418e14; // m^3/s^2
+export const EARTH_RADIUS = 6371000; // meters (realistic planetary radius)
+export const MU_EARTH = 3.986004418e14; // m^3/s^2 (standard gravitational parameter)
 
 export interface DebrisObject {
   id: string;
@@ -114,7 +114,8 @@ export function calculateCurrentStageMassAndThrust(
     }
   }
 
-  const avgIsp = thrustN > 0 ? weightedIsp / thrustN : 300;
+  // If stage has no active engines, don't burn fuel into a ghost vacuum
+  const avgIsp = thrustN > 0 ? weightedIsp / thrustN : 0;
 
   return {
     stageDryMassTons: stageDryMass,
@@ -127,21 +128,29 @@ export function calculateCurrentStageMassAndThrust(
 }
 
 /**
- * Calculates acceleration vector at state (altitude, downrange, vx, vy)
+ * Calculates acceleration vector in true 2D Spherical Planet Gravity:
+ * Origin (0, -R_E) is the center of the spherical planet.
  */
 function getFlightAccelerations(
-  alt: number,
+  posX: number,
+  posY: number,
   vx: number,
   vy: number,
   pitchDeg: number,
   engineThrustN: number,
   totalMassKg: number,
   blueprint: RocketBlueprint
-): { ax: number; ay: number; q: number; dragX: number; dragY: number; localG: number } {
-  const atm = calculateAtmosphere(alt);
+): { ax: number; ay: number; q: number; altitude: number; localG: number } {
+  // Vector from Earth center (0, -R_E) to vehicle (posX, posY)
+  const rx = posX;
+  const ry = posY + EARTH_RADIUS;
+  const r = Math.hypot(rx, ry);
+  const altitude = Math.max(0, r - EARTH_RADIUS);
+
+  const atm = calculateAtmosphere(altitude);
   const speed = Math.hypot(vx, vy);
 
-  // Aerodynamic Drag
+  // Aerodynamic Drag opposes the velocity vector relative to atmosphere
   const q = 0.5 * atm.density * speed * speed;
   const frontalArea = Math.max(1.5, Math.min(12, blueprint.parts.length * 0.45));
   const cd = 0.25;
@@ -150,35 +159,52 @@ function getFlightAccelerations(
   const dragX = speed > 0.01 ? -dragMagnitude * (vx / speed) : 0;
   const dragY = speed > 0.01 ? -dragMagnitude * (vy / speed) : 0;
 
-  // Thrust Vector
+  // Local radial unit vector pointing Up from Earth Center
+  const upX = rx / r;
+  const upY = ry / r;
+  // Local horizontal East unit vector (tangent to surface)
+  const eastX = upY;
+  const eastY = -upX;
+
+  // Pitch Angle relative to local horizon (90 = Vertical Up, 0 = Horizontal East)
   const pitchRad = (pitchDeg * Math.PI) / 180;
-  const thrustX = engineThrustN * Math.cos(pitchRad);
-  const thrustY = engineThrustN * Math.sin(pitchRad);
+  const thrustX = engineThrustN * (eastX * Math.cos(pitchRad) + upX * Math.sin(pitchRad));
+  const thrustY = engineThrustN * (eastY * Math.cos(pitchRad) + upY * Math.sin(pitchRad));
 
-  // Spherical Newtonian Gravity
-  const rCurrent = EARTH_RADIUS + Math.max(0, alt);
-  const localG = MU_EARTH / (rCurrent * rCurrent);
-  const gravityForceY = -totalMassKg * localG;
+  // True Spherical Newtonian Gravity pointing towards Earth Center
+  const localG = MU_EARTH / (r * r);
+  const gravityFx = -totalMassKg * localG * upX;
+  const gravityFy = -totalMassKg * localG * upY;
 
-  const netFx = thrustX + dragX;
-  let netFy = thrustY + dragY + gravityForceY;
+  const netFx = thrustX + dragX + gravityFx;
+  let netFy = thrustY + dragY + gravityFy;
 
-  if (alt <= 0 && netFy < 0) {
-    netFy = 0; // Ground support on launchpad
+  // Launchpad ground support reaction
+  if (altitude <= 0) {
+    const netRadial = netFx * upX + netFy * upY;
+    if (netRadial < 0) {
+      // Cancel downward radial gravity into pad
+      return {
+        ax: 0,
+        ay: 0,
+        q: 0,
+        altitude: 0,
+        localG
+      };
+    }
   }
 
   return {
     ax: netFx / totalMassKg,
     ay: netFy / totalMassKg,
     q,
-    dragX,
-    dragY,
+    altitude,
     localG
   };
 }
 
 /**
- * High-Precision 4th-Order Runge-Kutta (RK4) Flight Physics Integrator
+ * 4th-Order Runge-Kutta (RK4) Spherical Flight Dynamics Integrator
  */
 export function stepFlightPhysics(
   state: FlightState,
@@ -200,12 +226,11 @@ export function stepFlightPhysics(
   let pitch = state.pitch;
   if (guidanceMode === 'auto') {
     if (state.altitude > 800 && state.altitude < 120000) {
-      if (state.velocity.vx > 10 && state.velocity.vy > 0) {
-        // True prograde angle matching vehicle velocity vector
+      if (state.velocity.vx > 15 && state.speed > 30) {
+        // True zero-AoA prograde angle
         const progradeAngleDeg = (Math.atan2(state.velocity.vy, state.velocity.vx) * 180) / Math.PI;
-        pitch = pitch + (progradeAngleDeg - pitch) * Math.min(1, dt * 1.5);
+        pitch = pitch + (progradeAngleDeg - pitch) * Math.min(1, dt * 1.8);
       } else {
-        // Initial pitch kick towards East (+X)
         const turnFraction = Math.min(1, (state.altitude - 800) / 70000);
         const targetPitch = Math.max(0, 90 - turnFraction * 90);
         pitch = pitch + (targetPitch - pitch) * dt * 0.5;
@@ -218,7 +243,7 @@ export function stepFlightPhysics(
   let currentFuel = Math.max(0, state.fuelMassRemaining);
   let engineThrustN = 0;
 
-  if (throttle > 0 && currentFuel > 0.001) {
+  if (throttle > 0 && currentFuel > 0.001 && stageInfo.thrustN > 0 && stageInfo.isp > 0) {
     engineThrustN = stageInfo.thrustN * throttle;
     const mdot = engineThrustN / (stageInfo.isp * G_EARTH); // kg/s
     currentFuel = Math.max(0, currentFuel - (mdot * dt) / 1000);
@@ -226,25 +251,30 @@ export function stepFlightPhysics(
 
   const totalMassKg = (stageInfo.activeVehicleDryMassTons + currentFuel) * 1000;
 
-  // Runge-Kutta 4 Integration Stages
-  const k1 = getFlightAccelerations(state.altitude, state.velocity.vx, state.velocity.vy, pitch, engineThrustN, totalMassKg, blueprint);
+  // Runge-Kutta 4 Numerical Integration
+  const posX = state.downrange;
+  const posY = state.altitude;
 
-  const vHalfX1 = state.velocity.vx + 0.5 * dt * k1.ax;
-  const vHalfY1 = state.velocity.vy + 0.5 * dt * k1.ay;
-  const altHalf1 = state.altitude + 0.5 * dt * state.velocity.vy;
-  const k2 = getFlightAccelerations(altHalf1, vHalfX1, vHalfY1, pitch, engineThrustN, totalMassKg, blueprint);
+  const k1 = getFlightAccelerations(posX, posY, state.velocity.vx, state.velocity.vy, pitch, engineThrustN, totalMassKg, blueprint);
 
-  const vHalfX2 = state.velocity.vx + 0.5 * dt * k2.ax;
-  const vHalfY2 = state.velocity.vy + 0.5 * dt * k2.ay;
-  const altHalf2 = state.altitude + 0.5 * dt * vHalfY1;
-  const k3 = getFlightAccelerations(altHalf2, vHalfX2, vHalfY2, pitch, engineThrustN, totalMassKg, blueprint);
+  const posX2 = posX + 0.5 * dt * state.velocity.vx;
+  const posY2 = posY + 0.5 * dt * state.velocity.vy;
+  const vX2 = state.velocity.vx + 0.5 * dt * k1.ax;
+  const vY2 = state.velocity.vy + 0.5 * dt * k1.ay;
+  const k2 = getFlightAccelerations(posX2, posY2, vX2, vY2, pitch, engineThrustN, totalMassKg, blueprint);
 
-  const vEndX = state.velocity.vx + dt * k3.ax;
-  const vEndY = state.velocity.vy + dt * k3.ay;
-  const altEnd = state.altitude + dt * vHalfY2;
-  const k4 = getFlightAccelerations(altEnd, vEndX, vEndY, pitch, engineThrustN, totalMassKg, blueprint);
+  const posX3 = posX + 0.5 * dt * vX2;
+  const posY3 = posY + 0.5 * dt * vY2;
+  const vX3 = state.velocity.vx + 0.5 * dt * k2.ax;
+  const vY3 = state.velocity.vy + 0.5 * dt * k2.ay;
+  const k3 = getFlightAccelerations(posX3, posY3, vX3, vY3, pitch, engineThrustN, totalMassKg, blueprint);
 
-  // Weighted sum
+  const posX4 = posX + dt * vX3;
+  const posY4 = posY + dt * vY3;
+  const vX4 = state.velocity.vx + dt * k3.ax;
+  const vY4 = state.velocity.vy + dt * k3.ay;
+  const k4 = getFlightAccelerations(posX4, posY4, vX4, vY4, pitch, engineThrustN, totalMassKg, blueprint);
+
   const avgAx = (k1.ax + 2 * k2.ax + 2 * k3.ax + k4.ax) / 6;
   const avgAy = (k1.ay + 2 * k2.ay + 2 * k3.ay + k4.ay) / 6;
 
@@ -257,10 +287,10 @@ export function stepFlightPhysics(
   let isDisintegrated = false;
   let crashImpactSpeed = 0;
 
-  // Ground Impact & Crash Dynamics
+  // Ground Impact & Crash Mechanics
   if (newAltitude <= 0) {
     newAltitude = 0;
-    if (newVy < -12 || state.velocity.vy < -12) {
+    if (newVy < -10 || state.velocity.vy < -10) {
       isCrashed = true;
       isDisintegrated = true;
       crashImpactSpeed = Math.hypot(newVx, newVy);
@@ -275,7 +305,7 @@ export function stepFlightPhysics(
   const newSpeed = Math.hypot(newVx, newVy);
   const gTotal = Math.sqrt(avgAx * avgAx + (avgAy + k1.localG) * (avgAy + k1.localG)) / G_EARTH;
 
-  // Atmospheric Compression Re-Entry Heat Flux & Plasma
+  // Atmospheric Re-entry Plasma & Heat Flux
   const atm = calculateAtmosphere(newAltitude);
   const noseRadiusM = 0.5;
   const kSutton = 1.7415e-4;
@@ -287,14 +317,13 @@ export function stepFlightPhysics(
   const emissivity = 0.85;
   const radSkinTempK = Math.min(4500, atm.temperature + Math.pow(Math.max(0, (heatFluxKwM2 * 1000) / (emissivity * STEFAN_BOLTZMANN)), 0.25));
 
-  // Re-entry structural disintegration check
   if (radSkinTempK > 3900 && newAltitude > 10000) {
     isDisintegrated = true;
     isCrashed = true;
   }
 
-  // Exact Keplerian Orbital Elements
-  const rNew = EARTH_RADIUS + newAltitude;
+  // True Spherical Keplerian Orbital Elements
+  const rNew = Math.hypot(newDownrange, newAltitude + EARTH_RADIUS);
   const specificEnergy = (newSpeed * newSpeed) / 2 - MU_EARTH / rNew;
 
   let apoapsis = newAltitude;

@@ -1,8 +1,8 @@
 import type { CelestialBody, OrbitalElements } from '../types';
 
 export const G_NEWTON = 6.6743e-11;
-// Scaled gravitational constant for visual multi-body simulation
-export const SIM_G = 1200.0;
+// Calibrated G constant for 3D astronomical visualization
+export const SIM_G = 800.0;
 
 export const CELESTIAL_PRESETS: { id: string; name: string; description: string; bodies: CelestialBody[] }[] = [
   {
@@ -106,7 +106,7 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
   {
     id: 'jupiter_system',
     name: 'Jupiter & Galilean Moons',
-    description: 'Gas giant Jupiter with Io, Europa, Ganymede, and Callisto in 4:2:1 Laplace resonance.',
+    description: 'Gas giant Jupiter with Io, Europa, Ganymede, and Callisto in Laplace resonance.',
     bodies: [
       {
         id: 'jupiter',
@@ -237,7 +237,8 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
 ];
 
 /**
- * High-precision RK4 N-body gravitational step with collision merger handling
+ * True Newtonian Gravitational acceleration obeying Newton's 3rd Law (F_ij = -F_ji).
+ * Uses physical masses with linear scaling and 4th-order Runge-Kutta integration.
  */
 export function stepNBodySimulation(bodies: CelestialBody[], dt: number): CelestialBody[] {
   let updated = bodies.map(b => ({
@@ -250,45 +251,48 @@ export function stepNBodySimulation(bodies: CelestialBody[], dt: number): Celest
   const n = updated.length;
   if (n === 0) return updated;
 
-  // Normalized mass mapping for physical G acceleration
-  const getMassScaled = (mass: number) => {
-    return Math.max(0.1, Math.log10(Math.max(1e18, mass)) / 28);
+  // Normalized linear mass scale where 1 Solar Mass (1.989e30 kg) = 1.0 sim mass unit
+  const SOLAR_MASS = 1.989e30;
+  const getSimMass = (massKg: number) => {
+    return Math.max(1e-8, massKg / SOLAR_MASS);
   };
 
   const getAccelerations = (positions: { x: number; y: number; z: number }[]) => {
-    const accels: { ax: number; ay: number; az: number }[] = [];
+    const accels = Array.from({ length: n }, () => ({ ax: 0, ay: 0, az: 0 }));
 
+    // Pairwise mutual Newtonian gravitation: a_i = G * M_j / r^2, a_j = -G * M_i / r^2
     for (let i = 0; i < n; i++) {
-      let ax = 0;
-      let ay = 0;
-      let az = 0;
+      const mi = getSimMass(updated[i].mass);
+      for (let j = i + 1; j < n; j++) {
+        const mj = getSimMass(updated[j].mass);
 
-      if (!updated[i].isFixed) {
-        for (let j = 0; j < n; j++) {
-          if (i === j) continue;
+        const dx = positions[j].x - positions[i].x;
+        const dy = positions[j].y - positions[i].y;
+        const dz = positions[j].z - positions[i].z;
+        const distSq = dx * dx + dy * dy + dz * dz + 0.05; // minimal softening
+        const dist = Math.sqrt(distSq);
+        const distCube = distSq * dist;
 
-          const dx = positions[j].x - positions[i].x;
-          const dy = positions[j].y - positions[i].y;
-          const dz = positions[j].z - positions[i].z;
-          const distSq = dx * dx + dy * dy + dz * dz + 4.0; // minimal softening to avoid singularity
-          const dist = Math.sqrt(distSq);
+        const forceCoeff = SIM_G / distCube;
 
-          const massJ = getMassScaled(updated[j].mass);
-          const f = (SIM_G * massJ) / distSq;
+        if (!updated[i].isFixed) {
+          accels[i].ax += forceCoeff * mj * dx;
+          accels[i].ay += forceCoeff * mj * dy;
+          accels[i].az += forceCoeff * mj * dz;
+        }
 
-          ax += f * (dx / dist);
-          ay += f * (dy / dist);
-          az += f * (dz / dist);
+        if (!updated[j].isFixed) {
+          accels[j].ax -= forceCoeff * mi * dx;
+          accels[j].ay -= forceCoeff * mi * dy;
+          accels[j].az -= forceCoeff * mi * dz;
         }
       }
-
-      accels.push({ ax, ay, az });
     }
 
     return accels;
   };
 
-  // RK4 Integration
+  // Runge-Kutta 4 Integrator
   const pos0 = updated.map(b => b.position);
   const vel0 = updated.map(b => b.velocity);
 
@@ -332,7 +336,8 @@ export function stepNBodySimulation(bodies: CelestialBody[], dt: number): Celest
     b.position.z += b.velocity.vz * dt;
 
     b.trail.push({ x: b.position.x, y: b.position.y, z: b.position.z });
-    if (b.trail.length > 260) {
+    // Extended trail buffer to retain full orbital ellipses without clipping
+    if (b.trail.length > 1200) {
       b.trail.shift();
     }
   }
@@ -354,11 +359,10 @@ export function stepNBodySimulation(bodies: CelestialBody[], dt: number): Celest
       const dz = b2.position.z - b1.position.z;
       const dist = Math.hypot(dx, dy, dz);
 
-      // Collision threshold based on physical body radii
-      const r1 = Math.max(4, Math.log10(b1.radius) * 2.5);
-      const r2 = Math.max(4, Math.log10(b2.radius) * 2.5);
+      const r1 = Math.max(3, Math.log10(b1.radius) * 2.2);
+      const r2 = Math.max(3, Math.log10(b2.radius) * 2.2);
 
-      if (dist < (r1 + r2) * 0.7) {
+      if (dist < (r1 + r2) * 0.6) {
         // Inelastic collision conservation of momentum
         const totalMass = b1.mass + b2.mass;
         const newVx = (b1.mass * b1.velocity.vx + b2.mass * b2.velocity.vx) / totalMass;
@@ -393,8 +397,9 @@ export function calculateOrbitalElements(body: CelestialBody, primary: Celestial
   const dvz = body.velocity.vz - primary.velocity.vz;
   const v = Math.hypot(dvx, dvy, dvz);
 
-  const massScaled = Math.max(0.1, Math.log10(Math.max(1e18, primary.mass)) / 28);
-  const mu = SIM_G * massScaled * 1000;
+  const SOLAR_MASS = 1.989e30;
+  const primarySimMass = Math.max(1e-8, primary.mass / SOLAR_MASS);
+  const mu = SIM_G * primarySimMass;
 
   const epsilon = (v * v) / 2 - mu / Math.max(1, r);
 
@@ -439,31 +444,27 @@ export function calculateOrbitalElements(body: CelestialBody, primary: Celestial
   };
 }
 
-/**
- * Spacetime metric curvature depth calculation
- */
 export function calculateSpacetimeDepression(x: number, z: number, bodies: CelestialBody[]): number {
   let depression = 0;
+  const SOLAR_MASS = 1.989e30;
   for (const b of bodies) {
     const dx = x - b.position.x;
     const dz = z - b.position.z;
-    const distSq = dx * dx + dz * dz + 400;
-    const massFactor = Math.log10(Math.max(1e20, b.mass)) / 30;
-    const depth = (massFactor * 4200) / Math.sqrt(distSq);
+    const distSq = dx * dx + dz * dz + 100;
+    const simMass = Math.max(0.01, b.mass / SOLAR_MASS);
+    const depth = (simMass * 3800) / Math.sqrt(distSq);
     depression -= depth;
   }
   return depression;
 }
 
-/**
- * Computes Hohmann transfer burn delta-Vs between two concentric circular orbits
- */
 export function calculateHohmannTransfer(
   r1: number,
   r2: number,
   centralMassKg: number
 ): { deltaV1: number; deltaV2: number; totalDeltaV: number; transferTimeSec: number } {
-  const mu = (G_NEWTON * centralMassKg) / 1e9; // scaled
+  const SOLAR_MASS = 1.989e30;
+  const mu = SIM_G * (centralMassKg / SOLAR_MASS);
   const v1 = Math.sqrt(mu / r1);
   const v2 = Math.sqrt(mu / r2);
 

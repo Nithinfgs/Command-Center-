@@ -73,8 +73,8 @@ export const POPULATION_AREAS: Record<TargetAreaType, PopulationAreaConfig> = {
   },
   uninhabited: {
     id: 'uninhabited',
-    name: 'Remote Desert (0 Pop)',
-    description: 'Uninhabited desert/polar tundra with 0 permanent civilian casualties',
+    name: 'Remote Desert / Extraterrestrial (0 Pop)',
+    description: 'Uninhabited desert or lunar/martian surface with 0 casualties',
     population: 0,
     densityPerKm2: 0,
     radiusKm: 50,
@@ -115,24 +115,31 @@ export const JOULES_PER_MEGATON = 4.184e15;
 export const HIROSHIMA_ENERGY_JOULES = 6.3e13;
 
 export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry {
-  const radiusMeters = config.diameter / 2;
-  const volumeM3 = (4 / 3) * Math.PI * Math.pow(radiusMeters, 3);
-  const massKg = volumeM3 * config.density;
-  const velocityMps = config.velocity * 1000;
-  const angleRad = (config.entryAngle * Math.PI) / 180;
+  // Clamped positive input variables preventing NaN / divide-by-zero
+  const safeDiameter = Math.max(1.0, config.diameter || 100);
+  const safeDensity = Math.max(500, config.density || 3000);
+  const safeVelocityKmS = Math.max(0.5, config.velocity || 20);
+  const safeAngleDeg = Math.max(1.0, Math.min(90, config.entryAngle || 45));
 
-  const kineticEnergyJoules = 0.5 * massKg * Math.pow(velocityMps, 2);
+  const radiusMeters = safeDiameter / 2;
+  const volumeM3 = (4 / 3) * Math.PI * Math.pow(radiusMeters, 3);
+  const massKg = volumeM3 * safeDensity;
+  const velocityMps = safeVelocityKmS * 1000;
+  const angleRad = (safeAngleDeg * Math.PI) / 180;
+
+  const kineticEnergyJoules = Math.max(1.0, 0.5 * massKg * Math.pow(velocityMps, 2));
   const kineticEnergyMegatons = kineticEnergyJoules / JOULES_PER_MEGATON;
   const hiroshimaEquiv = kineticEnergyJoules / HIROSHIMA_ENERGY_JOULES;
 
-  const isOcean = config.targetSurfaceType === 'water_ocean' || config.targetAreaType === 'ocean_deep' || config.geographicTarget?.isOcean === true;
+  const isEarthTarget = !config.targetBodyId || config.targetBodyId === 'earth';
+  const isOcean = isEarthTarget && (config.targetSurfaceType === 'water_ocean' || config.targetAreaType === 'ocean_deep' || config.geographicTarget?.isOcean === true);
   const targetDensity = TARGET_SURFACES[isOcean ? 'water_ocean' : config.targetSurfaceType]?.density || 2750;
   const g = 9.80665;
 
   const transientCrater =
     1.161 *
-    Math.pow(config.density / targetDensity, 1 / 3) *
-    Math.pow(config.diameter, 0.78) *
+    Math.pow(safeDensity / targetDensity, 1 / 3) *
+    Math.pow(safeDiameter, 0.78) *
     Math.pow(velocityMps, 0.44) *
     Math.pow(g, -0.22) *
     Math.pow(Math.sin(angleRad), 1 / 3);
@@ -154,18 +161,17 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
   const fireballRadiusKm = Math.max(0.1, (0.002 * Math.pow(kineticEnergyJoules, 1 / 3)) / 1000);
   const thermalIgnitionRadiusKm = fireballRadiusKm * 3.8;
 
-  const r20psiKm = Math.max(0.1, 0.28 * Math.pow(kineticEnergyMegatons, 1 / 3));
-  const r5psiKm = Math.max(0.2, 0.82 * Math.pow(kineticEnergyMegatons, 1 / 3));
-  const r1psiKm = Math.max(0.5, 2.4 * Math.pow(kineticEnergyMegatons, 1 / 3));
+  const r20psiKm = Math.max(0.1, 0.28 * Math.pow(Math.max(0.001, kineticEnergyMegatons), 1 / 3));
+  const r5psiKm = Math.max(0.2, 0.82 * Math.pow(Math.max(0.001, kineticEnergyMegatons), 1 / 3));
+  const r1psiKm = Math.max(0.5, 2.4 * Math.pow(Math.max(0.001, kineticEnergyMegatons), 1 / 3));
 
   const ejectaRadiusKm = (finalCraterDiameter * 2.5) / 1000;
 
   const seismicEnergy = kineticEnergyJoules * 1e-4;
-  const richterMagnitude = Math.min(13.5, Math.max(1.0, 0.67 * Math.log10(Math.max(1, seismicEnergy)) - 5.87));
+  const richterMagnitude = Math.min(13.5, Math.max(0.0, 0.67 * Math.log10(Math.max(10, seismicEnergy)) - 5.87));
 
-  const soundDb = Math.min(240, Math.max(40, 120 + 20 * Math.log10(Math.max(1, kineticEnergyMegatons)) - 20 * Math.log10(100)));
+  const soundDb = Math.min(240, Math.max(0, 120 + 20 * Math.log10(Math.max(0.001, kineticEnergyMegatons)) - 20 * Math.log10(100)));
 
-  // Atmospheric disruption text
   let atmosphereText = 'Localized low-altitude pressure shock; minimal stratospheric dust injection.';
   if (kineticEnergyMegatons > 1e6) {
     atmosphereText = 'GLOBAL EXTINCTION EVENT: Stratospheric sulfate/soot veil blocking 99% sunlight for years, nuclear winter, global acid rain, collapse of photosynthesis.';
@@ -177,24 +183,26 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
     atmosphereText = 'METROPOLITAN DEVASTATION: High-altitude fireball, severe blast overpressure demolishing all structures across city radius, regional fallout.';
   }
 
-  // ==========================================
-  // CASUALTY & FATALITY ESTIMATION MODEL
-  // ==========================================
-  const areaConfig = POPULATION_AREAS[config.targetAreaType || 'dense_metro'] || POPULATION_AREAS.dense_metro;
-  const totalPop = config.customPopulation !== undefined
-    ? config.customPopulation
-    : config.geographicTarget
-    ? config.geographicTarget.populationDensityPerKm2 * Math.PI * Math.pow(25, 2)
-    : areaConfig.population;
+  // Casualty modeling (Zero for Moon/Mars extraterrestrial bodies)
+  let totalPop = 0;
+  let popDensity = 0;
 
-  const popDensity = config.geographicTarget
-    ? config.geographicTarget.populationDensityPerKm2
-    : areaConfig.densityPerKm2;
+  if (isEarthTarget) {
+    const areaConfig = POPULATION_AREAS[config.targetAreaType || 'dense_metro'] || POPULATION_AREAS.dense_metro;
+    totalPop = config.customPopulation !== undefined
+      ? config.customPopulation
+      : config.geographicTarget
+      ? config.geographicTarget.populationDensityPerKm2 * Math.PI * Math.pow(25, 2)
+      : areaConfig.population;
+
+    popDensity = config.geographicTarget
+      ? config.geographicTarget.populationDensityPerKm2
+      : areaConfig.densityPerKm2;
+  }
 
   let estimatedFatalities = 0;
   let estimatedInjuries = 0;
 
-  // Shallow water wave amplification via Green's Law: H1 / H0 = (h0 / h1)^(1/4)
   const initialDeepWaveM = Math.round(Math.max(15, craterDepth * 0.45));
   const deepDepthM = config.geographicTarget?.oceanDepthM || 4000;
   const shallowCoastDepthM = 20;
@@ -205,7 +213,7 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
   const tsunamiRunupInundationKm = parseFloat((tsunamiWaveHeightAt100kmM * 0.35).toFixed(2));
   const tsunamiTravelSpeedKmh = Math.round(Math.sqrt(9.81 * deepDepthM) * 3.6);
 
-  if (totalPop > 0) {
+  if (totalPop > 0 && isEarthTarget) {
     if (isOcean) {
       if (tsunamiWaveHeightAt100kmM > 25) {
         estimatedFatalities = Math.round(totalPop * 0.85);
@@ -260,10 +268,10 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
     estimatedFatalities,
     estimatedInjuries,
     isOceanImpact: isOcean,
-    tsunamiWaveHeightAtImpactM: initialDeepWaveM,
-    tsunamiWaveHeightAt100kmM,
-    tsunamiRunupInundationKm,
-    tsunamiTravelSpeedKmh
+    tsunamiWaveHeightAtImpactM: isOcean ? initialDeepWaveM : 0,
+    tsunamiWaveHeightAt100kmM: isOcean ? tsunamiWaveHeightAt100kmM : 0,
+    tsunamiRunupInundationKm: isOcean ? tsunamiRunupInundationKm : 0,
+    tsunamiTravelSpeedKmh: isOcean ? tsunamiTravelSpeedKmh : 0
   };
 }
 

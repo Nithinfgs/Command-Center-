@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Rocket, 
   Wind, 
@@ -9,7 +9,8 @@ import {
   Save, 
   Share2, 
   CheckCircle2,
-  ChevronDown
+  ChevronDown,
+  X
 } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { ROCKET_PRESETS } from '../../physics/rocket-math';
@@ -36,13 +37,24 @@ export const Header: React.FC = () => {
   ];
 
   const handleSave = () => {
-    localStorage.setItem('aero_orbit_saved_blueprint', JSON.stringify(blueprint));
+    localStorage.setItem('mission_control_blueprint', JSON.stringify(blueprint));
     setSavedNotification(true);
     setTimeout(() => setSavedNotification(false), 2000);
   };
 
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showPresetModal) {
+        setShowPresetModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPresetModal]);
+
   return (
-    <header className="bg-[#0E1015] border-b border-[#252B36] px-4 h-13 flex items-center justify-between select-none z-30 shrink-0">
+    <header className="bg-[#0E1015] border-b border-[#252B36] px-4 h-13 flex items-center justify-between select-none z-30 shrink-0" role="banner">
       {/* Brand & Active Vehicle Subtitle */}
       <div className="flex items-center gap-3.5">
         <div className="flex flex-col">
@@ -54,9 +66,10 @@ export const Header: React.FC = () => {
           </div>
           <button 
             onClick={() => setShowPresetModal(true)}
+            aria-label="Select Rocket Preset"
             className="flex items-center gap-1 text-[11px] text-[#A4ABB6] hover:text-[#FF8A1F] transition-colors text-left font-mono-num"
           >
-            <span className="uppercase tracking-tight font-medium">{blueprint.name}</span>
+            <span className="uppercase tracking-tight font-medium truncate max-w-[180px]">{blueprint.name}</span>
             <span className="text-[10px] text-[#69717E]">({blueprint.parts.length} parts)</span>
             <ChevronDown className="w-2.5 h-2.5 text-[#69717E]" />
           </button>
@@ -64,7 +77,7 @@ export const Header: React.FC = () => {
       </div>
 
       {/* Primary Mode Navigation with Thin Orange Line */}
-      <nav className="flex items-center h-full gap-5">
+      <nav className="flex items-center h-full gap-5" aria-label="Main Navigation">
         {navTabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -72,6 +85,7 @@ export const Header: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              aria-current={isActive ? 'page' : undefined}
               className={`relative flex items-center gap-1.5 h-full text-xs transition-colors ${
                 isActive
                   ? 'text-[#E6E8EB] font-semibold'
@@ -101,6 +115,7 @@ export const Header: React.FC = () => {
         <button
           onClick={handleSave}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-[#151820] hover:bg-[#1B1F28] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] transition-colors font-medium text-[11px]"
+          title="Save Configuration to Browser Storage"
         >
           {savedNotification ? (
             <>
@@ -118,7 +133,7 @@ export const Header: React.FC = () => {
         <button
           onClick={() => {
             navigator.clipboard.writeText(window.location.href);
-            alert('Mission configuration link copied.');
+            alert('Mission Control configuration URL copied to clipboard.');
           }}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-[#151820] hover:bg-[#1B1F28] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] transition-colors font-medium text-[11px]"
           title="Share Configuration"
@@ -140,22 +155,34 @@ export const Header: React.FC = () => {
 
       {/* Preset Modal */}
       {showPresetModal && (
-        <div className="fixed inset-0 bg-[#090A0D]/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-[#151820] border border-[#353D4A] rounded-lg max-w-md w-full p-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#252B36]">
+        <div 
+          onClick={() => setShowPresetModal(false)}
+          className="fixed inset-0 bg-[#090A0D]/80 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="preset-modal-title"
+        >
+          <div 
+            onClick={e => e.stopPropagation()}
+            className="bg-[#151820] border border-[#353D4A] rounded-lg max-w-md w-full p-4 shadow-2xl space-y-3"
+          >
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#252B36]">
               <div className="flex items-center gap-2">
                 <Rocket className="w-4 h-4 text-[#FF8A1F]" />
-                <h3 className="font-semibold text-xs text-[#E6E8EB] uppercase tracking-wider">Flight Vehicle Library</h3>
+                <h3 id="preset-modal-title" className="font-semibold text-xs text-[#E6E8EB] uppercase tracking-wider">
+                  Flight Vehicle Library
+                </h3>
               </div>
               <button 
                 onClick={() => setShowPresetModal(false)}
-                className="text-[#69717E] hover:text-[#E6E8EB] text-xs font-mono"
+                aria-label="Close modal"
+                className="text-[#69717E] hover:text-[#E6E8EB] p-1 rounded hover:bg-[#1B1F28]"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-1.5 my-3 max-h-72 overflow-y-auto pr-1">
+            <div className="space-y-1.5 my-2 max-h-72 overflow-y-auto pr-1">
               {ROCKET_PRESETS.map(preset => (
                 <button
                   key={preset.id}
