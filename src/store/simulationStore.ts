@@ -5,29 +5,40 @@ import type {
   CelestialBody, 
   AsteroidConfig, 
   ImpactTelemetry, 
-  FlightState 
+  FlightState,
+  SymmetryMode,
+  GeographicTarget
 } from '../types';
 import { ROCKET_PRESETS } from '../physics/rocket-math';
 import { CELESTIAL_PRESETS } from '../physics/n-body';
-import { calculateImpactPhysics, ASTEROID_DENSITIES } from '../physics/impact-physics';
+import { calculateImpactPhysics, ASTEROID_DENSITIES, GEOGRAPHIC_TARGETS } from '../physics/impact-physics';
 import { initFlightState } from '../physics/flight-dynamics';
 import { calculateAtmosphere } from '../physics/aerodynamics';
 
 export interface GlobalStore {
-  // Navigation
+  // Navigation & Responsive
   activeTab: AppTab;
+  isSidebarOpen: boolean;
   setActiveTab: (tab: AppTab) => void;
+  toggleSidebar: () => void;
 
   // Rocket Builder
   blueprint: RocketBlueprint;
   selectedPartInstanceId: string | null;
   selectedCatalogPartType: string | null;
+  symmetryMode: SymmetryMode;
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
+  setSymmetryMode: (mode: SymmetryMode) => void;
   setSelectedPartInstanceId: (id: string | null) => void;
   setSelectedCatalogPartType: (type: string | null) => void;
   addPartToBlueprint: (partType: string, x: number, y: number, stage?: number) => void;
   removePartFromBlueprint: (instanceId: string) => void;
   movePartInBlueprint: (instanceId: string, x: number, y: number) => void;
-  rotatePartInBlueprint: (instanceId: string) => void;
+  rotatePartInBlueprint: (instanceId: string, angleStep?: number) => void;
+  duplicatePartInBlueprint: (instanceId: string) => void;
   setPartStage: (instanceId: string, stage: number) => void;
   loadRocketPreset: (presetId: string) => void;
   clearRocketBlueprint: () => void;
@@ -59,6 +70,7 @@ export interface GlobalStore {
   isImpactSimulating: boolean;
   impactTriggerCounter: number;
   setAsteroidConfig: (updater: Partial<AsteroidConfig> | ((prev: AsteroidConfig) => AsteroidConfig)) => void;
+  setGeographicTarget: (target: GeographicTarget) => void;
   triggerImpactSimulation: () => void;
   resetImpactSimulation: () => void;
 
@@ -76,7 +88,20 @@ export interface GlobalStore {
 }
 
 export function createInitialState() {
-  const initialBlueprint = ROCKET_PRESETS[0];
+  // Try loading saved blueprint from localStorage
+  let savedBlueprint = ROCKET_PRESETS[0];
+  try {
+    const raw = localStorage.getItem('mission_control_blueprint');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.parts) && parsed.parts.length > 0) {
+        savedBlueprint = parsed;
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+
   const initialBodies = CELESTIAL_PRESETS[0].bodies;
   
   const initialAsteroidConfig: AsteroidConfig = {
@@ -87,7 +112,8 @@ export function createInitialState() {
     entryAngle: 45,
     targetBodyId: 'earth',
     targetSurfaceType: 'crystalline_rock',
-    targetAreaType: 'dense_metro'
+    targetAreaType: 'dense_metro',
+    geographicTarget: GEOGRAPHIC_TARGETS[0]
   };
 
   const initialAtm = calculateAtmosphere(0);
@@ -112,10 +138,10 @@ export function createInitialState() {
   };
 
   const initialImpactTelemetry = calculateImpactPhysics(initialAsteroidConfig);
-  const initialFlight = initFlightState(initialBlueprint);
+  const initialFlight = initFlightState(savedBlueprint);
 
   return {
-    blueprint: initialBlueprint,
+    blueprint: savedBlueprint,
     bodies: initialBodies,
     asteroidConfig: initialAsteroidConfig,
     windTunnel: initialWindTunnel,

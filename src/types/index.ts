@@ -5,6 +5,7 @@ export type AppTab = 'rocket-builder' | 'wind-tunnel' | 'celestial-sim' | 'aster
 // ==========================================
 
 export type PartCategory = 'command' | 'fuel' | 'engine' | 'aerodynamics' | 'staging' | 'utility';
+export type SymmetryMode = '1x' | '2x_mirror' | '2x_radial' | '3x' | '4x' | '6x' | '8x';
 
 export interface PartConnectionPoint {
   id: string;
@@ -41,10 +42,12 @@ export interface PlacedPart {
   partType: string;
   x: number; // Grid coordinates
   y: number;
-  rotation: number; // 0, 90, 180, 270 deg
+  rotation: number; // in degrees: 0, 15, 30, 45, 90, 180...
   stage: number; // 1, 2, 3...
   fuelPercentage: number; // 0 to 100
   isActivated?: boolean;
+  parentInstanceId?: string; // Attachment tree graph parent
+  isDisconnected?: boolean; // True if part is floating without physical attachment
 }
 
 export interface RocketBlueprint {
@@ -52,6 +55,7 @@ export interface RocketBlueprint {
   name: string;
   parts: PlacedPart[];
   staging: number[][]; // Array of stages containing instanceIds
+  crossfeedEnabled?: boolean;
 }
 
 export interface RocketAeroProperties {
@@ -66,7 +70,9 @@ export interface RocketAeroProperties {
   totalDeltaV: number;
   maxTWR: number;
   minTWR: number;
-  aerodynamicStabilityMargin: number; // distance between CoM and CoP
+  aerodynamicStabilityMargin: number; // distance between CoM and CoP (positive = stable)
+  disconnectedPartsCount: number;
+  isStructurallySound: boolean;
 }
 
 // ==========================================
@@ -107,6 +113,9 @@ export interface AeroTelemetry {
   shockwaveAngle: number; // degrees
   aerodynamicMoment: number; // kN*m (pitching moment)
   finControlEffectiveness: number;
+  reynoldsNumber: number;
+  skinFrictionCoefficient: number;
+  isStalled: boolean;
 }
 
 // ==========================================
@@ -137,6 +146,18 @@ export interface CelestialBody {
   trail: { x: number; y: number; z: number }[];
 }
 
+export interface ManeuverNode {
+  id: string;
+  targetBodyId: string;
+  timeToNodeSeconds: number;
+  deltaVPrograde: number; // m/s (+prograde / -retrograde)
+  deltaVNormal: number; // m/s (+normal / -antinormal)
+  deltaVRadial: number; // m/s (+radial out / -radial in)
+  totalDeltaV: number; // m/s
+  predictedApoapsisKm: number;
+  predictedPeriapsisKm: number;
+}
+
 export interface OrbitalElements {
   semiMajorAxis: number; // km
   eccentricity: number;
@@ -145,6 +166,8 @@ export interface OrbitalElements {
   orbitalPeriod: number; // seconds
   currentSpeed: number; // km/s
   escapeVelocity: number; // km/s
+  isEscapeTrajectory: boolean;
+  hyperbolicExcessSpeed?: number; // km/s
 }
 
 // ==========================================
@@ -152,8 +175,17 @@ export interface OrbitalElements {
 // ==========================================
 
 export type AsteroidComposition = 'rubble' | 'carbonaceous' | 'silicate' | 'iron_nickel' | 'cometary_ice';
+export type TargetAreaType = 'dense_metro' | 'major_city' | 'urban_suburbs' | 'small_town' | 'rural_plains' | 'uninhabited' | 'ocean_deep' | 'custom_geo';
 
-export type TargetAreaType = 'dense_metro' | 'major_city' | 'urban_suburbs' | 'small_town' | 'rural_plains' | 'uninhabited' | 'ocean_deep';
+export interface GeographicTarget {
+  latitude: number; // -90 to +90
+  longitude: number; // -180 to +180
+  name: string;
+  elevationM: number;
+  populationDensityPerKm2: number;
+  isOcean: boolean;
+  oceanDepthM?: number;
+}
 
 export interface AsteroidConfig {
   diameter: number; // meters (10m to 50,000m)
@@ -165,6 +197,7 @@ export interface AsteroidConfig {
   targetSurfaceType: 'crystalline_rock' | 'sedimentary_rock' | 'water_ocean' | 'ice_sheet';
   targetAreaType: TargetAreaType;
   customPopulation?: number;
+  geographicTarget?: GeographicTarget;
 }
 
 export interface ImpactTelemetry {
@@ -223,4 +256,11 @@ export interface FlightState {
   targetPlanetId: string;
   aborted: boolean;
   inOrbit: boolean;
+  isEscapeTrajectory: boolean;
+  reentryHeatFlux: number; // kW/m^2
+  plasmaTemperatureK: number;
+  vehicleSkinTempK: number;
+  isCrashed: boolean;
+  isDisintegrated: boolean;
+  crashImpactSpeed: number;
 }

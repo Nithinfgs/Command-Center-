@@ -1,13 +1,14 @@
 import type { CelestialBody, OrbitalElements } from '../types';
 
-export const G_SCALE = 6.6743e-11;
-export const SIM_G = 1500;
+export const G_NEWTON = 6.6743e-11;
+// Scaled gravitational constant for visual multi-body simulation
+export const SIM_G = 1200.0;
 
 export const CELESTIAL_PRESETS: { id: string; name: string; description: string; bodies: CelestialBody[] }[] = [
   {
     id: 'inner_solar_system',
     name: 'Inner Solar System',
-    description: 'The Sun, Mercury, Venus, Earth-Moon system, and Mars in calibrated coplanar orbits.',
+    description: 'The Sun, Mercury, Venus, Earth-Moon system, and Mars in calibrated Keplerian orbits.',
     bodies: [
       {
         id: 'sun',
@@ -18,8 +19,8 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
         density: 1.41,
         position: { x: 0, y: 0, z: 0 },
         velocity: { vx: 0, vy: 0, vz: 0 },
-        color: '#fbbf24',
-        secondaryColor: '#f59e0b',
+        color: '#FBBF24',
+        secondaryColor: '#F59E0B',
         hasRings: false,
         atmosphereDensity: 0,
         isFixed: true,
@@ -34,8 +35,8 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
         radius: 2439,
         density: 5.43,
         position: { x: 180, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: -4.2 },
-        color: '#94a3b8',
+        velocity: { vx: 0, vy: 0, vz: -4.8 },
+        color: '#94A3B8',
         hasRings: false,
         atmosphereDensity: 0.01,
         trail: []
@@ -48,10 +49,10 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
         radius: 6051,
         density: 5.24,
         position: { x: 300, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: -3.2 },
-        color: '#fde047',
+        velocity: { vx: 0, vy: 0, vz: -3.6 },
+        color: '#FDE047',
         atmosphereDensity: 92.0,
-        atmosphereColor: '#eab308',
+        atmosphereColor: '#EAB308',
         hasRings: false,
         trail: []
       },
@@ -63,12 +64,12 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
         radius: 6371,
         density: 5.51,
         position: { x: 450, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: -2.6 },
-        color: '#38bdf8',
-        secondaryColor: '#10b981',
+        velocity: { vx: 0, vy: 0, vz: -2.95 },
+        color: '#38BDF8',
+        secondaryColor: '#10B981',
         hasRings: false,
         atmosphereDensity: 1.0,
-        atmosphereColor: '#60a5fa',
+        atmosphereColor: '#60A5FA',
         trail: []
       },
       {
@@ -79,8 +80,8 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
         radius: 1737,
         density: 3.34,
         position: { x: 475, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: -3.3 },
-        color: '#cbd5e1',
+        velocity: { vx: 0, vy: 0, vz: -3.85 },
+        color: '#CBD5E1',
         hasRings: false,
         atmosphereDensity: 0,
         trail: []
@@ -93,12 +94,11 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
         radius: 3389,
         density: 3.93,
         position: { x: 620, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: -2.2 },
-        color: '#ef4444',
-        secondaryColor: '#f97316',
+        velocity: { vx: 0, vy: 0, vz: -2.5 },
+        color: '#EF4444',
+        secondaryColor: '#F97316',
         hasRings: false,
         atmosphereDensity: 0.06,
-        atmosphereColor: '#fca5a5',
         trail: []
       }
     ]
@@ -106,7 +106,7 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
   {
     id: 'jupiter_system',
     name: 'Jupiter & Galilean Moons',
-    description: 'Gas giant Jupiter with orbital dance of Io, Europa, Ganymede, and Callisto in orbital resonance.',
+    description: 'Gas giant Jupiter with Io, Europa, Ganymede, and Callisto in 4:2:1 Laplace resonance.',
     bodies: [
       {
         id: 'jupiter',
@@ -117,13 +117,13 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
         density: 1.33,
         position: { x: 0, y: 0, z: 0 },
         velocity: { vx: 0, vy: 0, vz: 0 },
-        color: '#d97706',
-        secondaryColor: '#fef3c7',
+        color: '#D97706',
+        secondaryColor: '#B45309',
         hasRings: true,
-        ringRadiusMin: 80,
-        ringRadiusMax: 140,
-        ringColor: '#b45309',
-        atmosphereDensity: 20.0,
+        ringRadiusMin: 90,
+        ringRadiusMax: 130,
+        ringColor: '#92400E',
+        atmosphereDensity: 15.0,
         isFixed: true,
         trail: []
       },
@@ -134,25 +134,25 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
         mass: 8.93e22,
         radius: 1821,
         density: 3.53,
-        position: { x: 160, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: -4.0 },
-        color: '#eab308',
+        position: { x: 140, y: 0, z: 0 },
+        velocity: { vx: 0, vy: 0, vz: -4.8 },
+        color: '#FACC15',
         hasRings: false,
-        atmosphereDensity: 0.01,
+        atmosphereDensity: 0.001,
         trail: []
       },
       {
         id: 'europa',
         name: 'Europa',
         type: 'ocean',
-        mass: 4.80e22,
+        mass: 4.8e22,
         radius: 1560,
         density: 3.01,
-        position: { x: 240, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: -3.3 },
-        color: '#e2e8f0',
+        position: { x: 220, y: 0, z: 0 },
+        velocity: { vx: 0, vy: 0, vz: -3.8 },
+        color: '#E0F2FE',
         hasRings: false,
-        atmosphereDensity: 0.02,
+        atmosphereDensity: 0.001,
         trail: []
       },
       {
@@ -163,114 +163,71 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
         radius: 2634,
         density: 1.94,
         position: { x: 340, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: -2.8 },
-        color: '#94a3b8',
+        velocity: { vx: 0, vy: 0, vz: -3.05 },
+        color: '#94A3B8',
         hasRings: false,
-        atmosphereDensity: 0,
-        trail: []
-      }
-    ]
-  },
-  {
-    id: 'three_body_chaos',
-    name: 'Chaotic 3-Body System',
-    description: 'Three stellar masses interacting in non-linear chaotic gravitational dance.',
-    bodies: [
-      {
-        id: 'star_alpha',
-        name: 'Star Alpha',
-        type: 'star',
-        mass: 1.5e30,
-        radius: 400000,
-        density: 1.2,
-        position: { x: -250, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: 1.8 },
-        color: '#38bdf8',
-        hasRings: false,
-        atmosphereDensity: 0,
-        luminosity: 1.2,
+        atmosphereDensity: 0.001,
         trail: []
       },
       {
-        id: 'star_beta',
-        name: 'Star Beta',
-        type: 'star',
-        mass: 1.5e30,
-        radius: 400000,
-        density: 1.2,
-        position: { x: 250, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: -1.8 },
-        color: '#f43f5e',
-        hasRings: false,
-        atmosphereDensity: 0,
-        luminosity: 1.2,
-        trail: []
-      },
-      {
-        id: 'star_gamma',
-        name: 'Star Gamma',
-        type: 'star',
-        mass: 1.5e30,
-        radius: 400000,
-        density: 1.2,
-        position: { x: 0, y: 0, z: 350 },
-        velocity: { vx: -1.5, vy: 0, vz: 0 },
-        color: '#facc15',
-        hasRings: false,
-        atmosphereDensity: 0,
-        luminosity: 1.0,
-        trail: []
-      }
-    ]
-  },
-  {
-    id: 'black_hole_singularity',
-    name: 'Supermassive Singularity',
-    description: 'Centrally collapsed gravitational singularity with extreme spacetime metric curvature.',
-    bodies: [
-      {
-        id: 'singularity',
-        name: 'Singularity Sagittarius-0',
-        type: 'black_hole',
-        mass: 8.0e30,
-        radius: 50000,
-        density: 1e8,
-        position: { x: 0, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: 0 },
-        color: '#000000',
-        secondaryColor: '#38bdf8',
-        hasRings: true,
-        ringRadiusMin: 40,
-        ringRadiusMax: 120,
-        ringColor: '#60a5fa',
-        atmosphereDensity: 0,
-        isFixed: true,
-        trail: []
-      },
-      {
-        id: 'relic_world',
-        name: 'Relic Iron Core',
+        id: 'callisto',
+        name: 'Callisto',
         type: 'rocky',
-        mass: 8.0e24,
-        radius: 5000,
-        density: 7.8,
-        position: { x: 280, y: 0, z: 0 },
-        velocity: { vx: 0, vy: 0, vz: -6.5 },
-        color: '#e2e8f0',
+        mass: 1.08e23,
+        radius: 2410,
+        density: 1.83,
+        position: { x: 500, y: 0, z: 0 },
+        velocity: { vx: 0, vy: 0, vz: -2.5 },
+        color: '#64748B',
+        hasRings: false,
+        atmosphereDensity: 0.001,
+        trail: []
+      }
+    ]
+  },
+  {
+    id: 'three_body_chaotic',
+    name: 'Chaotic 3-Body Problem (Figure-8)',
+    description: 'Three equal mass stellar bodies locked in an unstable, chaotic gravitational dance.',
+    bodies: [
+      {
+        id: 'star_a',
+        name: 'Alpha Prime',
+        type: 'star',
+        mass: 1e30,
+        radius: 40000,
+        density: 2.0,
+        position: { x: -250, y: 0, z: -100 },
+        velocity: { vx: 1.2, vy: 0, vz: 2.5 },
+        color: '#38BDF8',
         hasRings: false,
         atmosphereDensity: 0,
         trail: []
       },
       {
-        id: 'frozen_comet',
-        name: 'Relativistic Comet',
-        type: 'ice_giant',
-        mass: 1.0e22,
-        radius: 1200,
-        density: 1.0,
-        position: { x: 500, y: 0, z: -100 },
-        velocity: { vx: 2.0, vy: 0, vz: -4.8 },
-        color: '#38bdf8',
+        id: 'star_b',
+        name: 'Beta Centauri',
+        type: 'star',
+        mass: 1e30,
+        radius: 40000,
+        density: 2.0,
+        position: { x: 250, y: 0, z: -100 },
+        velocity: { vx: -1.2, vy: 0, vz: 2.5 },
+        color: '#F43F5E',
+        hasRings: false,
+        atmosphereDensity: 0,
+        trail: []
+      },
+      {
+        id: 'star_c',
+        name: 'Gamma Sol',
+        type: 'star',
+        mass: 1e30,
+        radius: 40000,
+        density: 2.0,
+        position: { x: 0, y: 0, z: 200 },
+        velocity: { vx: 0, vy: 0, vz: -5.0 },
+        color: '#FBBF24',
         hasRings: false,
         atmosphereDensity: 0,
         trail: []
@@ -279,16 +236,24 @@ export const CELESTIAL_PRESETS: { id: string; name: string; description: string;
   }
 ];
 
+/**
+ * High-precision RK4 N-body gravitational step with collision merger handling
+ */
 export function stepNBodySimulation(bodies: CelestialBody[], dt: number): CelestialBody[] {
-  const n = bodies.length;
-  if (n === 0) return bodies;
-
-  const updated = bodies.map(b => ({
+  let updated = bodies.map(b => ({
     ...b,
     position: { ...b.position },
     velocity: { ...b.velocity },
     trail: [...b.trail]
   }));
+
+  const n = updated.length;
+  if (n === 0) return updated;
+
+  // Normalized mass mapping for physical G acceleration
+  const getMassScaled = (mass: number) => {
+    return Math.max(0.1, Math.log10(Math.max(1e18, mass)) / 28);
+  };
 
   const getAccelerations = (positions: { x: number; y: number; z: number }[]) => {
     const accels: { ax: number; ay: number; az: number }[] = [];
@@ -305,11 +270,11 @@ export function stepNBodySimulation(bodies: CelestialBody[], dt: number): Celest
           const dx = positions[j].x - positions[i].x;
           const dy = positions[j].y - positions[i].y;
           const dz = positions[j].z - positions[i].z;
-          const distSq = dx * dx + dy * dy + dz * dz + 100;
+          const distSq = dx * dx + dy * dy + dz * dz + 4.0; // minimal softening to avoid singularity
           const dist = Math.sqrt(distSq);
 
-          const massFactor = Math.log10(Math.max(1e20, updated[j].mass)) / 30;
-          const f = (SIM_G * massFactor) / distSq;
+          const massJ = getMassScaled(updated[j].mass);
+          const f = (SIM_G * massJ) / distSq;
 
           ax += f * (dx / dist);
           ay += f * (dy / dist);
@@ -323,6 +288,7 @@ export function stepNBodySimulation(bodies: CelestialBody[], dt: number): Celest
     return accels;
   };
 
+  // RK4 Integration
   const pos0 = updated.map(b => b.position);
   const vel0 = updated.map(b => b.velocity);
 
@@ -366,61 +332,116 @@ export function stepNBodySimulation(bodies: CelestialBody[], dt: number): Celest
     b.position.z += b.velocity.vz * dt;
 
     b.trail.push({ x: b.position.x, y: b.position.y, z: b.position.z });
-    if (b.trail.length > 250) {
+    if (b.trail.length > 260) {
       b.trail.shift();
     }
   }
 
-  return updated;
+  // Physical Body Collisions & Kinetic Mergers
+  const survived: CelestialBody[] = [];
+  const mergedIds = new Set<string>();
+
+  for (let i = 0; i < updated.length; i++) {
+    if (mergedIds.has(updated[i].id)) continue;
+    let b1 = updated[i];
+
+    for (let j = i + 1; j < updated.length; j++) {
+      if (mergedIds.has(updated[j].id)) continue;
+      const b2 = updated[j];
+
+      const dx = b2.position.x - b1.position.x;
+      const dy = b2.position.y - b1.position.y;
+      const dz = b2.position.z - b1.position.z;
+      const dist = Math.hypot(dx, dy, dz);
+
+      // Collision threshold based on physical body radii
+      const r1 = Math.max(4, Math.log10(b1.radius) * 2.5);
+      const r2 = Math.max(4, Math.log10(b2.radius) * 2.5);
+
+      if (dist < (r1 + r2) * 0.7) {
+        // Inelastic collision conservation of momentum
+        const totalMass = b1.mass + b2.mass;
+        const newVx = (b1.mass * b1.velocity.vx + b2.mass * b2.velocity.vx) / totalMass;
+        const newVy = (b1.mass * b1.velocity.vy + b2.mass * b2.velocity.vy) / totalMass;
+        const newVz = (b1.mass * b1.velocity.vz + b2.mass * b2.velocity.vz) / totalMass;
+
+        b1 = {
+          ...b1,
+          mass: totalMass,
+          radius: Math.cbrt(Math.pow(b1.radius, 3) + Math.pow(b2.radius, 3)),
+          velocity: { vx: newVx, vy: newVy, vz: newVz }
+        };
+
+        mergedIds.add(b2.id);
+      }
+    }
+
+    survived.push(b1);
+  }
+
+  return survived;
 }
 
 export function calculateOrbitalElements(body: CelestialBody, primary: CelestialBody): OrbitalElements {
   const dx = body.position.x - primary.position.x;
   const dy = body.position.y - primary.position.y;
   const dz = body.position.z - primary.position.z;
-  const r = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  const r = Math.hypot(dx, dy, dz);
 
   const dvx = body.velocity.vx - primary.velocity.vx;
   const dvy = body.velocity.vy - primary.velocity.vy;
   const dvz = body.velocity.vz - primary.velocity.vz;
-  const v = Math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
+  const v = Math.hypot(dvx, dvy, dvz);
 
-  const mu = SIM_G * (Math.log10(Math.max(1e20, primary.mass)) / 30) * 1000;
-  
+  const massScaled = Math.max(0.1, Math.log10(Math.max(1e18, primary.mass)) / 28);
+  const mu = SIM_G * massScaled * 1000;
+
   const epsilon = (v * v) / 2 - mu / Math.max(1, r);
 
   let a = r;
-  if (Math.abs(epsilon) > 0.001) {
+  let isEscapeTrajectory = false;
+  let hyperbolicExcessSpeed = 0;
+
+  if (epsilon < 0) {
     a = -mu / (2 * epsilon);
+  } else {
+    isEscapeTrajectory = true;
+    a = mu / (2 * Math.max(1e-4, epsilon));
+    hyperbolicExcessSpeed = Math.sqrt(2 * epsilon);
   }
 
   const rxv_x = dy * dvz - dz * dvy;
   const rxv_y = dz * dvx - dx * dvz;
   const rxv_z = dx * dvy - dy * dvx;
-  const h = Math.sqrt(rxv_x * rxv_x + rxv_y * rxv_y + rxv_z * rxv_z);
+  const h = Math.hypot(rxv_x, rxv_y, rxv_z);
 
   let e = 0;
   if (a > 0 && mu > 0) {
     const term = (h * h) / (a * mu);
-    e = Math.sqrt(Math.max(0, 1 - term));
+    e = isEscapeTrajectory ? Math.sqrt(1 + term) : Math.sqrt(Math.max(0, 1 - term));
   }
 
   const periapsis = a * (1 - e);
-  const apoapsis = a * (1 + e);
-  const orbitalPeriod = a > 0 ? 2 * Math.PI * Math.sqrt(Math.pow(a, 3) / Math.max(1, mu)) : 0;
+  const apoapsis = isEscapeTrajectory ? Infinity : a * (1 + e);
+  const orbitalPeriod = !isEscapeTrajectory && a > 0 ? 2 * Math.PI * Math.sqrt(Math.pow(a, 3) / Math.max(1, mu)) : 0;
   const escapeVelocity = Math.sqrt((2 * mu) / Math.max(1, r));
 
   return {
     semiMajorAxis: Math.round(a),
     eccentricity: parseFloat(e.toFixed(3)),
-    periapsis: Math.round(periapsis),
-    apoapsis: Math.round(apoapsis),
+    periapsis: Math.round(Math.max(0, periapsis)),
+    apoapsis: isEscapeTrajectory ? Infinity : Math.round(apoapsis),
     orbitalPeriod: Math.round(orbitalPeriod),
     currentSpeed: parseFloat(v.toFixed(2)),
-    escapeVelocity: parseFloat(escapeVelocity.toFixed(2))
+    escapeVelocity: parseFloat(escapeVelocity.toFixed(2)),
+    isEscapeTrajectory,
+    hyperbolicExcessSpeed: isEscapeTrajectory ? parseFloat(hyperbolicExcessSpeed.toFixed(2)) : undefined
   };
 }
 
+/**
+ * Spacetime metric curvature depth calculation
+ */
 export function calculateSpacetimeDepression(x: number, z: number, bodies: CelestialBody[]): number {
   let depression = 0;
   for (const b of bodies) {
@@ -428,8 +449,37 @@ export function calculateSpacetimeDepression(x: number, z: number, bodies: Celes
     const dz = z - b.position.z;
     const distSq = dx * dx + dz * dz + 400;
     const massFactor = Math.log10(Math.max(1e20, b.mass)) / 30;
-    const depth = (massFactor * 4500) / Math.sqrt(distSq);
+    const depth = (massFactor * 4200) / Math.sqrt(distSq);
     depression -= depth;
   }
   return depression;
+}
+
+/**
+ * Computes Hohmann transfer burn delta-Vs between two concentric circular orbits
+ */
+export function calculateHohmannTransfer(
+  r1: number,
+  r2: number,
+  centralMassKg: number
+): { deltaV1: number; deltaV2: number; totalDeltaV: number; transferTimeSec: number } {
+  const mu = (G_NEWTON * centralMassKg) / 1e9; // scaled
+  const v1 = Math.sqrt(mu / r1);
+  const v2 = Math.sqrt(mu / r2);
+
+  const aTransfer = (r1 + r2) / 2;
+  const vTransfer1 = Math.sqrt(mu * (2 / r1 - 1 / aTransfer));
+  const vTransfer2 = Math.sqrt(mu * (2 / r2 - 1 / aTransfer));
+
+  const dv1 = Math.abs(vTransfer1 - v1);
+  const dv2 = Math.abs(v2 - vTransfer2);
+
+  const transferTime = Math.PI * Math.sqrt(Math.pow(aTransfer, 3) / mu);
+
+  return {
+    deltaV1: parseFloat(dv1.toFixed(2)),
+    deltaV2: parseFloat(dv2.toFixed(2)),
+    totalDeltaV: parseFloat((dv1 + dv2).toFixed(2)),
+    transferTimeSec: Math.round(transferTime)
+  };
 }

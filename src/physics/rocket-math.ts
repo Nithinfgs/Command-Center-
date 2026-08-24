@@ -1,4 +1,4 @@
-import type { PartDefinition, PlacedPart, RocketAeroProperties, RocketBlueprint } from '../types';
+import type { PartDefinition, PlacedPart, RocketAeroProperties, RocketBlueprint, SymmetryMode } from '../types';
 
 export const GRID_CELL_SIZE = 20;
 
@@ -102,19 +102,19 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
   'tank_heavy_4m': {
     type: 'tank_heavy_4m',
     category: 'fuel',
-    name: 'Cryogenic Booster Tank B-800 (4m)',
-    description: 'High-capacity 4-meter liquid oxygen/liquid hydrogen tank with thermal insulation foam.',
+    name: 'Heavy Core Tank (4m)',
+    description: 'Heavy 4-meter diameter cryogenic main stage propellant tank for booster cores.',
     width: 4,
-    height: 6,
-    dryMass: 2.8,
-    fuelMass: 24.0,
+    height: 8,
+    dryMass: 3.2,
+    fuelMass: 28.0,
     dragCoeff: 0.18,
-    heatTolerance: 1800,
-    color: '#d97706',
-    texturePattern: 'smooth',
+    heatTolerance: 1700,
+    color: '#f1f5f9',
+    texturePattern: 'ribbed',
     connectionPoints: [
-      { id: 'top', type: 'top', x: 0, y: -3 },
-      { id: 'bottom', type: 'bottom', x: 0, y: 3 },
+      { id: 'top', type: 'top', x: 0, y: -4 },
+      { id: 'bottom', type: 'bottom', x: 0, y: 4 },
       { id: 'left', type: 'left', x: -2, y: 0 },
       { id: 'right', type: 'right', x: 2, y: 0 }
     ]
@@ -148,13 +148,13 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
     height: 2,
     dryMass: 0.65,
     fuelMass: 0,
-    thrust: 845,
+    thrust: 850,
     seaLevelThrust: 760,
     ispVac: 311,
     ispAtm: 282,
-    dragCoeff: 0.45,
+    dragCoeff: 0.35,
     heatTolerance: 2800,
-    gimbalAngle: 5.0,
+    gimbalAngle: 5,
     color: '#475569',
     texturePattern: 'engine-bell',
     connectionPoints: [
@@ -164,8 +164,8 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
   'engine_raptor': {
     type: 'engine_raptor',
     category: 'engine',
-    name: 'Raptor Full-Flow Staged Engine',
-    description: 'Deep-throttling methalox full-flow staged combustion engine with supreme chamber pressure (300 bar).',
+    name: 'Apex Full-Flow Methalox Engine',
+    description: 'Advanced full-flow staged combustion engine with extreme chamber pressure and vacuum Isp.',
     width: 2,
     height: 3,
     dryMass: 1.5,
@@ -173,10 +173,10 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
     thrust: 2200,
     seaLevelThrust: 2000,
     ispVac: 363,
-    ispAtm: 327,
-    dragCoeff: 0.42,
-    heatTolerance: 3400,
-    gimbalAngle: 7.0,
+    ispAtm: 330,
+    dragCoeff: 0.38,
+    heatTolerance: 3300,
+    gimbalAngle: 8,
     color: '#334155',
     texturePattern: 'engine-bell',
     connectionPoints: [
@@ -186,41 +186,41 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
   'engine_vacuum_expand': {
     type: 'engine_vacuum_expand',
     category: 'engine',
-    name: 'Aero-Vac High-Expansion Upper Engine',
-    description: 'Gigantic niobium-alloy expansion bell nozzle optimized strictly for vacuum delta-V efficiency.',
+    name: 'Nebula Vacuum Hydrolox Engine',
+    description: 'High-expansion vacuum nozzle optimized for orbital transfer and lunar excursion burns.',
     width: 2,
-    height: 3,
-    dryMass: 0.9,
+    height: 2.5,
+    dryMass: 0.45,
     fuelMass: 0,
-    thrust: 980,
-    seaLevelThrust: 350,
-    ispVac: 380,
-    ispAtm: 200,
-    dragCoeff: 0.65,
-    heatTolerance: 2600,
-    gimbalAngle: 3.5,
-    color: '#1e293b',
+    thrust: 110,
+    seaLevelThrust: 35,
+    ispVac: 452,
+    ispAtm: 180,
+    dragCoeff: 0.42,
+    heatTolerance: 2200,
+    gimbalAngle: 4,
+    color: '#64748b',
     texturePattern: 'engine-bell',
     connectionPoints: [
-      { id: 'top', type: 'top', x: 0, y: -1.5 }
+      { id: 'top', type: 'top', x: 0, y: -1.25 }
     ]
   },
   'engine_cluster_quad': {
     type: 'engine_cluster_quad',
     category: 'engine',
-    name: 'Quad-Cluster Titan Core Thruster',
-    description: 'Heavy 4-chamber booster cluster generating massive liftoff thrust for 4m stages.',
+    name: 'Titan Quad Heavy Engine Cluster',
+    description: '4x clustered heavy booster engines for super-heavy orbital payload liftoff.',
     width: 4,
     height: 3,
     dryMass: 4.2,
     fuelMass: 0,
-    thrust: 7500,
-    seaLevelThrust: 6800,
-    ispVac: 305,
-    ispAtm: 275,
-    dragCoeff: 0.55,
-    heatTolerance: 3200,
-    gimbalAngle: 4.0,
+    thrust: 6800,
+    seaLevelThrust: 6100,
+    ispVac: 320,
+    ispAtm: 290,
+    dragCoeff: 0.48,
+    heatTolerance: 3400,
+    gimbalAngle: 6,
     color: '#1e293b',
     texturePattern: 'engine-bell',
     connectionPoints: [
@@ -230,161 +230,38 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
   'srb_heavy': {
     type: 'srb_heavy',
     category: 'engine',
-    name: 'Solid Rocket Booster Titan-Castor',
-    description: 'Heavy solid rocket booster. High initial thrust, constant burn profile, non-throttleable.',
-    width: 1,
+    name: 'Castor Solid Rocket Booster',
+    description: 'Strap-on high-thrust solid booster providing intense liftoff impulse during maximum dynamic pressure.',
+    width: 2,
     height: 8,
-    dryMass: 3.0,
-    fuelMass: 18.0,
-    thrust: 2800,
-    seaLevelThrust: 2500,
-    ispVac: 270,
-    ispAtm: 250,
-    dragCoeff: 0.30,
-    heatTolerance: 2200,
+    dryMass: 3.5,
+    fuelMass: 22.0,
+    thrust: 3400,
+    seaLevelThrust: 3100,
+    ispVac: 268,
+    ispAtm: 242,
+    dragCoeff: 0.22,
+    heatTolerance: 2600,
     color: '#e2e8f0',
     texturePattern: 'ribbed',
     connectionPoints: [
-      { id: 'radial_left', type: 'left', x: -0.5, y: 0 },
-      { id: 'radial_right', type: 'right', x: 0.5, y: 0 },
+      { id: 'radial', type: 'radial', x: 0, y: 0 },
       { id: 'top', type: 'top', x: 0, y: -4 }
-    ]
-  },
-  'nosecone_2m': {
-    type: 'nosecone_2m',
-    category: 'aerodynamics',
-    name: 'Aerodynamic Ogive Nosecone (2m)',
-    description: 'Low-drag parabolic nose fairing for minimizing supersonic wave drag and Max-Q pressure.',
-    width: 2,
-    height: 2,
-    dryMass: 0.15,
-    fuelMass: 0,
-    dragCoeff: 0.08,
-    heatTolerance: 2200,
-    color: '#f1f5f9',
-    texturePattern: 'cone',
-    connectionPoints: [
-      { id: 'bottom', type: 'bottom', x: 0, y: 1 }
-    ]
-  },
-  'nosecone_slant_left': {
-    type: 'nosecone_slant_left',
-    category: 'aerodynamics',
-    name: 'Slanted Booster Cap (Left)',
-    description: 'Canted aerodynamic cap designed specifically for radial booster attachment.',
-    width: 1,
-    height: 2,
-    dryMass: 0.1,
-    fuelMass: 0,
-    dragCoeff: 0.12,
-    heatTolerance: 2000,
-    color: '#e2e8f0',
-    texturePattern: 'cone',
-    connectionPoints: [
-      { id: 'bottom', type: 'bottom', x: 0, y: 1 },
-      { id: 'right', type: 'right', x: 0.5, y: 0 }
-    ]
-  },
-  'nosecone_slant_right': {
-    type: 'nosecone_slant_right',
-    category: 'aerodynamics',
-    name: 'Slanted Booster Cap (Right)',
-    description: 'Canted aerodynamic cap designed specifically for radial booster attachment.',
-    width: 1,
-    height: 2,
-    dryMass: 0.1,
-    fuelMass: 0,
-    dragCoeff: 0.12,
-    heatTolerance: 2000,
-    color: '#e2e8f0',
-    texturePattern: 'cone',
-    connectionPoints: [
-      { id: 'bottom', type: 'bottom', x: 0, y: 1 },
-      { id: 'left', type: 'left', x: -0.5, y: 0 }
-    ]
-  },
-  'fin_delta': {
-    type: 'fin_delta',
-    category: 'aerodynamics',
-    name: 'Delta Stabilizer Fin',
-    description: 'Large fixed delta wing surface providing passive aerodynamic stability and restoring moment.',
-    width: 2,
-    height: 2,
-    dryMass: 0.08,
-    fuelMass: 0,
-    dragCoeff: 0.05,
-    heatTolerance: 2000,
-    color: '#38bdf8',
-    texturePattern: 'fin',
-    connectionPoints: [
-      { id: 'radial', type: 'radial', x: 0, y: 0 }
-    ]
-  },
-  'fin_grid_titanium': {
-    type: 'fin_grid_titanium',
-    category: 'aerodynamics',
-    name: 'Titanium Grid Fin (Hypersonic)',
-    description: 'Active steerable grid fin providing aerodynamic control authority through supersonic & hypersonic regimes.',
-    width: 1,
-    height: 2,
-    dryMass: 0.12,
-    fuelMass: 0,
-    dragCoeff: 0.14,
-    heatTolerance: 3100,
-    color: '#64748b',
-    texturePattern: 'fin',
-    connectionPoints: [
-      { id: 'radial', type: 'radial', x: 0, y: 0 }
-    ]
-  },
-  'heatshield_2m': {
-    type: 'heatshield_2m',
-    category: 'aerodynamics',
-    name: 'Ablative Heat Shield (2m PICA-X)',
-    description: 'Carbon-phenolic thermal protection shield rated for extreme hypersonic stagnation heating.',
-    width: 2,
-    height: 1,
-    dryMass: 0.4,
-    fuelMass: 0,
-    dragCoeff: 0.85,
-    heatTolerance: 3800,
-    color: '#1e293b',
-    texturePattern: 'tiled',
-    connectionPoints: [
-      { id: 'top', type: 'top', x: 0, y: -0.5 },
-      { id: 'bottom', type: 'bottom', x: 0, y: 0.5 }
-    ]
-  },
-  'fairing_payload_4m': {
-    type: 'fairing_payload_4m',
-    category: 'aerodynamics',
-    name: 'Aerodynamic Payload Fairing (4m)',
-    description: 'Jettisonable composite aerodynamic shroud protecting satellites during atmospheric ascent.',
-    width: 4,
-    height: 5,
-    dryMass: 0.8,
-    fuelMass: 0,
-    dragCoeff: 0.11,
-    heatTolerance: 2400,
-    color: '#f8fafc',
-    texturePattern: 'smooth',
-    connectionPoints: [
-      { id: 'bottom', type: 'bottom', x: 0, y: 2.5 }
     ]
   },
   'decoupler_stack_2m': {
     type: 'decoupler_stack_2m',
     category: 'staging',
-    name: 'Stack Decoupler TR-18A (2m)',
-    description: 'Pneumatic explosive separation ring for staging rocket sections.',
+    name: 'Pneumatic Stack Decoupler (2m)',
+    description: 'Pneumatically-actuated 2m interstage separation ring with redundant explosive bolts.',
     width: 2,
     height: 1,
-    dryMass: 0.1,
+    dryMass: 0.15,
     fuelMass: 0,
-    dragCoeff: 0.15,
-    heatTolerance: 1800,
-    color: '#f59e0b',
-    texturePattern: 'ribbed',
+    dragCoeff: 0.12,
+    heatTolerance: 2000,
+    color: '#eab308',
+    texturePattern: 'tiled',
     connectionPoints: [
       { id: 'top', type: 'top', x: 0, y: -0.5 },
       { id: 'bottom', type: 'bottom', x: 0, y: 0.5 }
@@ -393,16 +270,16 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
   'decoupler_stack_4m': {
     type: 'decoupler_stack_4m',
     category: 'staging',
-    name: 'Heavy Interstage Decoupler (4m)',
-    description: 'Heavy-duty ring decoupler for 4m booster stage separation.',
+    name: 'Heavy Stage Decoupler (4m)',
+    description: 'Heavy 4m pneumatic interstage ring for primary booster separation.',
     width: 4,
     height: 1,
-    dryMass: 0.25,
+    dryMass: 0.4,
     fuelMass: 0,
-    dragCoeff: 0.18,
-    heatTolerance: 1800,
-    color: '#f59e0b',
-    texturePattern: 'ribbed',
+    dragCoeff: 0.14,
+    heatTolerance: 2200,
+    color: '#eab308',
+    texturePattern: 'tiled',
     connectionPoints: [
       { id: 'top', type: 'top', x: 0, y: -0.5 },
       { id: 'bottom', type: 'bottom', x: 0, y: 0.5 }
@@ -411,19 +288,122 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
   'decoupler_radial': {
     type: 'decoupler_radial',
     category: 'staging',
-    name: 'Radial Booster Decoupler TT-70',
-    description: 'Side-mounted explosive bolts with outward push-springs to jettison booster tanks safely away.',
+    name: 'Hydraulic Radial Decoupler',
+    description: 'Outward-pushing hydraulic piston bracket for side booster jettison.',
     width: 1,
     height: 2,
-    dryMass: 0.05,
+    dryMass: 0.08,
     fuelMass: 0,
-    dragCoeff: 0.15,
-    heatTolerance: 1800,
-    color: '#d97706',
-    texturePattern: 'ribbed',
+    dragCoeff: 0.18,
+    heatTolerance: 1900,
+    color: '#ca8a04',
+    texturePattern: 'smooth',
     connectionPoints: [
       { id: 'left', type: 'left', x: -0.5, y: 0 },
       { id: 'right', type: 'right', x: 0.5, y: 0 }
+    ]
+  },
+  'nosecone_2m': {
+    type: 'nosecone_2m',
+    category: 'aerodynamics',
+    name: 'Aerodynamic Ogive Nose Cone (2m)',
+    description: 'Low-drag ogive fairing tip minimizing transonic wave drag and shock wave detachment.',
+    width: 2,
+    height: 2,
+    dryMass: 0.2,
+    fuelMass: 0,
+    dragCoeff: 0.06,
+    heatTolerance: 2400,
+    color: '#f8fafc',
+    texturePattern: 'cone',
+    connectionPoints: [
+      { id: 'bottom', type: 'bottom', x: 0, y: 1 }
+    ]
+  },
+  'nosecone_slant_left': {
+    type: 'nosecone_slant_left',
+    category: 'aerodynamics',
+    name: 'Slanted Radial Nose Cone (Left)',
+    description: 'Asymmetric outward-deflecting nose cone for strapped booster stages.',
+    width: 2,
+    height: 2,
+    dryMass: 0.2,
+    fuelMass: 0,
+    dragCoeff: 0.08,
+    heatTolerance: 2200,
+    color: '#f8fafc',
+    texturePattern: 'cone',
+    connectionPoints: [
+      { id: 'bottom', type: 'bottom', x: 0, y: 1 }
+    ]
+  },
+  'nosecone_slant_right': {
+    type: 'nosecone_slant_right',
+    category: 'aerodynamics',
+    name: 'Slanted Radial Nose Cone (Right)',
+    description: 'Asymmetric outward-deflecting nose cone for strapped booster stages.',
+    width: 2,
+    height: 2,
+    dryMass: 0.2,
+    fuelMass: 0,
+    dragCoeff: 0.08,
+    heatTolerance: 2200,
+    color: '#f8fafc',
+    texturePattern: 'cone',
+    connectionPoints: [
+      { id: 'bottom', type: 'bottom', x: 0, y: 1 }
+    ]
+  },
+  'fin_delta': {
+    type: 'fin_delta',
+    category: 'aerodynamics',
+    name: 'Delta Stabilizer Fin',
+    description: 'Passive aerodynamic fin creating restorative pitching and yawing moment during ascent.',
+    width: 2,
+    height: 3,
+    dryMass: 0.12,
+    fuelMass: 0,
+    dragCoeff: 0.04,
+    heatTolerance: 2100,
+    color: '#e2e8f0',
+    texturePattern: 'fin',
+    connectionPoints: [
+      { id: 'radial', type: 'radial', x: 0, y: 0 }
+    ]
+  },
+  'fin_grid_titanium': {
+    type: 'fin_grid_titanium',
+    category: 'aerodynamics',
+    name: 'Hypersonic Titanium Grid Fin',
+    description: 'Actuated lattice grid fin providing extreme 3-axis control authority from Mach 4 to touchdown.',
+    width: 1.5,
+    height: 2,
+    dryMass: 0.18,
+    fuelMass: 0,
+    dragCoeff: 0.12,
+    heatTolerance: 2900,
+    color: '#475569',
+    texturePattern: 'tiled',
+    connectionPoints: [
+      { id: 'radial', type: 'radial', x: 0, y: 0 }
+    ]
+  },
+  'heatshield_2m': {
+    type: 'heatshield_2m',
+    category: 'aerodynamics',
+    name: 'Ablative Heatshield (2m)',
+    description: 'Phenolic-impregnated carbon ablative heatshield capable of surviving 3,500K atmospheric entry.',
+    width: 2,
+    height: 1,
+    dryMass: 0.35,
+    fuelMass: 0,
+    dragCoeff: 0.65,
+    heatTolerance: 3800,
+    color: '#451a03',
+    texturePattern: 'smooth',
+    connectionPoints: [
+      { id: 'top', type: 'top', x: 0, y: -0.5 },
+      { id: 'bottom', type: 'bottom', x: 0, y: 0.5 }
     ]
   },
   'rcs_quad_block': {
@@ -464,6 +444,129 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
   }
 };
 
+/**
+ * Validates the structural attachment graph of the vehicle.
+ * Ensures every placed part is physically adjacent / connected to the vehicle root tree.
+ */
+export function validateStructuralConnectivity(parts: PlacedPart[]): {
+  connectedIds: Set<string>;
+  disconnectedIds: string[];
+  isFullyConnected: boolean;
+} {
+  if (parts.length === 0) {
+    return { connectedIds: new Set(), disconnectedIds: [], isFullyConnected: true };
+  }
+
+  // Find root candidates (Command pods, probes, or bottom center booster tanks)
+  const rootPart = parts.find(p => {
+    const def = PARTS_CATALOG[p.partType];
+    return def && (def.category === 'command' || p.x === 0);
+  }) || parts[0];
+
+  const connectedIds = new Set<string>();
+  connectedIds.add(rootPart.instanceId);
+
+  // Adjacency graph expansion
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const part of parts) {
+      if (connectedIds.has(part.instanceId)) continue;
+      const def = PARTS_CATALOG[part.partType];
+      if (!def) continue;
+
+      const partLeft = part.x - def.width / 2;
+      const partRight = part.x + def.width / 2;
+      const partTop = part.y - def.height / 2;
+      const partBottom = part.y + def.height / 2;
+
+      // Check if physically adjacent / touching any already connected part
+      for (const connId of Array.from(connectedIds)) {
+        const other = parts.find(p => p.instanceId === connId);
+        if (!other) continue;
+        const otherDef = PARTS_CATALOG[other.partType];
+        if (!otherDef) continue;
+
+        const otherLeft = other.x - otherDef.width / 2;
+        const otherRight = other.x + otherDef.width / 2;
+        const otherTop = other.y - otherDef.height / 2;
+        const otherBottom = other.y + otherDef.height / 2;
+
+        const isXOverlap = partLeft < otherRight + 0.3 && partRight > otherLeft - 0.3;
+        const isYOverlap = partTop < otherBottom + 0.3 && partBottom > otherTop - 0.3;
+
+        // Bounding box adjacency tolerance
+        if (isXOverlap && isYOverlap) {
+          connectedIds.add(part.instanceId);
+          changed = true;
+          break;
+        }
+      }
+    }
+  }
+
+  const disconnectedIds = parts.filter(p => !connectedIds.has(p.instanceId)).map(p => p.instanceId);
+  return {
+    connectedIds,
+    disconnectedIds,
+    isFullyConnected: disconnectedIds.length === 0
+  };
+}
+
+/**
+ * Calculates symmetric counterpart positions for builder tools.
+ */
+export function getSymmetricPlacements(
+  partType: string,
+  x: number,
+  y: number,
+  rotation: number,
+  symmetry: SymmetryMode
+): { x: number; y: number; rotation: number; partType: string }[] {
+  if (symmetry === '1x' || x === 0) {
+    return [{ x, y, rotation, partType }];
+  }
+
+  const results: { x: number; y: number; rotation: number; partType: string }[] = [
+    { x, y, rotation, partType }
+  ];
+
+  if (symmetry === '2x_mirror') {
+    // Mirrored across central axis X = 0
+    let mirrorType = partType;
+    if (partType === 'nosecone_slant_left') mirrorType = 'nosecone_slant_right';
+    else if (partType === 'nosecone_slant_right') mirrorType = 'nosecone_slant_left';
+
+    results.push({
+      x: -x,
+      y,
+      rotation: (360 - rotation) % 360,
+      partType: mirrorType
+    });
+  } else if (symmetry === '2x_radial') {
+    results.push({ x: -x, y, rotation, partType });
+  } else if (symmetry === '3x') {
+    const r = Math.sqrt(x * x + y * y);
+    const angle = Math.atan2(y, x);
+    results.push(
+      { x: Math.round(r * Math.cos(angle + (2 * Math.PI) / 3) * 10) / 10, y: Math.round(r * Math.sin(angle + (2 * Math.PI) / 3) * 10) / 10, rotation, partType },
+      { x: Math.round(r * Math.cos(angle + (4 * Math.PI) / 3) * 10) / 10, y: Math.round(r * Math.sin(angle + (4 * Math.PI) / 3) * 10) / 10, rotation, partType }
+    );
+  } else if (symmetry === '4x') {
+    results.push(
+      { x: -x, y, rotation, partType },
+      { x: -y, y: x, rotation: (rotation + 90) % 360, partType },
+      { x: y, y: -x, rotation: (rotation + 270) % 360, partType }
+    );
+  }
+
+  return results;
+}
+
+/**
+ * Calculates physical, aerodynamic, staging, and mass properties of the assembled rocket.
+ * Incorporates aerodynamic body occlusion and structural connectivity graph validation.
+ */
 export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAeroProperties {
   if (!blueprint.parts.length) {
     return {
@@ -478,25 +581,36 @@ export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAer
       totalDeltaV: 0,
       maxTWR: 0,
       minTWR: 0,
-      aerodynamicStabilityMargin: 0
+      aerodynamicStabilityMargin: 0,
+      disconnectedPartsCount: 0,
+      isStructurallySound: true
     };
   }
+
+  const connectivity = validateStructuralConnectivity(blueprint.parts);
 
   let totalMass = 0;
   let dryMass = 0;
   let totalFuel = 0;
   let momentX = 0;
   let momentY = 0;
-  let totalArea = 0;
-  let areaMomentX = 0;
-  let areaMomentY = 0;
   let totalThrust = 0;
   let thrustMomentX = 0;
   let thrustMomentY = 0;
 
   const stagePartsMap = new Map<number, PlacedPart[]>();
 
-  for (const part of blueprint.parts) {
+  // Sort parts from top to bottom for aerodynamic shading calculation
+  const sortedByY = [...blueprint.parts].sort((a, b) => a.y - b.y);
+
+  let totalExposedArea = 0;
+  let aeroMomentX = 0;
+  let aeroMomentY = 0;
+
+  // Track the widest cross-section upstream at each lateral X column
+  const upstreamWidthMap: { x: number; width: number; y: number }[] = [];
+
+  for (const part of sortedByY) {
     const def = PARTS_CATALOG[part.partType];
     if (!def) continue;
 
@@ -509,10 +623,23 @@ export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAer
     momentX += part.x * partTotalMass;
     momentY += part.y * partTotalMass;
 
-    const area = def.width * def.height * def.dragCoeff;
-    totalArea += area;
-    areaMomentX += part.x * area;
-    areaMomentY += part.y * area;
+    // Aerodynamic Occlusion Model:
+    // If a part is behind a wider upstream nosecone or tank, reduce its direct frontal drag area
+    let shieldingFactor = 1.0;
+    for (const upstream of upstreamWidthMap) {
+      if (Math.abs(upstream.x - part.x) < 0.5 && upstream.y < part.y) {
+        if (upstream.width >= def.width) {
+          shieldingFactor = 0.25; // 75% shaded by upstream body
+          break;
+        }
+      }
+    }
+    upstreamWidthMap.push({ x: part.x, width: def.width, y: part.y });
+
+    const effectiveDragArea = def.width * def.height * def.dragCoeff * shieldingFactor;
+    totalExposedArea += effectiveDragArea;
+    aeroMomentX += part.x * effectiveDragArea;
+    aeroMomentY += part.y * effectiveDragArea;
 
     if (def.thrust && def.thrust > 0) {
       totalThrust += def.thrust;
@@ -530,12 +657,13 @@ export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAer
   const comX = totalMass > 0 ? momentX / totalMass : 0;
   const comY = totalMass > 0 ? momentY / totalMass : 0;
 
-  const copX = totalArea > 0 ? areaMomentX / totalArea : 0;
-  const copY = totalArea > 0 ? areaMomentY / totalArea : 0;
+  const copX = totalExposedArea > 0 ? aeroMomentX / totalExposedArea : 0;
+  const copY = totalExposedArea > 0 ? aeroMomentY / totalExposedArea : 0;
 
   const cotX = totalThrust > 0 ? thrustMomentX / totalThrust : comX;
   const cotY = totalThrust > 0 ? thrustMomentY / totalThrust : comY;
 
+  // Staging delta-V calculation (Tsiolkovsky rocket equation per stage)
   const sortedStages = Array.from(stagePartsMap.keys()).sort((a, b) => a - b);
   const stagesDeltaV: { stage: number; deltaV: number; twr: number; burnTime: number }[] = [];
   let cumulativeMass = totalMass;
@@ -583,6 +711,7 @@ export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAer
     cumulativeMass = mf;
   }
 
+  // Aerodynamic Stability Margin: CoP should be behind CoM (higher Y in screen space) for static stability
   const stabilityMargin = copY - comY;
 
   return {
@@ -597,7 +726,9 @@ export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAer
     totalDeltaV: Math.round(totalDeltaV),
     maxTWR: stagesDeltaV.length > 0 ? Math.max(...stagesDeltaV.map(s => s.twr)) : 0,
     minTWR: stagesDeltaV.length > 0 ? Math.min(...stagesDeltaV.map(s => s.twr)) : 0,
-    aerodynamicStabilityMargin: parseFloat(stabilityMargin.toFixed(2))
+    aerodynamicStabilityMargin: parseFloat(stabilityMargin.toFixed(2)),
+    disconnectedPartsCount: connectivity.disconnectedIds.length,
+    isStructurallySound: connectivity.isFullyConnected
   };
 }
 
@@ -639,20 +770,5 @@ export const ROCKET_PRESETS: RocketBlueprint[] = [
       { instanceId: 's14', partType: 'fin_delta', x: 4, y: 14, rotation: 0, stage: 1, fuelPercentage: 100 }
     ],
     staging: [[1], [2], [3]]
-  },
-  {
-    id: 'preset_aero_dart',
-    name: 'Mach-15 Hypersonic Dart',
-    parts: [
-      { instanceId: 'd1', partType: 'nosecone_2m', x: 0, y: -5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'd2', partType: 'tank_small_2m', x: 0, y: -2.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'd3', partType: 'tank_med_2m', x: 0, y: 2, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'd4', partType: 'engine_raptor', x: 0, y: 6.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'd5', partType: 'fin_grid_titanium', x: -1.5, y: -1, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'd6', partType: 'fin_grid_titanium', x: 1.5, y: -1, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'd7', partType: 'fin_delta', x: -2, y: 4, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'd8', partType: 'fin_delta', x: 2, y: 4, rotation: 0, stage: 1, fuelPercentage: 100 }
-    ],
-    staging: [[1]]
   }
 ];

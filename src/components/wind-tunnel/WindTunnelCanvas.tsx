@@ -866,7 +866,7 @@ export const WindTunnelCanvas: React.FC = () => {
 
           if (windTunnelState.engineTestActive) {
             const plumeLength = 140 * scale * windTunnelState.engineThrottle;
-            const plumeWidth = pw * 0.85 * (plume.plumeState === 'underexpanded' ? 1.8 : 0.95);
+            const plumeWidth = pw * 0.85 * (plume.isUnderExpanded ? 1.8 : 0.95);
 
             ctx.save();
             ctx.translate(0, ph / 2);

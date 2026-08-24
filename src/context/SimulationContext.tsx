@@ -7,9 +7,11 @@ import type {
   CelestialBody, 
   AsteroidConfig, 
   ImpactTelemetry, 
-  FlightState 
+  FlightState,
+  SymmetryMode,
+  GeographicTarget
 } from '../types';
-import { ROCKET_PRESETS } from '../physics/rocket-math';
+import { ROCKET_PRESETS, getSymmetricPlacements } from '../physics/rocket-math';
 import { CELESTIAL_PRESETS, stepNBodySimulation } from '../physics/n-body';
 import { calculateImpactPhysics, ASTEROID_DENSITIES } from '../physics/impact-physics';
 import { initFlightState, stepFlightPhysics, calculateCurrentStageMassAndThrust } from '../physics/flight-dynamics';
@@ -22,11 +24,16 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const initial = createInitialState();
 
   const [activeTab, setActiveTab] = useState<AppTab>('rocket-builder');
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   
-  // Rocket Builder
-  const [blueprint, setBlueprint] = useState<RocketBlueprint>(initial.blueprint);
+  // Rocket Builder & Undo/Redo History
+  const [blueprint, setBlueprintState] = useState<RocketBlueprint>(initial.blueprint);
+  const [history, setHistory] = useState<RocketBlueprint[]>([initial.blueprint]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+
   const [selectedPartInstanceId, setSelectedPartInstanceId] = useState<string | null>(null);
   const [selectedCatalogPartType, setSelectedCatalogPartType] = useState<string | null>('tank_med_2m');
+  const [symmetryMode, setSymmetryMode] = useState<SymmetryMode>('1x');
 
   // Wind Tunnel
   const [windTunnelState, setWindTunnelStateRaw] = useState<WindTunnelState>(initial.windTunnel);
@@ -47,80 +54,159 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Flight Sandbox
   const [flightState, setFlightState] = useState<FlightState>(initial.flight);
+  const [guidanceMode, setGuidanceMode] = useState<'manual' | 'auto'>('manual');
+
+  // Push new blueprint state with Undo/Redo history tracking & localStorage persistence
+  const updateBlueprint = useCallback((newBlueprint: RocketBlueprint | ((prev: RocketBlueprint) => RocketBlueprint)) => {
+    setBlueprintState(prev => {
+      const next = typeof newBlueprint === 'function' ? newBlueprint(prev) : newBlueprint;
+      
+      // Update history stack
+      setHistory(h => {
+        const truncated = h.slice(0, historyIndex + 1);
+        return [...truncated, next];
+      });
+      setHistoryIndex(i => i + 1);
+
+      // Auto-save to localStorage
+      try {
+        localStorage.setItem('mission_control_blueprint', JSON.stringify(next));
+      } catch (e) {}
+
+      return next;
+    });
+  }, [historyIndex]);
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const targetIndex = historyIndex - 1;
+      const targetBlueprint = history[targetIndex];
+      setHistoryIndex(targetIndex);
+      setBlueprintState(targetBlueprint);
+      try {
+        localStorage.setItem('mission_control_blueprint', JSON.stringify(targetBlueprint));
+      } catch (e) {}
+    }
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const targetIndex = historyIndex + 1;
+      const targetBlueprint = history[targetIndex];
+      setHistoryIndex(targetIndex);
+      setBlueprintState(targetBlueprint);
+      try {
+        localStorage.setItem('mission_control_blueprint', JSON.stringify(targetBlueprint));
+      } catch (e) {}
+    }
+  }, [history, historyIndex]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  // Auto-sync vehicle to flight sandbox whenever blueprint changes
+  useEffect(() => {
+    if (!flightState.isLaunched) {
+      setFlightState(initFlightState(blueprint));
+    }
+  }, [blueprint, flightState.isLaunched]);
 
   // =====================
   // ROCKET BUILDER ACTIONS
   // =====================
   const addPartToBlueprint = useCallback((partType: string, x: number, y: number, stage: number = 1) => {
-    const newPart: PlacedPart = {
-      instanceId: `p_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      partType,
-      x: Math.round(x),
-      y: Math.round(y),
-      rotation: 0,
+    const placements = getSymmetricPlacements(partType, x, y, 0, symmetryMode);
+    
+    const newParts: PlacedPart[] = placements.map(pl => ({
+      instanceId: `p_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+      partType: pl.partType,
+      x: Math.round(pl.x),
+      y: Math.round(pl.y),
+      rotation: pl.rotation,
       stage,
       fuelPercentage: 100
-    };
-
-    setBlueprint(prev => ({
-      ...prev,
-      parts: [...prev.parts, newPart]
     }));
-    setSelectedPartInstanceId(newPart.instanceId);
-  }, []);
+
+    updateBlueprint(prev => ({
+      ...prev,
+      parts: [...prev.parts, ...newParts]
+    }));
+
+    if (newParts.length > 0) {
+      setSelectedPartInstanceId(newParts[0].instanceId);
+    }
+  }, [symmetryMode, updateBlueprint]);
 
   const removePartFromBlueprint = useCallback((instanceId: string) => {
-    setBlueprint(prev => ({
+    updateBlueprint(prev => ({
       ...prev,
       parts: prev.parts.filter(p => p.instanceId !== instanceId)
     }));
     setSelectedPartInstanceId(prev => prev === instanceId ? null : prev);
-  }, []);
+  }, [updateBlueprint]);
 
   const movePartInBlueprint = useCallback((instanceId: string, x: number, y: number) => {
-    setBlueprint(prev => ({
+    updateBlueprint(prev => ({
       ...prev,
       parts: prev.parts.map(p => p.instanceId === instanceId ? { ...p, x: Math.round(x), y: Math.round(y) } : p)
     }));
-  }, []);
+  }, [updateBlueprint]);
 
-  const rotatePartInBlueprint = useCallback((instanceId: string) => {
-    setBlueprint(prev => ({
+  const rotatePartInBlueprint = useCallback((instanceId: string, angleStep: number = 90) => {
+    updateBlueprint(prev => ({
       ...prev,
       parts: prev.parts.map(p => {
         if (p.instanceId === instanceId) {
-          const nextRot = (p.rotation + 90) % 360;
+          const nextRot = (p.rotation + angleStep) % 360;
           return { ...p, rotation: nextRot };
         }
         return p;
       })
     }));
-  }, []);
+  }, [updateBlueprint]);
+
+  const duplicatePartInBlueprint = useCallback((instanceId: string) => {
+    const part = blueprint.parts.find(p => p.instanceId === instanceId);
+    if (!part) return;
+
+    const cloned: PlacedPart = {
+      ...part,
+      instanceId: `p_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+      x: part.x + 2,
+      y: part.y
+    };
+
+    updateBlueprint(prev => ({
+      ...prev,
+      parts: [...prev.parts, cloned]
+    }));
+    setSelectedPartInstanceId(cloned.instanceId);
+  }, [blueprint.parts, updateBlueprint]);
 
   const setPartStage = useCallback((instanceId: string, stage: number) => {
-    setBlueprint(prev => ({
+    updateBlueprint(prev => ({
       ...prev,
       parts: prev.parts.map(p => p.instanceId === instanceId ? { ...p, stage } : p)
     }));
-  }, []);
+  }, [updateBlueprint]);
 
   const loadRocketPreset = useCallback((presetId: string) => {
     const preset = ROCKET_PRESETS.find(p => p.id === presetId);
     if (preset) {
-      setBlueprint(JSON.parse(JSON.stringify(preset)));
+      updateBlueprint(preset);
       setSelectedPartInstanceId(null);
     }
-  }, []);
+  }, [updateBlueprint]);
 
   const clearRocketBlueprint = useCallback(() => {
-    setBlueprint({
+    updateBlueprint({
       id: `custom_${Date.now()}`,
-      name: 'Custom Launcher',
+      name: 'New Custom Launch Vehicle',
       parts: [],
-      staging: [[1]]
+      staging: []
     });
     setSelectedPartInstanceId(null);
-  }, []);
+  }, [updateBlueprint]);
 
   // =====================
   // WIND TUNNEL ACTIONS
@@ -129,17 +215,21 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setWindTunnelStateRaw(prev => {
       const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
       const atm = calculateAtmosphere(next.altitude);
-      const soundSpeed = atm.speedOfSound;
-      const speed = next.mach * soundSpeed;
-      const q = 0.5 * atm.density * speed * speed;
-      const effectiveAoA = (next.windAngle ?? prev.windAngle ?? 0) - (next.rocketPitch ?? prev.rocketPitch ?? 0);
+      const speedOfSound = atm.speedOfSound;
+      const freestreamSpeed = next.mach * speedOfSound;
+      const dynamicPressure = 0.5 * atm.density * Math.pow(freestreamSpeed, 2);
+
+      const rocketP = next.rocketPitch || 0;
+      const windA = next.windAngle || 0;
+      const effectiveAoA = windA - rocketP;
+
       return {
         ...next,
-        angleToGo: effectiveAoA,
         airDensity: atm.density,
         airTemperature: atm.temperature,
-        freestreamSpeed: speed,
-        dynamicPressure: q
+        freestreamSpeed,
+        dynamicPressure,
+        angleToGo: effectiveAoA
       };
     });
   }, []);
@@ -149,24 +239,24 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   // =====================
-  // CELESTIAL ACTIONS
+  // CELESTIAL SIMULATOR ACTIONS
   // =====================
   const loadCelestialPreset = useCallback((presetId: string) => {
     const preset = CELESTIAL_PRESETS.find(p => p.id === presetId);
     if (preset) {
-      setCelestialBodies(JSON.parse(JSON.stringify(preset.bodies)));
+      setCelestialBodies(preset.bodies);
       setSelectedBodyId(preset.bodies[0]?.id || null);
     }
   }, []);
 
-  const addCustomCelestialBody = useCallback((newBodyData: Omit<CelestialBody, 'id' | 'trail'>) => {
-    const body: CelestialBody = {
-      ...newBodyData,
-      id: `body_${Date.now()}`,
-      trail: []
+  const addCustomCelestialBody = useCallback((body: Omit<CelestialBody, 'id' | 'trail'>) => {
+    const newBody: CelestialBody = {
+      ...body,
+      id: `body_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      trail: [{ ...body.position }]
     };
-    setCelestialBodies(prev => [...prev, body]);
-    setSelectedBodyId(body.id);
+    setCelestialBodies(prev => [...prev, newBody]);
+    setSelectedBodyId(newBody.id);
   }, []);
 
   const removeCelestialBody = useCallback((id: string) => {
@@ -174,18 +264,23 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setSelectedBodyId(prev => prev === id ? null : prev);
   }, []);
 
-  // N-Body animation loop
+  // RK4 Celestial N-Body Simulation Loop
   useEffect(() => {
     if (activeTab !== 'celestial-sim' || isCelestialPaused) return;
 
-    const interval = setInterval(() => {
-      setCelestialBodies(prev => {
-        const dt = 0.04 * timeWarp;
-        return stepNBodySimulation(prev, dt);
-      });
-    }, 16);
+    let animFrame: number;
+    let lastTime = performance.now();
 
-    return () => clearInterval(interval);
+    const loop = (time: number) => {
+      const dt = Math.min(0.08, (time - lastTime) / 1000) * timeWarp;
+      lastTime = time;
+
+      setCelestialBodies(prev => stepNBodySimulation(prev, dt));
+      animFrame = requestAnimationFrame(loop);
+    };
+
+    animFrame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animFrame);
   }, [activeTab, isCelestialPaused, timeWarp]);
 
   // =====================
@@ -194,49 +289,65 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const setAsteroidConfig = useCallback((updater: Partial<AsteroidConfig> | ((prev: AsteroidConfig) => AsteroidConfig)) => {
     setAsteroidConfigRaw(prev => {
       const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
-      const density = ASTEROID_DENSITIES[next.composition] || next.density;
-      const updatedConfig = { ...next, density };
-      setImpactTelemetry(calculateImpactPhysics(updatedConfig));
-      return updatedConfig;
+      if (updater && 'composition' in updater && updater.composition) {
+        next.density = ASTEROID_DENSITIES[updater.composition] || next.density;
+      }
+      setImpactTelemetry(calculateImpactPhysics(next));
+      return next;
+    });
+  }, []);
+
+  const setGeographicTarget = useCallback((target: GeographicTarget) => {
+    setAsteroidConfigRaw(prev => {
+      const next: AsteroidConfig = {
+        ...prev,
+        targetAreaType: 'custom_geo',
+        targetSurfaceType: target.isOcean ? 'water_ocean' : 'sedimentary_rock',
+        geographicTarget: target
+      };
+      setImpactTelemetry(calculateImpactPhysics(next));
+      return next;
     });
   }, []);
 
   const triggerImpactSimulation = useCallback(() => {
     setIsImpactSimulating(true);
-    setImpactTriggerCounter(c => c + 1);
+    setImpactTriggerCounter(prev => prev + 1);
   }, []);
 
   const resetImpactSimulation = useCallback(() => {
     setIsImpactSimulating(false);
+    setImpactTriggerCounter(0);
   }, []);
 
   // =====================
   // FLIGHT SANDBOX ACTIONS
   // =====================
-  const [guidanceMode, setGuidanceMode] = useState<'manual' | 'auto'>('manual');
-
   const launchFlight = useCallback(() => {
-    setFlightState(prev => {
-      const stageInfo = calculateCurrentStageMassAndThrust(blueprint, prev.currentStageIndex, 0);
-      return {
-        ...prev,
-        isLaunched: true,
-        isActive: true,
-        isPaused: false,
-        throttle: prev.throttle > 0 ? prev.throttle : 1.0,
-        fuelMassRemaining: stageInfo.stageFuelMassTons > 0 ? stageInfo.stageFuelMassTons : prev.fuelMassRemaining
-      };
-    });
-  }, [blueprint]);
+    setFlightState(prev => ({
+      ...prev,
+      isLaunched: true,
+      isActive: true,
+      isPaused: false,
+      throttle: 1.0
+    }));
+  }, []);
 
   const triggerStaging = useCallback(() => {
     setFlightState(prev => {
-      const nextStage = prev.currentStageIndex + 1;
-      const stageInfo = calculateCurrentStageMassAndThrust(blueprint, nextStage, prev.altitude);
+      const maxStage = Math.max(1, ...blueprint.parts.map(p => p.stage || 1));
+      if (prev.currentStageIndex >= maxStage) {
+        return prev;
+      }
+
+      const nextStageIndex = prev.currentStageIndex + 1;
+      const nextStageInfo = calculateCurrentStageMassAndThrust(blueprint, nextStageIndex, prev.altitude);
+
       return {
         ...prev,
-        currentStageIndex: nextStage,
-        fuelMassRemaining: stageInfo.stageFuelMassTons
+        currentStageIndex: nextStageIndex,
+        fuelMassRemaining: nextStageInfo.stageFuelMassTons,
+        burnTimeRemaining: 60
       };
     });
   }, [blueprint]);
@@ -250,88 +361,156 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const abortFlight = useCallback(() => {
-    setFlightState(prev => ({ ...prev, aborted: true, throttle: 0 }));
+    setFlightState(prev => ({
+      ...prev,
+      aborted: true,
+      throttle: 0
+    }));
   }, []);
 
   const resetFlight = useCallback(() => {
-    const init = initFlightState(blueprint);
-    const initialStageInfo = calculateCurrentStageMassAndThrust(blueprint, init.currentStageIndex, 0);
-    init.fuelMassRemaining = initialStageInfo.stageFuelMassTons;
-    setFlightState(init);
+    setFlightState(initFlightState(blueprint));
   }, [blueprint]);
 
   const transferRocketToFlight = useCallback(() => {
-    const init = initFlightState(blueprint);
-    const initialStageInfo = calculateCurrentStageMassAndThrust(blueprint, init.currentStageIndex, 0);
-    init.fuelMassRemaining = initialStageInfo.stageFuelMassTons;
-    setFlightState(init);
+    setFlightState(initFlightState(blueprint));
     setActiveTab('flight-sandbox');
   }, [blueprint]);
 
-  // Flight simulation step loop
+  // RK4 Flight Physics Loop
   useEffect(() => {
-    if (activeTab !== 'flight-sandbox' || !flightState.isLaunched || flightState.isPaused) return;
+    if (activeTab !== 'flight-sandbox') return;
 
-    const interval = setInterval(() => {
-      setFlightState(prev => stepFlightPhysics(prev, blueprint, 0.04, guidanceMode));
-    }, 40);
+    let animFrame: number;
+    let lastTime = performance.now();
 
-    return () => clearInterval(interval);
-  }, [activeTab, flightState.isLaunched, flightState.isPaused, blueprint, guidanceMode]);
+    const loop = (time: number) => {
+      const dt = Math.min(0.04, (time - lastTime) / 1000);
+      lastTime = time;
+
+      setFlightState(prev => stepFlightPhysics(prev, blueprint, dt, guidanceMode));
+      animFrame = requestAnimationFrame(loop);
+    };
+
+    animFrame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animFrame);
+  }, [activeTab, blueprint, guidanceMode]);
+
+  // Global Keyboard Shortcuts (Hotkeys)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      // Rocket Builder Undo/Redo
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          redo();
+        } else {
+          e.preventDefault();
+          undo();
+        }
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
+      // Flight Sandbox Hotkeys
+      if (activeTab === 'flight-sandbox') {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          if (!flightState.isLaunched) launchFlight();
+          else triggerStaging();
+        } else if (e.code === 'KeyZ') {
+          e.preventDefault();
+          setFlightThrottle(1.0);
+        } else if (e.code === 'KeyX') {
+          e.preventDefault();
+          setFlightThrottle(0);
+        } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+          setFlightThrottle(Math.min(1.0, flightState.throttle + 0.1));
+        } else if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+          setFlightThrottle(Math.max(0.0, flightState.throttle - 0.1));
+        } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+          setFlightPitch(Math.min(90, flightState.pitch + 2));
+        } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+          setFlightPitch(Math.max(0, flightState.pitch - 2));
+        } else if (e.code === 'KeyR') {
+          resetFlight();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, flightState.isLaunched, flightState.pitch, flightState.throttle, launchFlight, redo, resetFlight, setFlightPitch, setFlightThrottle, triggerStaging, undo]);
+
+  const value: GlobalStore = {
+    activeTab,
+    isSidebarOpen,
+    setActiveTab,
+    toggleSidebar: () => setIsSidebarOpen(prev => !prev),
+    blueprint,
+    selectedPartInstanceId,
+    selectedCatalogPartType,
+    symmetryMode,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    setSymmetryMode,
+    setSelectedPartInstanceId,
+    setSelectedCatalogPartType,
+    addPartToBlueprint,
+    removePartFromBlueprint,
+    movePartInBlueprint,
+    rotatePartInBlueprint,
+    duplicatePartInBlueprint,
+    setPartStage,
+    loadRocketPreset,
+    clearRocketBlueprint,
+    windTunnelState,
+    setWindTunnelState,
+    transferRocketToWindTunnel,
+    celestialBodies,
+    selectedBodyId,
+    timeWarp,
+    showSpacetimeGrid,
+    showOrbitalTrails,
+    isCelestialPaused,
+    setSelectedBodyId,
+    setTimeWarp,
+    setShowSpacetimeGrid,
+    setShowOrbitalTrails,
+    setIsCelestialPaused,
+    loadCelestialPreset,
+    addCustomCelestialBody,
+    removeCelestialBody,
+    asteroidConfig,
+    impactTelemetry,
+    isImpactSimulating,
+    impactTriggerCounter,
+    setAsteroidConfig,
+    setGeographicTarget,
+    triggerImpactSimulation,
+    resetImpactSimulation,
+    flightState,
+    guidanceMode,
+    setGuidanceMode,
+    launchFlight,
+    triggerStaging,
+    setFlightThrottle,
+    setFlightPitch,
+    abortFlight,
+    resetFlight,
+    transferRocketToFlight
+  };
 
   return (
-    <SimulationContext.Provider
-      value={{
-        activeTab,
-        setActiveTab,
-        blueprint,
-        selectedPartInstanceId,
-        selectedCatalogPartType,
-        setSelectedPartInstanceId,
-        setSelectedCatalogPartType,
-        addPartToBlueprint,
-        removePartFromBlueprint,
-        movePartInBlueprint,
-        rotatePartInBlueprint,
-        setPartStage,
-        loadRocketPreset,
-        clearRocketBlueprint,
-        windTunnelState,
-        setWindTunnelState,
-        transferRocketToWindTunnel,
-        celestialBodies,
-        selectedBodyId,
-        timeWarp,
-        showSpacetimeGrid,
-        showOrbitalTrails,
-        isCelestialPaused,
-        setSelectedBodyId,
-        setTimeWarp,
-        setShowSpacetimeGrid,
-        setShowOrbitalTrails,
-        setIsCelestialPaused,
-        loadCelestialPreset,
-        addCustomCelestialBody,
-        removeCelestialBody,
-        asteroidConfig,
-        impactTelemetry,
-        isImpactSimulating,
-        impactTriggerCounter,
-        setAsteroidConfig,
-        triggerImpactSimulation,
-        resetImpactSimulation,
-        flightState,
-        guidanceMode,
-        setGuidanceMode,
-        launchFlight,
-        triggerStaging,
-        setFlightThrottle,
-        setFlightPitch,
-        abortFlight,
-        resetFlight,
-        transferRocketToFlight
-      }}
-    >
+    <SimulationContext.Provider value={value}>
       {children}
     </SimulationContext.Provider>
   );

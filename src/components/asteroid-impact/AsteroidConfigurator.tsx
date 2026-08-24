@@ -4,13 +4,14 @@ import {
   Play, 
   Users, 
   Skull, 
-  Waves
+  Waves,
+  Globe
 } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { 
-  TARGET_SURFACES, 
   IMPACT_PRESETS, 
-  POPULATION_AREAS 
+  POPULATION_AREAS,
+  GEOGRAPHIC_TARGETS 
 } from '../../physics/impact-physics';
 import type { AsteroidComposition } from '../../types';
 
@@ -19,10 +20,11 @@ export const AsteroidConfigurator: React.FC = () => {
     asteroidConfig,
     impactTelemetry,
     setAsteroidConfig,
+    setGeographicTarget,
     triggerImpactSimulation
   } = useSimulation();
 
-  const isOcean = asteroidConfig.targetSurfaceType === 'water_ocean' || asteroidConfig.targetAreaType === 'ocean_deep';
+  const isOcean = asteroidConfig.targetSurfaceType === 'water_ocean' || asteroidConfig.targetAreaType === 'ocean_deep' || asteroidConfig.geographicTarget?.isOcean === true;
 
   return (
     <aside className="w-[320px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
@@ -101,14 +103,42 @@ export const AsteroidConfigurator: React.FC = () => {
           )}
         </div>
 
-        {/* Target Area & Population Density Selector */}
+        {/* Real-World GIS Geographic Coordinate Selector */}
+        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2">
+          <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block flex items-center gap-1.5">
+            <Globe className="w-3.5 h-3.5 text-[#79AFC1]" />
+            <span>Interactive GIS Target Location</span>
+          </label>
+
+          <select
+            value={asteroidConfig.geographicTarget?.name || GEOGRAPHIC_TARGETS[0].name}
+            onChange={e => {
+              const target = GEOGRAPHIC_TARGETS.find(t => t.name === e.target.value);
+              if (target) setGeographicTarget(target);
+            }}
+            className="w-full bg-[#0E1015] border border-[#252B36] rounded px-2.5 py-1.5 text-xs text-[#E6E8EB] focus:outline-none focus:border-[#FF8A1F]"
+          >
+            {GEOGRAPHIC_TARGETS.map(geo => (
+              <option key={geo.name} value={geo.name}>
+                {geo.name} ({geo.latitude.toFixed(1)}°, {geo.longitude.toFixed(1)}°)
+              </option>
+            ))}
+          </select>
+
+          {asteroidConfig.geographicTarget && (
+            <div className="flex justify-between text-[10px] text-[#A4ABB6] bg-[#0E1015] p-2 rounded border border-[#252B36]">
+              <span>Density: <strong className="text-[#E6E8EB]">{asteroidConfig.geographicTarget.populationDensityPerKm2.toLocaleString()}/km²</strong></span>
+              <span>Elevation: <strong className="text-[#79AFC1]">{asteroidConfig.geographicTarget.elevationM}m</strong></span>
+            </div>
+          )}
+        </div>
+
+        {/* Target Population Area Presets */}
         <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-[#FF8A1F]" />
-              <span>Target Population Area</span>
-            </label>
-          </div>
+          <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5 text-[#FF8A1F]" />
+            <span>Target Population Presets</span>
+          </label>
 
           <div className="grid grid-cols-2 gap-1.5">
             {Object.values(POPULATION_AREAS).map(area => (
@@ -134,32 +164,9 @@ export const AsteroidConfigurator: React.FC = () => {
               </button>
             ))}
           </div>
-
-          <div className="border-t border-[#252B36] pt-2">
-            <div className="flex items-center justify-between text-xs font-medium mb-1">
-              <span className="text-[#A4ABB6]">Custom Population Value</span>
-              <span className="text-[#FF8A1F] font-mono-num font-semibold">
-                {(asteroidConfig.customPopulation ?? POPULATION_AREAS[asteroidConfig.targetAreaType || 'dense_metro'].population).toLocaleString()}
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="15000000"
-              step="50000"
-              value={asteroidConfig.customPopulation ?? POPULATION_AREAS[asteroidConfig.targetAreaType || 'dense_metro'].population}
-              onChange={e => setAsteroidConfig({ customPopulation: parseInt(e.target.value) })}
-              className="w-full"
-            />
-            <div className="flex justify-between text-[10px] text-[#69717E] mt-1">
-              <span>0 (Desert)</span>
-              <span>1M (City)</span>
-              <span>15M (Megacity)</span>
-            </div>
-          </div>
         </div>
 
-        {/* Bolide Geometry & Specifications */}
+        {/* Bolide Geometry & Mass */}
         <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-3">
           <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">
             Bolide Geometry & Mass
@@ -181,11 +188,6 @@ export const AsteroidConfigurator: React.FC = () => {
               onChange={e => setAsteroidConfig({ diameter: parseInt(e.target.value) })}
               className="w-full"
             />
-            <div className="flex justify-between text-[10px] text-[#69717E] mt-1">
-              <span>10m (Meteor)</span>
-              <span>1km (Regional)</span>
-              <span>20km (Extinction)</span>
-            </div>
           </div>
 
           <div className="border-t border-[#252B36] pt-2.5">
@@ -200,22 +202,15 @@ export const AsteroidConfigurator: React.FC = () => {
               <option value="rubble">Porous Rubble Pile (1,500 kg/m³)</option>
               <option value="carbonaceous">Carbonaceous Chondrite (2,200 kg/m³)</option>
               <option value="silicate">Dense Silicate Rock (3,000 kg/m³)</option>
-              <option value="iron_nickel">Metallic Iron-Nickel Core (7,800 kg/m³)</option>
+              <option value="iron_nickel">Metallic Iron-Nickel (7,800 kg/m³)</option>
               <option value="cometary_ice">Cometary Volatile Ice (1,000 kg/m³)</option>
             </select>
           </div>
-        </div>
 
-        {/* Kinematics */}
-        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-3">
-          <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">
-            Kinematic Entry State
-          </label>
-
-          <div>
+          <div className="border-t border-[#252B36] pt-2.5">
             <div className="flex items-center justify-between text-xs font-medium mb-1">
               <span className="text-[#A4ABB6]">Impact Velocity</span>
-              <span className="text-[#E6B84D] font-mono-num font-semibold">{asteroidConfig.velocity} km/s</span>
+              <span className="text-[#FF8A1F] font-mono-num font-semibold">{asteroidConfig.velocity} km/s</span>
             </div>
             <input
               type="range"
@@ -226,49 +221,13 @@ export const AsteroidConfigurator: React.FC = () => {
               onChange={e => setAsteroidConfig({ velocity: parseInt(e.target.value) })}
               className="w-full"
             />
-            <div className="flex justify-between text-[10px] text-[#69717E] mt-1">
-              <span>11.2 km/s (Min Escape)</span>
-              <span>30 km/s</span>
-              <span>72 km/s</span>
-            </div>
-          </div>
-
-          <div className="border-t border-[#252B36] pt-2.5">
-            <div className="flex items-center justify-between text-xs font-medium mb-1">
-              <span className="text-[#A4ABB6]">Entry Angle (θ)</span>
-              <span className="text-[#79AFC1] font-mono-num font-semibold">{asteroidConfig.entryAngle}°</span>
-            </div>
-            <input
-              type="range"
-              min="10"
-              max="90"
-              step="5"
-              value={asteroidConfig.entryAngle}
-              onChange={e => setAsteroidConfig({ entryAngle: parseInt(e.target.value) })}
-              className="w-full"
-            />
-          </div>
-
-          <div className="border-t border-[#252B36] pt-2.5">
-            <label className="text-[#A4ABB6] text-xs font-medium block mb-1">
-              Target Surface Material
-            </label>
-            <select
-              value={asteroidConfig.targetSurfaceType}
-              onChange={e => setAsteroidConfig({ targetSurfaceType: e.target.value as any })}
-              className="w-full bg-[#0E1015] border border-[#252B36] rounded px-2.5 py-1.5 text-xs text-[#E6E8EB] focus:outline-none focus:border-[#FF8A1F]"
-            >
-              {Object.entries(TARGET_SURFACES).map(([key, val]) => (
-                <option key={key} value={key}>{val.name}</option>
-              ))}
-            </select>
           </div>
         </div>
 
         {/* Historical Impact Presets */}
         <div className="space-y-1.5">
           <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">
-            Impact Event Presets
+            Historical & Benchmark Events
           </label>
           <div className="space-y-1">
             {IMPACT_PRESETS.map(preset => (
@@ -281,14 +240,13 @@ export const AsteroidConfigurator: React.FC = () => {
                     velocity: preset.velocity,
                     entryAngle: preset.entryAngle,
                     targetSurfaceType: preset.targetSurfaceType,
-                    targetAreaType: preset.targetAreaType,
-                    customPopulation: POPULATION_AREAS[preset.targetAreaType]?.population
+                    targetAreaType: preset.targetAreaType
                   });
                 }}
                 className="w-full text-left p-2 rounded bg-[#1B1F28]/60 hover:bg-[#222733] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] transition-colors"
               >
-                <div className="font-medium text-[#E6E8EB] text-xs">{preset.name}</div>
-                <div className="text-[11px] text-[#69717E] line-clamp-1 mt-0.5">{preset.description}</div>
+                <div className="font-medium text-[11px] text-[#E6E8EB]">{preset.name}</div>
+                <div className="text-[10px] text-[#69717E] line-clamp-1 mt-0.5">{preset.description}</div>
               </button>
             ))}
           </div>

@@ -1,6 +1,6 @@
 import type { FlightState, RocketBlueprint } from '../types';
 import { calculateRocketProperties, PARTS_CATALOG } from './rocket-math';
-import { calculateAtmosphere } from './aerodynamics';
+import { calculateAtmosphere, STEFAN_BOLTZMANN } from './aerodynamics';
 
 export const G_EARTH = 9.80665;
 export const EARTH_RADIUS = 6371000; // meters (realistic scale)
@@ -20,7 +20,7 @@ export interface DebrisObject {
 
 export function initFlightState(blueprint: RocketBlueprint): FlightState {
   const props = calculateRocketProperties(blueprint);
-  
+
   let minStage = 1;
   if (blueprint.parts.length > 0) {
     const stages = blueprint.parts.map(p => p.stage || 1);
@@ -53,7 +53,14 @@ export function initFlightState(blueprint: RocketBlueprint): FlightState {
     trajectoryHistory: [{ x: 0, y: 0 }],
     targetPlanetId: 'earth',
     aborted: false,
-    inOrbit: false
+    inOrbit: false,
+    isEscapeTrajectory: false,
+    reentryHeatFlux: 0,
+    plasmaTemperatureK: 300,
+    vehicleSkinTempK: 300,
+    isCrashed: false,
+    isDisintegrated: false,
+    crashImpactSpeed: 0
   };
 }
 
@@ -119,13 +126,67 @@ export function calculateCurrentStageMassAndThrust(
   };
 }
 
+/**
+ * Calculates acceleration vector at state (altitude, downrange, vx, vy)
+ */
+function getFlightAccelerations(
+  alt: number,
+  vx: number,
+  vy: number,
+  pitchDeg: number,
+  engineThrustN: number,
+  totalMassKg: number,
+  blueprint: RocketBlueprint
+): { ax: number; ay: number; q: number; dragX: number; dragY: number; localG: number } {
+  const atm = calculateAtmosphere(alt);
+  const speed = Math.hypot(vx, vy);
+
+  // Aerodynamic Drag
+  const q = 0.5 * atm.density * speed * speed;
+  const frontalArea = Math.max(1.5, Math.min(12, blueprint.parts.length * 0.45));
+  const cd = 0.25;
+  const dragMagnitude = cd * q * frontalArea;
+
+  const dragX = speed > 0.01 ? -dragMagnitude * (vx / speed) : 0;
+  const dragY = speed > 0.01 ? -dragMagnitude * (vy / speed) : 0;
+
+  // Thrust Vector
+  const pitchRad = (pitchDeg * Math.PI) / 180;
+  const thrustX = engineThrustN * Math.cos(pitchRad);
+  const thrustY = engineThrustN * Math.sin(pitchRad);
+
+  // Spherical Newtonian Gravity
+  const rCurrent = EARTH_RADIUS + Math.max(0, alt);
+  const localG = MU_EARTH / (rCurrent * rCurrent);
+  const gravityForceY = -totalMassKg * localG;
+
+  const netFx = thrustX + dragX;
+  let netFy = thrustY + dragY + gravityForceY;
+
+  if (alt <= 0 && netFy < 0) {
+    netFy = 0; // Ground support on launchpad
+  }
+
+  return {
+    ax: netFx / totalMassKg,
+    ay: netFy / totalMassKg,
+    q,
+    dragX,
+    dragY,
+    localG
+  };
+}
+
+/**
+ * High-Precision 4th-Order Runge-Kutta (RK4) Flight Physics Integrator
+ */
 export function stepFlightPhysics(
   state: FlightState,
   blueprint: RocketBlueprint,
   dt: number,
   guidanceMode: 'manual' | 'auto' = 'manual'
 ): FlightState {
-  if (!state.isLaunched || state.isPaused || state.aborted) {
+  if (!state.isLaunched || state.isPaused || state.aborted || state.isCrashed) {
     return state;
   }
 
@@ -135,102 +196,111 @@ export function stepFlightPhysics(
     state.altitude
   );
 
-  const atm = calculateAtmosphere(state.altitude);
-
-  // Automatic Gravity Turn Guidance or Manual Pitch
+  // Prograde-Aligned True Gravity Turn Algorithm
   let pitch = state.pitch;
   if (guidanceMode === 'auto') {
-    if (state.altitude > 1000 && state.altitude < 80000) {
-      const turnFraction = Math.min(1, (state.altitude - 1000) / 60000);
-      const targetPitch = Math.max(0, 90 - turnFraction * 90);
-      pitch = pitch + (targetPitch - pitch) * dt * 0.4;
+    if (state.altitude > 800 && state.altitude < 120000) {
+      if (state.velocity.vx > 10 && state.velocity.vy > 0) {
+        // True prograde angle matching vehicle velocity vector
+        const progradeAngleDeg = (Math.atan2(state.velocity.vy, state.velocity.vx) * 180) / Math.PI;
+        pitch = pitch + (progradeAngleDeg - pitch) * Math.min(1, dt * 1.5);
+      } else {
+        // Initial pitch kick towards East (+X)
+        const turnFraction = Math.min(1, (state.altitude - 800) / 70000);
+        const targetPitch = Math.max(0, 90 - turnFraction * 90);
+        pitch = pitch + (targetPitch - pitch) * dt * 0.5;
+      }
     }
   }
 
-  // SFS-Style Instant Throttle & Fuel Depletion
+  // Throttle & Fuel Depletion
   const throttle = state.throttle;
   let currentFuel = Math.max(0, state.fuelMassRemaining);
-
   let engineThrustN = 0;
+
   if (throttle > 0 && currentFuel > 0.001) {
     engineThrustN = stageInfo.thrustN * throttle;
     const mdot = engineThrustN / (stageInfo.isp * G_EARTH); // kg/s
     currentFuel = Math.max(0, currentFuel - (mdot * dt) / 1000);
   }
 
-  // Instantaneous Vehicle Mass (kg)
-  const currentTotalMassKg = (stageInfo.activeVehicleDryMassTons + currentFuel) * 1000;
+  const totalMassKg = (stageInfo.activeVehicleDryMassTons + currentFuel) * 1000;
 
-  // Pitch Angle Orientation (90 deg = Vertical Up, 0 deg = Horizontal Downrange)
-  const pitchRad = (pitch * Math.PI) / 180;
-  const thrustX = engineThrustN * Math.cos(pitchRad);
-  const thrustY = engineThrustN * Math.sin(pitchRad);
+  // Runge-Kutta 4 Integration Stages
+  const k1 = getFlightAccelerations(state.altitude, state.velocity.vx, state.velocity.vy, pitch, engineThrustN, totalMassKg, blueprint);
 
-  // True Kinematic Speeds
-  const vx = state.velocity.vx;
-  const vy = state.velocity.vy;
-  const currentSpeed = Math.hypot(vx, vy);
+  const vHalfX1 = state.velocity.vx + 0.5 * dt * k1.ax;
+  const vHalfY1 = state.velocity.vy + 0.5 * dt * k1.ay;
+  const altHalf1 = state.altitude + 0.5 * dt * state.velocity.vy;
+  const k2 = getFlightAccelerations(altHalf1, vHalfX1, vHalfY1, pitch, engineThrustN, totalMassKg, blueprint);
 
-  // Aerodynamic Drag
-  const q = 0.5 * atm.density * currentSpeed * currentSpeed;
-  const frontalArea = Math.max(1.5, Math.min(12, blueprint.parts.length * 0.45));
-  const cd = 0.25;
-  const dragMagnitude = cd * q * frontalArea;
+  const vHalfX2 = state.velocity.vx + 0.5 * dt * k2.ax;
+  const vHalfY2 = state.velocity.vy + 0.5 * dt * k2.ay;
+  const altHalf2 = state.altitude + 0.5 * dt * vHalfY1;
+  const k3 = getFlightAccelerations(altHalf2, vHalfX2, vHalfY2, pitch, engineThrustN, totalMassKg, blueprint);
 
-  const dragX = currentSpeed > 0.01 ? -dragMagnitude * (vx / currentSpeed) : 0;
-  const dragY = currentSpeed > 0.01 ? -dragMagnitude * (vy / currentSpeed) : 0;
+  const vEndX = state.velocity.vx + dt * k3.ax;
+  const vEndY = state.velocity.vy + dt * k3.ay;
+  const altEnd = state.altitude + dt * vHalfY2;
+  const k4 = getFlightAccelerations(altEnd, vEndX, vEndY, pitch, engineThrustN, totalMassKg, blueprint);
 
-  // True Spherical Gravity Vector
-  const rCurrent = EARTH_RADIUS + state.altitude;
-  const localG = MU_EARTH / (rCurrent * rCurrent);
-  const gravityForceY = -currentTotalMassKg * localG;
+  // Weighted sum
+  const avgAx = (k1.ax + 2 * k2.ax + 2 * k3.ax + k4.ax) / 6;
+  const avgAy = (k1.ay + 2 * k2.ay + 2 * k3.ay + k4.ay) / 6;
 
-  // Net Forces
-  const netFx = thrustX + dragX;
-  let netFy = thrustY + dragY + gravityForceY;
+  let newVx = state.velocity.vx + avgAx * dt;
+  let newVy = state.velocity.vy + avgAy * dt;
+  let newDownrange = state.downrange + (state.velocity.vx + newVx) * 0.5 * dt;
+  let newAltitude = state.altitude + (state.velocity.vy + newVy) * 0.5 * dt;
 
-  // Ground Support Reaction on Launchpad
-  if (state.altitude <= 0 && netFy < 0) {
-    netFy = 0;
-  }
+  let isCrashed = false;
+  let isDisintegrated = false;
+  let crashImpactSpeed = 0;
 
-  // Accelerations
-  const ax = netFx / currentTotalMassKg;
-  const ay = netFy / currentTotalMassKg;
-
-  const gTotal = Math.sqrt(ax * ax + (ay + localG) * (ay + localG)) / G_EARTH;
-
-  // Velocity Integration
-  let newVx = vx + ax * dt;
-  let newVy = vy + ay * dt;
-
-  // Altitude & Downrange Integration
-  let newDownrange = state.downrange + newVx * dt;
-  let newAltitude = state.altitude + newVy * dt;
-
-  // Ground Collision / Landing Detection
+  // Ground Impact & Crash Dynamics
   if (newAltitude <= 0) {
     newAltitude = 0;
-    if (newVy < -12) {
-      // Hard crash
-      newVy = 0;
+    if (newVy < -12 || state.velocity.vy < -12) {
+      isCrashed = true;
+      isDisintegrated = true;
+      crashImpactSpeed = Math.hypot(newVx, newVy);
       newVx = 0;
+      newVy = 0;
     } else {
-      // Soft touchdown / sitting on pad
-      newVy = 0;
       newVx = 0;
+      newVy = 0;
     }
   }
 
   const newSpeed = Math.hypot(newVx, newVy);
+  const gTotal = Math.sqrt(avgAx * avgAx + (avgAy + k1.localG) * (avgAy + k1.localG)) / G_EARTH;
 
-  // Keplerian Orbital Elements Calculation (Ap & Pe)
+  // Atmospheric Compression Re-Entry Heat Flux & Plasma
+  const atm = calculateAtmosphere(newAltitude);
+  const noseRadiusM = 0.5;
+  const kSutton = 1.7415e-4;
+  let heatFluxKwM2 = 0;
+  if (newSpeed > 300 && atm.density > 0.0001) {
+    heatFluxKwM2 = (kSutton * Math.sqrt(atm.density / noseRadiusM) * Math.pow(newSpeed, 3)) / 1000;
+  }
+
+  const emissivity = 0.85;
+  const radSkinTempK = Math.min(4500, atm.temperature + Math.pow(Math.max(0, (heatFluxKwM2 * 1000) / (emissivity * STEFAN_BOLTZMANN)), 0.25));
+
+  // Re-entry structural disintegration check
+  if (radSkinTempK > 3900 && newAltitude > 10000) {
+    isDisintegrated = true;
+    isCrashed = true;
+  }
+
+  // Exact Keplerian Orbital Elements
   const rNew = EARTH_RADIUS + newAltitude;
   const specificEnergy = (newSpeed * newSpeed) / 2 - MU_EARTH / rNew;
-  
+
   let apoapsis = newAltitude;
   let periapsis = 0;
   let inOrbit = false;
+  let isEscapeTrajectory = false;
 
   if (specificEnergy < 0) {
     const semiMajorAxis = -MU_EARTH / (2 * specificEnergy);
@@ -245,18 +315,19 @@ export function stepFlightPhysics(
       inOrbit = true;
     }
   } else if (newSpeed > 0) {
-    apoapsis = 999999;
+    isEscapeTrajectory = true;
+    apoapsis = Infinity;
     periapsis = Math.max(0, newAltitude);
   }
 
-  const maxQ = Math.max(state.maxQReached, q);
+  const maxQ = Math.max(state.maxQReached, k1.q);
 
-  // Trajectory history trail
+  // Trajectory history
   const history = [...state.trajectoryHistory];
   const lastPoint = history[history.length - 1];
-  if (!lastPoint || Math.hypot(newDownrange - lastPoint.x, newAltitude - lastPoint.y) > 100) {
+  if (!lastPoint || Math.hypot(newDownrange - lastPoint.x, newAltitude - lastPoint.y) > 120) {
     history.push({ x: newDownrange, y: newAltitude });
-    if (history.length > 800) history.shift();
+    if (history.length > 900) history.shift();
   }
 
   return {
@@ -270,11 +341,19 @@ export function stepFlightPhysics(
     pitch: parseFloat(pitch.toFixed(1)),
     gForce: parseFloat(gTotal.toFixed(2)),
     fuelMassRemaining: parseFloat(currentFuel.toFixed(2)),
-    dynamicPressure: Math.round(q),
+    dynamicPressure: Math.round(k1.q),
     maxQReached: Math.round(maxQ),
-    apoapsis: Math.round(apoapsis),
+    apoapsis: isEscapeTrajectory ? Infinity : Math.round(apoapsis),
     periapsis: Math.round(periapsis),
     trajectoryHistory: history,
-    inOrbit
+    inOrbit,
+    isEscapeTrajectory,
+    reentryHeatFlux: Math.round(heatFluxKwM2),
+    plasmaTemperatureK: Math.round(radSkinTempK),
+    vehicleSkinTempK: Math.round(radSkinTempK),
+    isCrashed,
+    isDisintegrated,
+    crashImpactSpeed: Math.round(crashImpactSpeed),
+    aborted: isCrashed || isDisintegrated ? true : state.aborted
   };
 }

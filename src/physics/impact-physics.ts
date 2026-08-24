@@ -1,4 +1,4 @@
-import type { AsteroidConfig, ImpactTelemetry, TargetAreaType } from '../types';
+import type { AsteroidConfig, ImpactTelemetry, TargetAreaType, GeographicTarget } from '../types';
 
 export const ASTEROID_DENSITIES: Record<string, number> = {
   rubble: 1500,
@@ -88,8 +88,28 @@ export const POPULATION_AREAS: Record<TargetAreaType, PopulationAreaConfig> = {
     densityPerKm2: 450,
     radiusKm: 75,
     defaultSurface: 'water_ocean'
+  },
+  custom_geo: {
+    id: 'custom_geo',
+    name: 'Interactive GIS Location',
+    description: 'Custom coordinates chosen from interactive Earth map',
+    population: 1500000,
+    densityPerKm2: 2500,
+    radiusKm: 20,
+    defaultSurface: 'sedimentary_rock'
   }
 };
+
+export const GEOGRAPHIC_TARGETS: GeographicTarget[] = [
+  { name: 'Tokyo Metropolis, Japan', latitude: 35.6762, longitude: 139.6503, elevationM: 40, populationDensityPerKm2: 6300, isOcean: false },
+  { name: 'New York City, USA', latitude: 40.7128, longitude: -74.0060, elevationM: 10, populationDensityPerKm2: 11000, isOcean: false },
+  { name: 'London, United Kingdom', latitude: 51.5074, longitude: -0.1278, elevationM: 11, populationDensityPerKm2: 5700, isOcean: false },
+  { name: 'Paris, France', latitude: 48.8566, longitude: 2.3522, elevationM: 35, populationDensityPerKm2: 20000, isOcean: false },
+  { name: 'Pacific Ocean (Mariana Basin)', latitude: 11.3493, longitude: 142.1996, elevationM: -8000, populationDensityPerKm2: 0, isOcean: true, oceanDepthM: 6000 },
+  { name: 'Atlantic Ocean (Mid-Ridge)', latitude: 25.0000, longitude: -45.0000, elevationM: -4000, populationDensityPerKm2: 0, isOcean: true, oceanDepthM: 4500 },
+  { name: 'Cairo, Egypt', latitude: 30.0444, longitude: 31.2357, elevationM: 23, populationDensityPerKm2: 19000, isOcean: false },
+  { name: 'Sydney, Australia', latitude: -33.8688, longitude: 151.2093, elevationM: 19, populationDensityPerKm2: 2100, isOcean: false }
+];
 
 export const JOULES_PER_MEGATON = 4.184e15;
 export const HIROSHIMA_ENERGY_JOULES = 6.3e13;
@@ -105,8 +125,8 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
   const kineticEnergyMegatons = kineticEnergyJoules / JOULES_PER_MEGATON;
   const hiroshimaEquiv = kineticEnergyJoules / HIROSHIMA_ENERGY_JOULES;
 
-  const targetSurface = config.targetSurfaceType || 'crystalline_rock';
-  const targetDensity = TARGET_SURFACES[targetSurface]?.density || 2750;
+  const isOcean = config.targetSurfaceType === 'water_ocean' || config.targetAreaType === 'ocean_deep' || config.geographicTarget?.isOcean === true;
+  const targetDensity = TARGET_SURFACES[isOcean ? 'water_ocean' : config.targetSurfaceType]?.density || 2750;
   const g = 9.80665;
 
   const transientCrater =
@@ -161,25 +181,32 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
   // CASUALTY & FATALITY ESTIMATION MODEL
   // ==========================================
   const areaConfig = POPULATION_AREAS[config.targetAreaType || 'dense_metro'] || POPULATION_AREAS.dense_metro;
-  const totalPop = config.customPopulation !== undefined ? config.customPopulation : areaConfig.population;
-  const popDensity = areaConfig.densityPerKm2;
+  const totalPop = config.customPopulation !== undefined
+    ? config.customPopulation
+    : config.geographicTarget
+    ? config.geographicTarget.populationDensityPerKm2 * Math.PI * Math.pow(25, 2)
+    : areaConfig.population;
+
+  const popDensity = config.geographicTarget
+    ? config.geographicTarget.populationDensityPerKm2
+    : areaConfig.densityPerKm2;
 
   let estimatedFatalities = 0;
   let estimatedInjuries = 0;
 
-  const isOceanImpact = config.targetSurfaceType === 'water_ocean' || config.targetAreaType === 'ocean_deep';
+  // Shallow water wave amplification via Green's Law: H1 / H0 = (h0 / h1)^(1/4)
+  const initialDeepWaveM = Math.round(Math.max(15, craterDepth * 0.45));
+  const deepDepthM = config.geographicTarget?.oceanDepthM || 4000;
+  const shallowCoastDepthM = 20;
+  const greensAmplification = Math.pow(deepDepthM / shallowCoastDepthM, 0.25);
 
-  // Megatsunami wave metrics
-  const tsunamiWaveHeightAtImpactM = Math.round(Math.max(15, craterDepth * 0.45));
-  const tsunamiWaveHeightAt100kmM = parseFloat(
-    (tsunamiWaveHeightAtImpactM * Math.pow(Math.max(1, finalCraterDiameter / 2) / 100000, 0.72)).toFixed(1)
-  );
+  const waveDecayed100km = initialDeepWaveM * Math.pow(Math.max(1, finalCraterDiameter / 2) / 100000, 0.72);
+  const tsunamiWaveHeightAt100kmM = parseFloat(Math.min(500, waveDecayed100km * (isOcean ? greensAmplification * 0.5 : 1)).toFixed(1));
   const tsunamiRunupInundationKm = parseFloat((tsunamiWaveHeightAt100kmM * 0.35).toFixed(2));
-  const tsunamiTravelSpeedKmh = Math.round(Math.sqrt(9.81 * 4000) * 3.6); // ~713 km/h
+  const tsunamiTravelSpeedKmh = Math.round(Math.sqrt(9.81 * deepDepthM) * 3.6);
 
   if (totalPop > 0) {
-    if (isOceanImpact) {
-      // Coastal Tsunami devastation model
+    if (isOcean) {
       if (tsunamiWaveHeightAt100kmM > 25) {
         estimatedFatalities = Math.round(totalPop * 0.85);
         estimatedInjuries = Math.round(totalPop * 0.12);
@@ -194,7 +221,6 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
         estimatedInjuries = Math.round(totalPop * 0.1);
       }
     } else {
-      // Land / Urban Impact Casualties
       const lethalRadius = Math.max(thermalIgnitionRadiusKm * 0.9, r20psiKm);
       const lethalArea = Math.PI * Math.pow(lethalRadius, 2);
       const fatalitiesDirect = Math.min(totalPop, Math.round(lethalArea * popDensity));
@@ -230,11 +256,11 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
     seismicMagnitude: parseFloat(richterMagnitude.toFixed(1)),
     soundDecibelsAt100km: Math.round(soundDb),
     atmosphericDisruptionDescription: atmosphereText,
-    targetPopulation: totalPop,
+    targetPopulation: Math.round(totalPop),
     estimatedFatalities,
     estimatedInjuries,
-    isOceanImpact,
-    tsunamiWaveHeightAtImpactM,
+    isOceanImpact: isOcean,
+    tsunamiWaveHeightAtImpactM: initialDeepWaveM,
     tsunamiWaveHeightAt100kmM,
     tsunamiRunupInundationKm,
     tsunamiTravelSpeedKmh
