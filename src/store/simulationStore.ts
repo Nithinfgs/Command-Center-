@@ -86,7 +86,8 @@ export function createInitialState() {
     velocity: 24,
     entryAngle: 45,
     targetBodyId: 'earth',
-    targetSurfaceType: 'crystalline_rock'
+    targetSurfaceType: 'crystalline_rock',
+    targetAreaType: 'dense_metro'
   };
 
   const initialAtm = calculateAtmosphere(0);

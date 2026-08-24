@@ -1,4 +1,4 @@
-import type { AsteroidConfig, ImpactTelemetry } from '../types';
+import type { AsteroidConfig, ImpactTelemetry, TargetAreaType } from '../types';
 
 export const ASTEROID_DENSITIES: Record<string, number> = {
   rubble: 1500,
@@ -15,6 +15,82 @@ export const TARGET_SURFACES: Record<string, { density: number; name: string }> 
   ice_sheet: { density: 917, name: 'Glacial Polar Ice Sheet' }
 };
 
+export interface PopulationAreaConfig {
+  id: TargetAreaType;
+  name: string;
+  description: string;
+  population: number;
+  densityPerKm2: number;
+  radiusKm: number;
+  defaultSurface: 'crystalline_rock' | 'sedimentary_rock' | 'water_ocean' | 'ice_sheet';
+}
+
+export const POPULATION_AREAS: Record<TargetAreaType, PopulationAreaConfig> = {
+  dense_metro: {
+    id: 'dense_metro',
+    name: 'Mega-Metropolis (10M)',
+    description: 'High-density urban core (e.g., Tokyo, NYC, Mumbai) with 10,000,000 residents',
+    population: 10000000,
+    densityPerKm2: 8500,
+    radiusKm: 20,
+    defaultSurface: 'sedimentary_rock'
+  },
+  major_city: {
+    id: 'major_city',
+    name: 'Major City Core (1M)',
+    description: 'Major regional capital with 1,000,000 residents and high-rise commercial structures',
+    population: 1000000,
+    densityPerKm2: 3000,
+    radiusKm: 12,
+    defaultSurface: 'sedimentary_rock'
+  },
+  urban_suburbs: {
+    id: 'urban_suburbs',
+    name: 'Suburban County (250k)',
+    description: 'Residential suburban county and industrial parks with 250,000 residents',
+    population: 250000,
+    densityPerKm2: 600,
+    radiusKm: 15,
+    defaultSurface: 'sedimentary_rock'
+  },
+  small_town: {
+    id: 'small_town',
+    name: 'Small Town (100k)',
+    description: 'Township / small urban settlement with 100,000 residents',
+    population: 100000,
+    densityPerKm2: 250,
+    radiusKm: 12,
+    defaultSurface: 'crystalline_rock'
+  },
+  rural_plains: {
+    id: 'rural_plains',
+    name: 'Rural Plains (10k)',
+    description: 'Sparse agricultural farmlands and villages with 10,000 residents',
+    population: 10000,
+    densityPerKm2: 12,
+    radiusKm: 25,
+    defaultSurface: 'crystalline_rock'
+  },
+  uninhabited: {
+    id: 'uninhabited',
+    name: 'Remote Desert (0 Pop)',
+    description: 'Uninhabited desert/polar tundra with 0 permanent civilian casualties',
+    population: 0,
+    densityPerKm2: 0,
+    radiusKm: 50,
+    defaultSurface: 'crystalline_rock'
+  },
+  ocean_deep: {
+    id: 'ocean_deep',
+    name: 'Deep Ocean & Coastal Basin',
+    description: 'Open sea impact generating megatsunami threatening 2,000,000 coastal residents',
+    population: 2000000,
+    densityPerKm2: 450,
+    radiusKm: 75,
+    defaultSurface: 'water_ocean'
+  }
+};
+
 export const JOULES_PER_MEGATON = 4.184e15;
 export const HIROSHIMA_ENERGY_JOULES = 6.3e13;
 
@@ -29,7 +105,8 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
   const kineticEnergyMegatons = kineticEnergyJoules / JOULES_PER_MEGATON;
   const hiroshimaEquiv = kineticEnergyJoules / HIROSHIMA_ENERGY_JOULES;
 
-  const targetDensity = TARGET_SURFACES[config.targetSurfaceType]?.density || 2750;
+  const targetSurface = config.targetSurfaceType || 'crystalline_rock';
+  const targetDensity = TARGET_SURFACES[targetSurface]?.density || 2750;
   const g = 9.80665;
 
   const transientCrater =
@@ -45,7 +122,7 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
   let craterDepth = transientCrater / 3;
 
   if (transientCrater > dSimpleComplex) {
-    finalCraterDiameter = 1.17 * Math.pow(transientCrater, 1.13) / Math.pow(dSimpleComplex, 0.13);
+    finalCraterDiameter = (1.17 * Math.pow(transientCrater, 1.13)) / Math.pow(dSimpleComplex, 0.13);
     craterDepth = 1040 * Math.pow(finalCraterDiameter / 1000, 0.301);
   } else {
     finalCraterDiameter = 1.25 * transientCrater;
@@ -68,6 +145,7 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
 
   const soundDb = Math.min(240, Math.max(40, 120 + 20 * Math.log10(Math.max(1, kineticEnergyMegatons)) - 20 * Math.log10(100)));
 
+  // Atmospheric disruption text
   let atmosphereText = 'Localized low-altitude pressure shock; minimal stratospheric dust injection.';
   if (kineticEnergyMegatons > 1e6) {
     atmosphereText = 'GLOBAL EXTINCTION EVENT: Stratospheric sulfate/soot veil blocking 99% sunlight for years, nuclear winter, global acid rain, collapse of photosynthesis.';
@@ -77,6 +155,62 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
     atmosphereText = 'REGIONAL CATASTROPHE: Stratospheric dust injection causing regional cooling (-4°C), severe global infrasound detection, regional wildfires.';
   } else if (kineticEnergyMegatons > 1) {
     atmosphereText = 'METROPOLITAN DEVASTATION: High-altitude fireball, severe blast overpressure demolishing all structures across city radius, regional fallout.';
+  }
+
+  // ==========================================
+  // CASUALTY & FATALITY ESTIMATION MODEL
+  // ==========================================
+  const areaConfig = POPULATION_AREAS[config.targetAreaType || 'dense_metro'] || POPULATION_AREAS.dense_metro;
+  const totalPop = config.customPopulation !== undefined ? config.customPopulation : areaConfig.population;
+  const popDensity = areaConfig.densityPerKm2;
+
+  let estimatedFatalities = 0;
+  let estimatedInjuries = 0;
+
+  const isOceanImpact = config.targetSurfaceType === 'water_ocean' || config.targetAreaType === 'ocean_deep';
+
+  // Megatsunami wave metrics
+  const tsunamiWaveHeightAtImpactM = Math.round(Math.max(15, craterDepth * 0.45));
+  const tsunamiWaveHeightAt100kmM = parseFloat(
+    (tsunamiWaveHeightAtImpactM * Math.pow(Math.max(1, finalCraterDiameter / 2) / 100000, 0.72)).toFixed(1)
+  );
+  const tsunamiRunupInundationKm = parseFloat((tsunamiWaveHeightAt100kmM * 0.35).toFixed(2));
+  const tsunamiTravelSpeedKmh = Math.round(Math.sqrt(9.81 * 4000) * 3.6); // ~713 km/h
+
+  if (totalPop > 0) {
+    if (isOceanImpact) {
+      // Coastal Tsunami devastation model
+      if (tsunamiWaveHeightAt100kmM > 25) {
+        estimatedFatalities = Math.round(totalPop * 0.85);
+        estimatedInjuries = Math.round(totalPop * 0.12);
+      } else if (tsunamiWaveHeightAt100kmM > 10) {
+        estimatedFatalities = Math.round(totalPop * 0.55);
+        estimatedInjuries = Math.round(totalPop * 0.35);
+      } else if (tsunamiWaveHeightAt100kmM > 2) {
+        estimatedFatalities = Math.round(totalPop * 0.2);
+        estimatedInjuries = Math.round(totalPop * 0.45);
+      } else {
+        estimatedFatalities = Math.round(totalPop * 0.02);
+        estimatedInjuries = Math.round(totalPop * 0.1);
+      }
+    } else {
+      // Land / Urban Impact Casualties
+      const lethalRadius = Math.max(thermalIgnitionRadiusKm * 0.9, r20psiKm);
+      const lethalArea = Math.PI * Math.pow(lethalRadius, 2);
+      const fatalitiesDirect = Math.min(totalPop, Math.round(lethalArea * popDensity));
+
+      const r5psiArea = Math.PI * Math.pow(r5psiKm, 2);
+      const ring5psiArea = Math.max(0, r5psiArea - lethalArea);
+      const fatalities5psi = Math.min(totalPop - fatalitiesDirect, Math.round(ring5psiArea * popDensity * 0.6));
+
+      const r1psiArea = Math.PI * Math.pow(r1psiKm, 2);
+      const ring1psiArea = Math.max(0, r1psiArea - r5psiArea);
+      const fatalities1psi = Math.min(totalPop - fatalitiesDirect - fatalities5psi, Math.round(ring1psiArea * popDensity * 0.12));
+
+      estimatedFatalities = Math.min(totalPop, fatalitiesDirect + fatalities5psi + fatalities1psi);
+      const remainingPop = Math.max(0, totalPop - estimatedFatalities);
+      estimatedInjuries = Math.min(remainingPop, Math.round(ring1psiArea * popDensity * 0.65 + fatalitiesDirect * 0.3));
+    }
   }
 
   return {
@@ -95,7 +229,15 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
     overpressure1psiRadius: parseFloat(r1psiKm.toFixed(2)),
     seismicMagnitude: parseFloat(richterMagnitude.toFixed(1)),
     soundDecibelsAt100km: Math.round(soundDb),
-    atmosphericDisruptionDescription: atmosphereText
+    atmosphericDisruptionDescription: atmosphereText,
+    targetPopulation: totalPop,
+    estimatedFatalities,
+    estimatedInjuries,
+    isOceanImpact,
+    tsunamiWaveHeightAtImpactM,
+    tsunamiWaveHeightAt100kmM,
+    tsunamiRunupInundationKm,
+    tsunamiTravelSpeedKmh
   };
 }
 
@@ -109,7 +251,8 @@ export const IMPACT_PRESETS = [
     density: 3300,
     velocity: 19,
     entryAngle: 18,
-    targetSurfaceType: 'crystalline_rock' as const
+    targetSurfaceType: 'crystalline_rock' as const,
+    targetAreaType: 'small_town' as TargetAreaType
   },
   {
     id: 'tunguska',
@@ -120,7 +263,8 @@ export const IMPACT_PRESETS = [
     density: 3000,
     velocity: 27,
     entryAngle: 30,
-    targetSurfaceType: 'crystalline_rock' as const
+    targetSurfaceType: 'crystalline_rock' as const,
+    targetAreaType: 'uninhabited' as TargetAreaType
   },
   {
     id: 'meteor_crater',
@@ -131,18 +275,32 @@ export const IMPACT_PRESETS = [
     density: 7800,
     velocity: 12.8,
     entryAngle: 45,
-    targetSurfaceType: 'sedimentary_rock' as const
+    targetSurfaceType: 'sedimentary_rock' as const,
+    targetAreaType: 'rural_plains' as TargetAreaType
   },
   {
-    id: 'apophis_close',
-    name: 'Asteroid 99942 Apophis',
-    description: '340-meter near-Earth asteroid direct city-destroyer impact scenario.',
+    id: 'apophis_metro',
+    name: 'Apophis Metro Direct Hit',
+    description: '340-meter near-Earth asteroid impacting dense 10M population metropolis.',
     diameter: 340,
     composition: 'silicate' as const,
     density: 3200,
     velocity: 30.7,
     entryAngle: 45,
-    targetSurfaceType: 'crystalline_rock' as const
+    targetSurfaceType: 'sedimentary_rock' as const,
+    targetAreaType: 'dense_metro' as TargetAreaType
+  },
+  {
+    id: 'ocean_megatsunami',
+    name: 'Deep Ocean Megatsunami Impact',
+    description: '1-kilometer asteroid oceanic impact triggering 300m megatsunami waves.',
+    diameter: 1000,
+    composition: 'silicate' as const,
+    density: 3000,
+    velocity: 25,
+    entryAngle: 45,
+    targetSurfaceType: 'water_ocean' as const,
+    targetAreaType: 'ocean_deep' as TargetAreaType
   },
   {
     id: 'chicxulub_dinosaur',
@@ -153,6 +311,7 @@ export const IMPACT_PRESETS = [
     density: 2500,
     velocity: 20,
     entryAngle: 60,
-    targetSurfaceType: 'water_ocean' as const
+    targetSurfaceType: 'water_ocean' as const,
+    targetAreaType: 'ocean_deep' as TargetAreaType
   }
 ];

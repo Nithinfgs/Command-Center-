@@ -153,6 +153,8 @@ export interface OrbitalElements {
 
 export type AsteroidComposition = 'rubble' | 'carbonaceous' | 'silicate' | 'iron_nickel' | 'cometary_ice';
 
+export type TargetAreaType = 'dense_metro' | 'major_city' | 'urban_suburbs' | 'small_town' | 'rural_plains' | 'uninhabited' | 'ocean_deep';
+
 export interface AsteroidConfig {
   diameter: number; // meters (10m to 50,000m)
   composition: AsteroidComposition;
@@ -161,6 +163,8 @@ export interface AsteroidConfig {
   entryAngle: number; // degrees (10 to 90)
   targetBodyId: string;
   targetSurfaceType: 'crystalline_rock' | 'sedimentary_rock' | 'water_ocean' | 'ice_sheet';
+  targetAreaType: TargetAreaType;
+  customPopulation?: number;
 }
 
 export interface ImpactTelemetry {
@@ -180,6 +184,14 @@ export interface ImpactTelemetry {
   seismicMagnitude: number; // Richter scale Mw
   soundDecibelsAt100km: number; // dB
   atmosphericDisruptionDescription: string;
+  targetPopulation: number;
+  estimatedFatalities: number;
+  estimatedInjuries: number;
+  isOceanImpact: boolean;
+  tsunamiWaveHeightAtImpactM: number;
+  tsunamiWaveHeightAt100kmM: number;
+  tsunamiRunupInundationKm: number;
+  tsunamiTravelSpeedKmh: number;
 }
 
 // ==========================================
