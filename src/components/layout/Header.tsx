@@ -48,7 +48,7 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="text-[#38BDF8] text-base font-semibold">◈</span>
           <span className="font-semibold text-sm tracking-tight text-[#E8EDF2]">
-            Aero-Orbit
+            Mission Control
           </span>
         </div>
 
