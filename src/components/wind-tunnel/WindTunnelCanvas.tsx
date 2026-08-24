@@ -1,7 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { Download } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { PARTS_CATALOG, GRID_CELL_SIZE, calculateRocketProperties } from '../../physics/rocket-math';
 import { calculateAeroTelemetry, calculateNozzlePlume } from '../../physics/aerodynamics';
+import { ExportReportModal } from './ExportReportModal';
 
 interface ProbeData {
   worldX: number;
@@ -23,6 +25,7 @@ export const WindTunnelCanvas: React.FC = () => {
   const animFrameRef = useRef<number | null>(null);
 
   const [mouseProbe, setMouseProbe] = useState<ProbeData | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const aero = calculateAeroTelemetry(windTunnelState);
   const plume = calculateNozzlePlume(
@@ -878,9 +881,19 @@ export const WindTunnelCanvas: React.FC = () => {
       <div className="absolute top-3 right-3 bg-[#121A26]/95 border border-[#263548] rounded-lg p-3 text-xs shadow-lg w-72 space-y-2">
         <div className="flex items-center justify-between pb-1.5 border-b border-[#1C2938]">
           <span className="font-semibold text-[#E8EDF2] text-xs">Aerodynamic Metrics</span>
-          <span className="text-[10px] text-[#38BDF8] bg-[#38BDF8]/10 px-2 py-0.5 rounded font-medium capitalize">
-            {windTunnelState.visualizationMode}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#38BDF8] hover:text-[#E8EDF2] text-[10px] font-medium transition-colors"
+              title="Export Telemetry Data"
+            >
+              <Download className="w-2.5 h-2.5" />
+              <span>Export</span>
+            </button>
+            <span className="text-[10px] text-[#38BDF8] bg-[#38BDF8]/10 px-1.5 py-0.5 rounded font-medium capitalize">
+              {windTunnelState.visualizationMode}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -962,6 +975,12 @@ export const WindTunnelCanvas: React.FC = () => {
         <span>AoA (α): <strong className="text-[#FBBF24] font-mono-num">{(windTunnelState.windAngle || 0) - (windTunnelState.rocketPitch || 0)}°</strong></span>
         <span>Freestream: <strong className="text-[#E8EDF2] font-mono-num">{Math.round(windTunnelState.freestreamSpeed)} m/s</strong></span>
       </div>
+
+      <ExportReportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        canvasRef={canvasRef}
+      />
     </div>
   );
 };

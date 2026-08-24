@@ -1,9 +1,11 @@
-import React from 'react';
-import { Wind, Compass, RotateCcw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Wind, Compass, RotateCcw, Download } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
+import { ExportReportModal } from './ExportReportModal';
 
 export const WindTunnelControls: React.FC = () => {
   const { windTunnelState, setWindTunnelState } = useSimulation();
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const presets = [
     { name: 'Sea Level Subsonic (Mach 0.4)', mach: 0.4, alt: 0 },
@@ -24,9 +26,14 @@ export const WindTunnelControls: React.FC = () => {
           <Wind className="w-4 h-4 text-[#38BDF8]" />
           <h2 className="font-semibold text-[#E8EDF2] text-xs tracking-tight">Wind Tunnel Simulation</h2>
         </div>
-        <span className="text-[10px] text-[#34D399] bg-[#34D399]/10 px-2 py-0.5 rounded font-medium">
-          Active
-        </span>
+        <button
+          onClick={() => setShowExportModal(true)}
+          className="flex items-center gap-1 px-2 py-1 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#38BDF8] hover:text-[#E8EDF2] text-[10px] font-medium transition-colors"
+          title="Export Telemetry Data (CSV / JSON / Polar Curve)"
+        >
+          <Download className="w-3 h-3" />
+          <span>Export Data</span>
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
@@ -262,6 +269,11 @@ export const WindTunnelControls: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ExportReportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+      />
     </aside>
   );
 };
