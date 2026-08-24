@@ -48,36 +48,36 @@ export const NavBallHud: React.FC = () => {
 
   return (
     <>
-      <aside className="w-[300px] bg-[#121A26] border-r border-[#1C2938] flex flex-col h-full select-none text-xs shrink-0 z-20">
-        <div className="p-3 border-b border-[#1C2938] flex items-center justify-between">
+      <aside className="w-[300px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
+        <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Compass className="w-4 h-4 text-[#38BDF8]" />
-            <h2 className="font-semibold text-[#E8EDF2] text-xs tracking-tight">Flight Telemetry</h2>
+            <Compass className="w-4 h-4 text-[#FF8A1F]" />
+            <h2 className="font-semibold text-[#E6E8EB] text-xs tracking-tight uppercase">Flight Dynamics</h2>
           </div>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsReportOpen(true)}
-              className="p-1 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2]"
+              className="p-1 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#79AFC1] hover:text-[#E6E8EB]"
               title="Mission Report / Incident Telemetry"
             >
-              <FileText className="w-3.5 h-3.5 text-[#38BDF8]" />
+              <FileText className="w-3.5 h-3.5 text-[#79AFC1]" />
             </button>
-            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+            <span className={`text-[10px] px-2 py-0.5 rounded font-mono-num font-semibold ${
               flightState.aborted
-                ? 'bg-[#F43F5E]/15 text-[#F43F5E]'
+                ? 'bg-[#D95757]/15 text-[#D95757]'
                 : flightState.inOrbit 
-                ? 'bg-[#34D399]/15 text-[#34D399]' 
+                ? 'bg-[#55B982]/15 text-[#55B982]' 
                 : flightState.isLaunched 
-                ? 'bg-[#FBBF24]/15 text-[#FBBF24]' 
-                : 'bg-[#172131] text-[#9AA9B8]'
+                ? 'bg-[#E6B84D]/15 text-[#E6B84D]' 
+                : 'bg-[#1B1F28] text-[#A4ABB6]'
             }`}>
               {flightState.aborted 
-                ? 'Aborted' 
+                ? '● ABORTED' 
                 : flightState.inOrbit 
-                ? 'Stable Orbit' 
+                ? '● STABLE ORBIT' 
                 : flightState.isLaunched 
-                ? 'Ascent Phase' 
-                : 'Pad Standby'}
+                ? '● ASCENT PHASE' 
+                : '● PAD STANDBY'}
             </span>
           </div>
         </div>
@@ -85,14 +85,14 @@ export const NavBallHud: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-3 space-y-4">
           {/* Abort Banner Notice */}
           {flightState.aborted && (
-            <div className="p-2.5 bg-[#F43F5E]/10 border border-[#F43F5E]/30 rounded-lg flex items-center justify-between text-[#F43F5E]">
+            <div className="p-2.5 bg-[#D95757]/10 border border-[#D95757]/30 rounded-lg flex items-center justify-between text-[#D95757]">
               <span className="flex items-center gap-1.5 font-semibold text-xs">
                 <AlertOctagon className="w-4 h-4" />
-                <span>Mission Aborted</span>
+                <span>MISSION ABORTED</span>
               </span>
               <button
                 onClick={() => setIsReportOpen(true)}
-                className="px-2 py-1 rounded bg-[#F43F5E] hover:bg-[#e11d48] text-[#0B0F17] font-semibold text-[11px] transition-colors"
+                className="px-2 py-1 rounded bg-[#D95757] hover:bg-[#bf4343] text-[#090A0D] font-semibold text-[11px] transition-colors"
               >
                 View Report
               </button>
@@ -104,7 +104,7 @@ export const NavBallHud: React.FC = () => {
             {!flightState.isLaunched ? (
               <button
                 onClick={launchFlight}
-                className="w-full py-2.5 rounded-md bg-[#34D399] hover:bg-[#2fc08a] text-[#0B0F17] font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 shadow-sm"
+                className="w-full py-2.5 rounded bg-[#FF8A1F] hover:bg-[#FFA24A] text-[#090A0D] font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 shadow-sm uppercase tracking-tight"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>Ignition & Launch (Space)</span>
@@ -113,10 +113,10 @@ export const NavBallHud: React.FC = () => {
               <button
                 onClick={triggerStaging}
                 disabled={!hasMoreStages || flightState.aborted}
-                className={`w-full py-2.5 rounded-md font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 ${
+                className={`w-full py-2.5 rounded font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 uppercase tracking-tight ${
                   hasMoreStages && !flightState.aborted
-                    ? 'bg-[#38BDF8] hover:bg-[#2ea8dd] text-[#0B0F17]'
-                    : 'bg-[#172131] text-[#64748B] border border-[#263548] cursor-not-allowed'
+                    ? 'bg-[#79AFC1] hover:bg-[#689fb0] text-[#090A0D]'
+                    : 'bg-[#1B1F28] text-[#69717E] border border-[#252B36] cursor-not-allowed'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -131,7 +131,7 @@ export const NavBallHud: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={resetFlight}
-                className="flex-1 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2] flex items-center justify-center gap-1.5 transition-colors"
+                className="flex-1 py-1.5 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] flex items-center justify-center gap-1.5 transition-colors text-[11px]"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset Pad</span>
@@ -142,10 +142,10 @@ export const NavBallHud: React.FC = () => {
                   setIsReportOpen(true);
                 }}
                 disabled={!flightState.isLaunched || flightState.aborted}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded font-medium transition-colors text-[11px] ${
                   flightState.isLaunched && !flightState.aborted
-                    ? 'bg-[#F43F5E]/15 hover:bg-[#F43F5E] text-[#F43F5E] hover:text-[#0B0F17] border border-[#F43F5E]/30 cursor-pointer'
-                    : 'bg-[#172131] text-[#64748B] border border-[#263548] cursor-not-allowed'
+                    ? 'bg-[#D95757]/15 hover:bg-[#D95757] text-[#D95757] hover:text-[#090A0D] border border-[#D95757]/30 cursor-pointer'
+                    : 'bg-[#1B1F28] text-[#69717E] border border-[#252B36] cursor-not-allowed'
                 }`}
                 title="Abort Mission"
               >
@@ -154,186 +154,186 @@ export const NavBallHud: React.FC = () => {
             </div>
           </div>
 
-        {/* Guidance Mode Selector */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-2.5 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[#9AA9B8]">Flight Guidance Mode</span>
-            <span className="text-[10px] text-[#38BDF8] capitalize font-medium">{guidanceMode}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              onClick={() => setGuidanceMode('manual')}
-              className={`py-1 rounded text-xs font-medium border transition-colors ${
-                guidanceMode === 'manual'
-                  ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#38BDF8]'
-                  : 'bg-[#172131] border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2]'
-              }`}
-            >
-              Manual Steering
-            </button>
-            <button
-              onClick={() => setGuidanceMode('auto')}
-              className={`py-1 rounded text-xs font-medium border transition-colors flex items-center justify-center gap-1 ${
-                guidanceMode === 'auto'
-                  ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#38BDF8]'
-                  : 'bg-[#172131] border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2]'
-              }`}
-            >
-              <Sparkles className="w-3 h-3 text-[#FBBF24]" />
-              <span>Auto Gravity Turn</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Throttle & Propellant */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-3">
-          <div className="flex items-center justify-between text-xs font-medium">
-            <span className="text-[#9AA9B8] flex items-center gap-1">
-              <Flame className="w-3.5 h-3.5 text-[#FBBF24]" />
-              <span>Engine Throttle</span>
-            </span>
-            <span className="text-[#34D399] font-mono-num font-semibold">{Math.round(flightState.throttle * 100)}%</span>
-          </div>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={flightState.throttle}
-            onChange={e => setFlightThrottle(parseFloat(e.target.value))}
-            className="w-full"
-          />
-          <div className="flex justify-between gap-1 text-[10px]">
-            <button
-              onClick={() => setFlightThrottle(0)}
-              className="flex-1 py-1 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#9AA9B8] text-center"
-            >
-              Cutoff (X)
-            </button>
-            <button
-              onClick={() => setFlightThrottle(0.5)}
-              className="flex-1 py-1 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#9AA9B8] text-center"
-            >
-              50%
-            </button>
-            <button
-              onClick={() => setFlightThrottle(1.0)}
-              className="flex-1 py-1 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#34D399] font-medium text-center"
-            >
-              100% (Z)
-            </button>
-          </div>
-
-          <div className="border-t border-[#1C2938] pt-2.5">
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-[#9AA9B8]">Stage Fuel Remaining</span>
-              <span className={`font-mono-num font-semibold ${flightState.fuelMassRemaining < 0.5 ? 'text-[#F43F5E]' : 'text-[#E8EDF2]'}`}>
-                {flightState.fuelMassRemaining.toFixed(1)} t
-              </span>
+          {/* Guidance Mode Selector */}
+          <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-2.5 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[#A4ABB6]">Flight Guidance Mode</span>
+              <span className="text-[10px] text-[#FF8A1F] capitalize font-medium">{guidanceMode}</span>
             </div>
-            <div className="w-full bg-[#121A26] h-1.5 rounded-full overflow-hidden border border-[#263548]">
-              <div
-                className={`h-full transition-all duration-150 ${
-                  flightState.fuelMassRemaining < 1.0 ? 'bg-[#F43F5E]' : 'bg-[#38BDF8]'
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={() => setGuidanceMode('manual')}
+                className={`py-1 rounded text-xs font-medium border transition-colors ${
+                  guidanceMode === 'manual'
+                    ? 'bg-[#222733] border-[#FF8A1F] text-[#E6E8EB] font-semibold'
+                    : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB]'
                 }`}
-                style={{
-                  width: `${Math.min(
-                    100,
-                    (flightState.fuelMassRemaining / Math.max(1, currentStageInfo.stageFuelMassTons || 10)) * 100
-                  )}%`
-                }}
-              />
+              >
+                Manual Steering
+              </button>
+              <button
+                onClick={() => setGuidanceMode('auto')}
+                className={`py-1 rounded text-xs font-medium border transition-colors flex items-center justify-center gap-1 ${
+                  guidanceMode === 'auto'
+                    ? 'bg-[#222733] border-[#FF8A1F] text-[#E6E8EB] font-semibold'
+                    : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB]'
+                }`}
+              >
+                <Sparkles className="w-3 h-3 text-[#FF8A1F]" />
+                <span>Auto Gravity Turn</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Throttle & Propellant */}
+          <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-3">
+            <div className="flex items-center justify-between text-xs font-medium">
+              <span className="text-[#A4ABB6] flex items-center gap-1">
+                <Flame className="w-3.5 h-3.5 text-[#FF8A1F]" />
+                <span>Engine Throttle</span>
+              </span>
+              <span className="text-[#FF8A1F] font-mono-num font-semibold">{Math.round(flightState.throttle * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={flightState.throttle}
+              onChange={e => setFlightThrottle(parseFloat(e.target.value))}
+              className="w-full"
+            />
+            <div className="flex justify-between gap-1 text-[10px]">
+              <button
+                onClick={() => setFlightThrottle(0)}
+                className="flex-1 py-1 rounded bg-[#0E1015] hover:bg-[#222733] border border-[#252B36] text-[#A4ABB6] text-center"
+              >
+                Cutoff (X)
+              </button>
+              <button
+                onClick={() => setFlightThrottle(0.5)}
+                className="flex-1 py-1 rounded bg-[#0E1015] hover:bg-[#222733] border border-[#252B36] text-[#A4ABB6] text-center"
+              >
+                50%
+              </button>
+              <button
+                onClick={() => setFlightThrottle(1.0)}
+                className="flex-1 py-1 rounded bg-[#0E1015] hover:bg-[#222733] border border-[#252B36] text-[#FF8A1F] font-medium text-center"
+              >
+                100% (Z)
+              </button>
+            </div>
+
+            <div className="border-t border-[#252B36] pt-2.5">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-[#A4ABB6]">Stage Fuel Remaining</span>
+                <span className={`font-mono-num font-semibold ${flightState.fuelMassRemaining < 0.5 ? 'text-[#D95757]' : 'text-[#E6E8EB]'}`}>
+                  {flightState.fuelMassRemaining.toFixed(1)} t
+                </span>
+              </div>
+              <div className="w-full bg-[#0E1015] h-1.5 rounded-full overflow-hidden border border-[#252B36]">
+                <div
+                  className={`h-full transition-all duration-150 ${
+                    flightState.fuelMassRemaining < 1.0 ? 'bg-[#D95757]' : 'bg-[#79AFC1]'
+                  }`}
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (flightState.fuelMassRemaining / Math.max(1, currentStageInfo.stageFuelMassTons || 10)) * 100
+                    )}%`
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Pitch Steering & Artificial Horizon */}
+          <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2.5">
+            <div className="flex items-center justify-between text-xs font-medium">
+              <span className="text-[#A4ABB6]">Pitch Angle (Steering)</span>
+              <span className="text-[#FF8A1F] font-mono-num font-semibold">{flightState.pitch}°</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="90"
+              step="1"
+              value={flightState.pitch}
+              onChange={e => setFlightPitch(parseInt(e.target.value))}
+              className="w-full"
+            />
+            <div className="flex justify-between text-[10px] text-[#69717E]">
+              <span>0° (Horizontal LEO)</span>
+              <span>45° (Gravity Turn)</span>
+              <span>90° (Vertical)</span>
+            </div>
+          </div>
+
+          {/* Live Flight Telemetry HUD */}
+          <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2.5">
+            <div className="flex items-center justify-between pb-1.5 border-b border-[#252B36]">
+              <span className="font-medium text-[#E6E8EB] text-xs uppercase tracking-wider text-[11px]">Ascent Telemetry</span>
+              <span className="text-[10px] font-mono-num text-[#79AFC1]">
+                {flightState.altitude > 0 ? 'Active' : 'Standby'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+                <span className="text-[#69717E] block text-[10px] uppercase">Altitude</span>
+                <span className="text-[#79AFC1] font-mono-num font-semibold text-xs mt-0.5 block">
+                  {flightState.altitude >= 1000
+                    ? `${(flightState.altitude / 1000).toFixed(2)} km`
+                    : `${Math.round(flightState.altitude)} m`}
+                </span>
+              </div>
+              <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+                <span className="text-[#69717E] block text-[10px] uppercase">Speed</span>
+                <span className="text-[#E6E8EB] font-mono-num font-semibold text-xs mt-0.5 block">
+                  {Math.round(flightState.speed)} m/s
+                </span>
+              </div>
+              <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+                <span className="text-[#69717E] block text-[10px] uppercase">Vertical Speed</span>
+                <span className="text-[#E6E8EB] font-mono-num font-semibold text-xs mt-0.5 block">
+                  {flightState.verticalSpeed} m/s
+                </span>
+              </div>
+              <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+                <span className="text-[#69717E] block text-[10px] uppercase">Acceleration</span>
+                <span className="text-[#FF8A1F] font-mono-num font-semibold text-xs mt-0.5 block">
+                  {flightState.gForce} G
+                </span>
+              </div>
+              <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+                <span className="text-[#69717E] block text-[10px] uppercase">Apoapsis (Ap)</span>
+                <span className="text-[#79AFC1] font-mono-num font-semibold text-xs mt-0.5 block">
+                  {(flightState.apoapsis / 1000).toFixed(1)} km
+                </span>
+              </div>
+              <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+                <span className="text-[#69717E] block text-[10px] uppercase">Periapsis (Pe)</span>
+                <span className="text-[#79AFC1] font-mono-num font-semibold text-xs mt-0.5 block">
+                  {(flightState.periapsis / 1000).toFixed(1)} km
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#252B36]">
+              <div className="flex justify-between text-[10px] text-[#A4ABB6] mb-1">
+                <span>Dynamic Pressure (q)</span>
+                <span className="text-[#D95757] font-mono-num font-semibold">{(flightState.dynamicPressure / 1000).toFixed(1)} kPa</span>
+              </div>
+              <div className="w-full bg-[#0E1015] h-1.5 rounded-full overflow-hidden border border-[#252B36]">
+                <div
+                  className="bg-[#D95757] h-full transition-all duration-150"
+                  style={{ width: `${Math.min(100, (flightState.dynamicPressure / 40000) * 100)}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Pitch Steering & Artificial Horizon */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2.5">
-          <div className="flex items-center justify-between text-xs font-medium">
-            <span className="text-[#9AA9B8]">Pitch Angle (Steering)</span>
-            <span className="text-[#38BDF8] font-mono-num font-semibold">{flightState.pitch}°</span>
-          </div>
-          <input
-            type="range"
-            min="0"
-            max="90"
-            step="1"
-            value={flightState.pitch}
-            onChange={e => setFlightPitch(parseInt(e.target.value))}
-            className="w-full"
-          />
-          <div className="flex justify-between text-[10px] text-[#64748B]">
-            <span>0° (Horizontal LEO)</span>
-            <span>45° (Gravity Turn)</span>
-            <span>90° (Vertical)</span>
-          </div>
-        </div>
-
-        {/* Live Flight Telemetry HUD */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2.5">
-          <div className="flex items-center justify-between pb-1.5 border-b border-[#1C2938]">
-            <span className="font-medium text-[#E8EDF2] text-xs">Ascent Telemetry</span>
-            <span className="text-[10px] font-mono-num text-[#38BDF8]">
-              {flightState.altitude > 0 ? 'Active' : 'Standby'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div className="bg-[#121A26] p-2 rounded border border-[#263548]/40">
-              <span className="text-[#64748B] block">Altitude</span>
-              <span className="text-[#38BDF8] font-mono-num font-semibold text-xs mt-0.5 block">
-                {flightState.altitude >= 1000
-                  ? `${(flightState.altitude / 1000).toFixed(2)} km`
-                  : `${Math.round(flightState.altitude)} m`}
-              </span>
-            </div>
-            <div className="bg-[#121A26] p-2 rounded border border-[#263548]/40">
-              <span className="text-[#64748B] block">Speed</span>
-              <span className="text-[#34D399] font-mono-num font-semibold text-xs mt-0.5 block">
-                {Math.round(flightState.speed)} m/s
-              </span>
-            </div>
-            <div className="bg-[#121A26] p-2 rounded border border-[#263548]/40">
-              <span className="text-[#64748B] block">Vertical Speed</span>
-              <span className="text-[#E8EDF2] font-mono-num font-semibold text-xs mt-0.5 block">
-                {flightState.verticalSpeed} m/s
-              </span>
-            </div>
-            <div className="bg-[#121A26] p-2 rounded border border-[#263548]/40">
-              <span className="text-[#64748B] block">Acceleration</span>
-              <span className="text-[#FBBF24] font-mono-num font-semibold text-xs mt-0.5 block">
-                {flightState.gForce} G
-              </span>
-            </div>
-            <div className="bg-[#121A26] p-2 rounded border border-[#263548]/40">
-              <span className="text-[#64748B] block">Apoapsis (Ap)</span>
-              <span className="text-[#E8EDF2] font-mono-num font-semibold text-xs mt-0.5 block">
-                {(flightState.apoapsis / 1000).toFixed(1)} km
-              </span>
-            </div>
-            <div className="bg-[#121A26] p-2 rounded border border-[#263548]/40">
-              <span className="text-[#64748B] block">Periapsis (Pe)</span>
-              <span className="text-[#E8EDF2] font-mono-num font-semibold text-xs mt-0.5 block">
-                {(flightState.periapsis / 1000).toFixed(1)} km
-              </span>
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-[#1C2938]">
-            <div className="flex justify-between text-[10px] text-[#9AA9B8] mb-1">
-              <span>Dynamic Pressure (q)</span>
-              <span className="text-[#F43F5E] font-mono-num font-semibold">{(flightState.dynamicPressure / 1000).toFixed(1)} kPa</span>
-            </div>
-            <div className="w-full bg-[#121A26] h-1.5 rounded-full overflow-hidden border border-[#263548]">
-              <div
-                className="bg-[#F43F5E] h-full transition-all duration-150"
-                style={{ width: `${Math.min(100, (flightState.dynamicPressure / 40000) * 100)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </aside>
+      </aside>
 
       {/* Post-Flight Incident & Mission Telemetry Report Modal */}
       <FlightReportModal

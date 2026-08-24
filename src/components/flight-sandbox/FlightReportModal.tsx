@@ -3,11 +3,9 @@ import {
   FileCode, 
   Copy, 
   CheckCircle2, 
-  X, 
-  AlertOctagon, 
   RotateCcw, 
-  Download,
-  Activity
+  Activity, 
+  FileSpreadsheet 
 } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { calculateRocketProperties } from '../../physics/rocket-math';
@@ -42,12 +40,12 @@ export const FlightReportModal: React.FC<FlightReportModalProps> = ({
     : 'FLIGHT STATUS SUMMARY';
 
   const statusColor = isAborted 
-    ? 'text-[#F43F5E] bg-[#F43F5E]/10 border-[#F43F5E]/30' 
+    ? 'text-[#D95757] bg-[#D95757]/10 border-[#D95757]/30' 
     : isCrashed 
-    ? 'text-[#FBBF24] bg-[#FBBF24]/10 border-[#FBBF24]/30' 
+    ? 'text-[#E6B84D] bg-[#E6B84D]/10 border-[#E6B84D]/30' 
     : isOrbit 
-    ? 'text-[#34D399] bg-[#34D399]/10 border-[#34D399]/30' 
-    : 'text-[#38BDF8] bg-[#38BDF8]/10 border-[#38BDF8]/30';
+    ? 'text-[#55B982] bg-[#55B982]/10 border-[#55B982]/30' 
+    : 'text-[#79AFC1] bg-[#79AFC1]/10 border-[#79AFC1]/30';
 
   const handleExportCSV = () => {
     const rows = [
@@ -100,144 +98,154 @@ export const FlightReportModal: React.FC<FlightReportModalProps> = ({
         maxQReachedPa: flightState.maxQReached,
         peakGForce: flightState.gForce,
         finalStageIndex: flightState.currentStageIndex,
-        fuelRemainingTons: flightState.fuelMassRemaining,
-        trajectoryPointsCount: flightState.trajectoryHistory.length,
-        trajectoryTrail: flightState.trajectoryHistory
+        fuelMassRemainingTons: flightState.fuelMassRemaining,
+        trajectoryWaypointsCount: flightState.trajectoryHistory.length
       }
     };
 
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(reportData, null, 2))}`;
+    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', jsonString);
-    link.setAttribute('download', `Flight_Telemetry_${blueprint.name.replace(/\s+/g, '_')}_${Date.now()}.json`);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Flight_Report_${blueprint.name.replace(/\s+/g, '_')}_${Date.now()}.json`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleCopyMarkdown = () => {
-    const markdownTable = `
-### Mission Flight & Incident Telemetry Report — ${blueprint.name}
-**Status**: **${statusTitle}** | **Target**: Low Earth Orbit (LEO)
+    const md = `
+# 🚀 Mission Control Post-Flight Report: ${blueprint.name}
+**Status**: ${statusTitle}  
+**Timestamp**: ${new Date().toUTCString()}  
 
+### Flight Trajectory Summary
 | Parameter | Value | Unit |
 | :--- | :--- | :--- |
-| **Peak Altitude (Apoapsis)** | \`${(flightState.apoapsis / 1000).toFixed(2)} km\` | km |
-| **Downrange Distance** | \`${(flightState.downrange / 1000).toFixed(2)} km\` | km |
-| **Peak Velocity** | \`${Math.round(flightState.speed)} m/s\` | m/s |
-| **Vertical Speed** | \`${flightState.verticalSpeed} m/s\` | m/s |
-| **Peak Dynamic Pressure (Max-Q)** | \`${(flightState.maxQReached / 1000).toFixed(1)} kPa\` | kPa |
-| **Peak Acceleration** | \`${flightState.gForce} G\` | G |
-| **Current Stage** | \`Stage ${flightState.currentStageIndex}\` | — |
-| **Propellant Remaining** | \`${flightState.fuelMassRemaining.toFixed(2)} t\` | t |
-| **Orbital Status** | \`${flightState.inOrbit ? 'Stable Orbit' : 'Sub-Orbital'}\` | — |
-    `.trim();
+| **Max Altitude (Apoapsis)** | ${(flightState.apoapsis / 1000).toFixed(2)} | km |
+| **Final Altitude** | ${(flightState.altitude / 1000).toFixed(2)} | km |
+| **Max Velocity** | ${Math.round(flightState.speed)} | m/s |
+| **Downrange Range** | ${(flightState.downrange / 1000).toFixed(2)} | km |
+| **Peak Max-Q Pressure** | ${(flightState.maxQReached / 1000).toFixed(1)} | kPa |
+| **Peak G-Force** | ${flightState.gForce.toFixed(2)} | G |
+| **Orbital Condition** | ${flightState.inOrbit ? 'Stable Low Earth Orbit' : 'Sub-Orbital Trajectory'} | — |
+| **Fuel Remaining** | ${flightState.fuelMassRemaining.toFixed(2)} | tons |
+| **Active Stage** | Stage ${flightState.currentStageIndex} | — |
+`;
 
-    navigator.clipboard.writeText(markdownTable);
+    navigator.clipboard.writeText(md.trim());
     setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0B0F17]/85 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-[#121A26] border border-[#263548] rounded-xl max-w-xl w-full p-4 shadow-2xl flex flex-col max-h-[85vh] select-none text-xs">
+    <div className="fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div className="bg-[#151820] border border-[#353D4A] rounded-lg max-w-2xl w-full p-4 shadow-2xl flex flex-col max-h-[88vh] select-none text-xs">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#1C2938]">
-          <div className="flex items-center gap-2.5">
-            <AlertOctagon className="w-5 h-5 text-[#F43F5E]" />
+        <div className="flex items-center justify-between pb-3 border-b border-[#252B36]">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-[#FF8A1F]" />
             <div>
-              <h3 className="font-semibold text-[#E8EDF2] text-sm">Post-Flight Mission Report</h3>
-              <p className="text-[11px] text-[#9AA9B8]">
-                Vehicle telemetry review, trajectory parameters, and incident export
+              <h3 className="font-semibold text-[#E6E8EB] text-xs uppercase tracking-wider">Mission Telemetry & Post-Flight Report</h3>
+              <p className="text-[11px] text-[#69717E]">
+                Recorded vehicle flight kinematics, staging history, and ascent trajectory
               </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="text-[#64748B] hover:text-[#E8EDF2] p-1 rounded hover:bg-[#172131]"
+            className="text-[#69717E] hover:text-[#E6E8EB] text-xs font-mono p-1 rounded hover:bg-[#1B1F28]"
           >
-            <X className="w-4 h-4" />
+            ✕
           </button>
         </div>
 
-        {/* Status Strip */}
-        <div className={`mt-3 p-2.5 rounded-lg border flex items-center justify-between font-semibold ${statusColor}`}>
-          <span className="flex items-center gap-2">
-            <Activity className="w-4 h-4" />
-            <span>{statusTitle}</span>
-          </span>
-          <span className="text-[11px] font-mono-num font-normal opacity-90">
-            {blueprint.name}
-          </span>
+        {/* Status Callout Banner */}
+        <div className={`my-3 p-3 rounded-lg border flex items-center justify-between font-mono-num ${statusColor}`}>
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider block">{statusTitle}</span>
+            <span className="text-[11px] opacity-90 block mt-0.5">
+              Vehicle: {blueprint.name} • Stage {flightState.currentStageIndex} Active
+            </span>
+          </div>
+          <div className="text-right">
+            <span className="text-sm font-bold block">
+              {(flightState.apoapsis / 1000).toFixed(1)} km Ap
+            </span>
+            <span className="text-[10px] opacity-80 block">
+              {Math.round(flightState.speed)} m/s peak
+            </span>
+          </div>
         </div>
 
         {/* Telemetry Metrics Grid */}
-        <div className="flex-1 overflow-y-auto my-3 space-y-3 pr-1">
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-[#172131] p-2.5 rounded-lg border border-[#263548]/40">
-              <span className="text-[#64748B] block text-[11px]">Peak Altitude (Ap)</span>
-              <span className="text-[#38BDF8] font-mono-num font-semibold text-sm mt-0.5 block">
-                {(flightState.apoapsis / 1000).toFixed(1)} km
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="bg-[#1B1F28] p-2.5 rounded-lg border border-[#252B36]">
+              <span className="text-[#69717E] block text-[10px] uppercase">Max Altitude (Ap)</span>
+              <span className="text-[#79AFC1] font-mono-num font-semibold text-sm mt-0.5 block">
+                {(flightState.apoapsis / 1000).toFixed(2)} km
               </span>
             </div>
-            <div className="bg-[#172131] p-2.5 rounded-lg border border-[#263548]/40">
-              <span className="text-[#64748B] block text-[11px]">Peak Velocity</span>
-              <span className="text-[#34D399] font-mono-num font-semibold text-sm mt-0.5 block">
+            <div className="bg-[#1B1F28] p-2.5 rounded-lg border border-[#252B36]">
+              <span className="text-[#69717E] block text-[10px] uppercase">Top Speed</span>
+              <span className="text-[#E6E8EB] font-mono-num font-semibold text-sm mt-0.5 block">
                 {Math.round(flightState.speed)} m/s
               </span>
             </div>
-            <div className="bg-[#172131] p-2.5 rounded-lg border border-[#263548]/40">
-              <span className="text-[#64748B] block text-[11px]">Downrange</span>
-              <span className="text-[#FBBF24] font-mono-num font-semibold text-sm mt-0.5 block">
-                {(flightState.downrange / 1000).toFixed(1)} km
+            <div className="bg-[#1B1F28] p-2.5 rounded-lg border border-[#252B36]">
+              <span className="text-[#69717E] block text-[10px] uppercase">Downrange</span>
+              <span className="text-[#E6E8EB] font-mono-num font-semibold text-sm mt-0.5 block">
+                {(flightState.downrange / 1000).toFixed(2)} km
               </span>
             </div>
           </div>
 
-          <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg overflow-hidden">
+          {/* Telemetry Data Table */}
+          <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg overflow-hidden">
             <table className="w-full text-left font-mono-num text-xs">
-              <thead className="bg-[#172131] border-b border-[#263548]/60 text-[#9AA9B8] text-[11px]">
+              <thead className="bg-[#1B1F28] border-b border-[#252B36] text-[#A4ABB6] text-[11px]">
                 <tr>
                   <th className="p-2">Telemetry Parameter</th>
                   <th className="p-2">Recorded Value</th>
                   <th className="p-2">Unit</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1C2938] text-[#E8EDF2]">
+              <tbody className="divide-y divide-[#252B36] text-[#E6E8EB]">
                 <tr>
-                  <td className="p-2 text-[#9AA9B8]">Final Altitude</td>
+                  <td className="p-2 text-[#A4ABB6]">Final Altitude</td>
                   <td className="p-2 font-medium">{(flightState.altitude / 1000).toFixed(2)}</td>
-                  <td className="p-2 text-[#64748B]">km</td>
+                  <td className="p-2 text-[#69717E]">km</td>
                 </tr>
                 <tr>
-                  <td className="p-2 text-[#9AA9B8]">Max-Q Dynamic Pressure</td>
-                  <td className="p-2 font-medium text-[#F43F5E]">{(flightState.maxQReached / 1000).toFixed(1)}</td>
-                  <td className="p-2 text-[#64748B]">kPa</td>
+                  <td className="p-2 text-[#A4ABB6]">Max-Q Dynamic Pressure</td>
+                  <td className="p-2 font-medium text-[#D95757]">{(flightState.maxQReached / 1000).toFixed(1)}</td>
+                  <td className="p-2 text-[#69717E]">kPa</td>
                 </tr>
                 <tr>
-                  <td className="p-2 text-[#9AA9B8]">Peak Acceleration</td>
-                  <td className="p-2 font-medium text-[#FBBF24]">{flightState.gForce.toFixed(2)}</td>
-                  <td className="p-2 text-[#64748B]">G</td>
+                  <td className="p-2 text-[#A4ABB6]">Peak Acceleration</td>
+                  <td className="p-2 font-medium text-[#FF8A1F]">{flightState.gForce.toFixed(2)}</td>
+                  <td className="p-2 text-[#69717E]">G</td>
                 </tr>
                 <tr>
-                  <td className="p-2 text-[#9AA9B8]">Active Stage Index</td>
-                  <td className="p-2 font-medium text-[#38BDF8]">Stage {flightState.currentStageIndex}</td>
-                  <td className="p-2 text-[#64748B]">—</td>
+                  <td className="p-2 text-[#A4ABB6]">Active Stage Index</td>
+                  <td className="p-2 font-medium text-[#79AFC1]">Stage {flightState.currentStageIndex}</td>
+                  <td className="p-2 text-[#69717E]">—</td>
                 </tr>
                 <tr>
-                  <td className="p-2 text-[#9AA9B8]">Propellant Mass Remaining</td>
+                  <td className="p-2 text-[#A4ABB6]">Propellant Mass Remaining</td>
                   <td className="p-2 font-medium">{flightState.fuelMassRemaining.toFixed(2)}</td>
-                  <td className="p-2 text-[#64748B]">t</td>
+                  <td className="p-2 text-[#69717E]">t</td>
                 </tr>
                 <tr>
-                  <td className="p-2 text-[#9AA9B8]">Periapsis (Pe)</td>
+                  <td className="p-2 text-[#A4ABB6]">Periapsis (Pe)</td>
                   <td className="p-2 font-medium">{(flightState.periapsis / 1000).toFixed(1)}</td>
-                  <td className="p-2 text-[#64748B]">km</td>
+                  <td className="p-2 text-[#69717E]">km</td>
                 </tr>
                 <tr>
-                  <td className="p-2 text-[#9AA9B8]">Trajectory Waypoints</td>
-                  <td className="p-2 font-medium text-[#38BDF8]">{flightState.trajectoryHistory.length}</td>
-                  <td className="p-2 text-[#64748B]">points</td>
+                  <td className="p-2 text-[#A4ABB6]">Trajectory Waypoints</td>
+                  <td className="p-2 font-medium text-[#79AFC1]">{flightState.trajectoryHistory.length}</td>
+                  <td className="p-2 text-[#69717E]">points</td>
                 </tr>
               </tbody>
             </table>
@@ -245,20 +253,20 @@ export const FlightReportModal: React.FC<FlightReportModalProps> = ({
         </div>
 
         {/* Action Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#1C2938]">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#252B36]">
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopyMarkdown}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#E8EDF2] font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#E6E8EB] font-medium text-xs transition-colors"
             >
               {copied ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#34D399]" />
-                  <span className="text-[#34D399]">Copied</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#55B982]" />
+                  <span className="text-[#55B982]">Copied</span>
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5 text-[#38BDF8]" />
+                  <Copy className="w-3.5 h-3.5 text-[#79AFC1]" />
                   <span>Copy Markdown</span>
                 </>
               )}
@@ -269,7 +277,7 @@ export const FlightReportModal: React.FC<FlightReportModalProps> = ({
                 resetFlight();
                 onClose();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2] font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] text-xs font-medium transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset & Re-Fly</span>
@@ -279,17 +287,17 @@ export const FlightReportModal: React.FC<FlightReportModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportJSON}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#E8EDF2] font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#E6E8EB] font-medium text-xs transition-colors"
             >
-              <FileCode className="w-3.5 h-3.5 text-[#38BDF8]" />
+              <FileCode className="w-3.5 h-3.5 text-[#79AFC1]" />
               <span>JSON Data</span>
             </button>
 
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#34D399] hover:bg-[#2fc08a] text-[#0B0F17] font-semibold transition-all active:scale-98"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-[#FF8A1F] hover:bg-[#FFA24A] text-[#090A0D] font-semibold text-xs transition-all active:scale-98 shadow-sm"
             >
-              <Download className="w-3.5 h-3.5" />
+              <FileSpreadsheet className="w-3.5 h-3.5" />
               <span>Export CSV Report</span>
             </button>
           </div>

@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { 
-  Download, 
+  Download,
   FileSpreadsheet, 
   FileCode, 
   Camera, 
   Copy, 
   CheckCircle2, 
-  X, 
   TrendingUp,
   Table
 } from 'lucide-react';
@@ -222,50 +221,50 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0B0F17]/85 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-[#121A26] border border-[#263548] rounded-xl max-w-2xl w-full p-4 shadow-2xl flex flex-col max-h-[85vh] select-none text-xs">
+    <div className="fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div className="bg-[#151820] border border-[#353D4A] rounded-lg max-w-2xl w-full p-4 shadow-2xl flex flex-col max-h-[88vh] select-none text-xs">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#1C2938]">
-          <div>
-            <h3 className="font-semibold text-[#E8EDF2] text-sm flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-[#38BDF8]" />
-              <span>Export Simulation Telemetry</span>
-            </h3>
-            <p className="text-xs text-[#9AA9B8] mt-0.5">
-              Export aerodynamic coefficients, thermal flux, and polar curves
-            </p>
+        <div className="flex items-center justify-between pb-3 border-b border-[#252B36]">
+          <div className="flex items-center gap-2">
+            <Download className="w-4 h-4 text-[#FF8A1F]" />
+            <div>
+              <h3 className="font-semibold text-[#E6E8EB] text-xs uppercase tracking-wider">Aerodynamic Telemetry Export Suite</h3>
+              <p className="text-[11px] text-[#69717E]">
+                CFD simulation datasets, aerodynamic coefficients, and polar sweeps
+              </p>
+            </div>
           </div>
           <button 
             onClick={onClose}
-            className="text-[#64748B] hover:text-[#E8EDF2] p-1 rounded hover:bg-[#172131]"
+            className="text-[#69717E] hover:text-[#E6E8EB] text-xs font-mono p-1 rounded hover:bg-[#1B1F28]"
           >
-            <X className="w-4 h-4" />
+            ✕
           </button>
         </div>
 
-        {/* Tab Selector */}
+        {/* Navigation Tabs */}
         <div className="flex gap-2 my-3">
           <button
             onClick={() => setActiveTab('current')}
-            className={`px-3 py-1.5 rounded-md font-medium text-xs transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded font-medium text-xs transition-colors flex items-center gap-1.5 ${
               activeTab === 'current'
-                ? 'bg-[#172131] text-[#38BDF8] border border-[#38BDF8]/40'
-                : 'bg-[#0B0F17] text-[#9AA9B8] hover:text-[#E8EDF2]'
+                ? 'bg-[#1B1F28] text-[#E6E8EB] border border-[#FF8A1F] font-semibold'
+                : 'bg-[#0E1015] text-[#A4ABB6] hover:text-[#E6E8EB] border border-[#252B36]'
             }`}
           >
-            <Table className="w-3.5 h-3.5" />
+            <Table className="w-3.5 h-3.5 text-[#FF8A1F]" />
             <span>Current Test Point</span>
           </button>
 
           <button
             onClick={() => setActiveTab('polar')}
-            className={`px-3 py-1.5 rounded-md font-medium text-xs transition-colors flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded font-medium text-xs transition-colors flex items-center gap-1.5 ${
               activeTab === 'polar'
-                ? 'bg-[#172131] text-[#38BDF8] border border-[#38BDF8]/40'
-                : 'bg-[#0B0F17] text-[#9AA9B8] hover:text-[#E8EDF2]'
+                ? 'bg-[#1B1F28] text-[#E6E8EB] border border-[#FF8A1F] font-semibold'
+                : 'bg-[#0E1015] text-[#A4ABB6] hover:text-[#E6E8EB] border border-[#252B36]'
             }`}
           >
-            <TrendingUp className="w-3.5 h-3.5" />
+            <TrendingUp className="w-3.5 h-3.5 text-[#79AFC1]" />
             <span>AoA Polar Curve Sweep (-30° to +30°)</span>
           </button>
         </div>
@@ -275,76 +274,76 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
           {activeTab === 'current' ? (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
-                <div className="bg-[#172131] p-2.5 rounded-lg border border-[#263548]/40">
-                  <span className="text-[#64748B] block text-[11px]">Mach & Airspeed</span>
-                  <span className="text-[#38BDF8] font-mono-num font-semibold text-sm mt-0.5 block">
+                <div className="bg-[#1B1F28] p-2.5 rounded-lg border border-[#252B36]">
+                  <span className="text-[#69717E] block text-[10px] uppercase">Mach & Airspeed</span>
+                  <span className="text-[#79AFC1] font-mono-num font-semibold text-sm mt-0.5 block">
                     M {windTunnelState.mach.toFixed(2)} ({Math.round(windTunnelState.freestreamSpeed)} m/s)
                   </span>
                 </div>
-                <div className="bg-[#172131] p-2.5 rounded-lg border border-[#263548]/40">
-                  <span className="text-[#64748B] block text-[11px]">Effective AoA (α)</span>
-                  <span className="text-[#FBBF24] font-mono-num font-semibold text-sm mt-0.5 block">
+                <div className="bg-[#1B1F28] p-2.5 rounded-lg border border-[#252B36]">
+                  <span className="text-[#69717E] block text-[10px] uppercase">Effective AoA (α)</span>
+                  <span className="text-[#FF8A1F] font-mono-num font-semibold text-sm mt-0.5 block">
                     {effectiveAoA > 0 ? `+${effectiveAoA}°` : `${effectiveAoA}°`}
                   </span>
                 </div>
-                <div className="bg-[#172131] p-2.5 rounded-lg border border-[#263548]/40">
-                  <span className="text-[#64748B] block text-[11px]">Aerodynamic L/D</span>
-                  <span className="text-[#34D399] font-mono-num font-semibold text-sm mt-0.5 block">
+                <div className="bg-[#1B1F28] p-2.5 rounded-lg border border-[#252B36]">
+                  <span className="text-[#69717E] block text-[10px] uppercase">Aerodynamic L/D</span>
+                  <span className="text-[#55B982] font-mono-num font-semibold text-sm mt-0.5 block">
                     {currentAero.liftToDragRatio}
                   </span>
                 </div>
               </div>
 
               {/* Data Table */}
-              <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg overflow-hidden">
+              <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg overflow-hidden">
                 <table className="w-full text-left font-mono-num text-xs">
-                  <thead className="bg-[#172131] border-b border-[#263548]/60 text-[#9AA9B8] text-[11px]">
+                  <thead className="bg-[#1B1F28] border-b border-[#252B36] text-[#A4ABB6] text-[11px]">
                     <tr>
                       <th className="p-2">Parameter</th>
                       <th className="p-2">Value</th>
                       <th className="p-2">Unit</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1C2938] text-[#E8EDF2]">
+                  <tbody className="divide-y divide-[#252B36] text-[#E6E8EB]">
                     <tr>
-                      <td className="p-2 text-[#9AA9B8]">Drag Coefficient (Cd)</td>
-                      <td className="p-2 font-medium text-[#F43F5E]">{currentAero.dragCoefficient}</td>
-                      <td className="p-2 text-[#64748B]">—</td>
+                      <td className="p-2 text-[#A4ABB6]">Drag Coefficient (Cd)</td>
+                      <td className="p-2 font-medium text-[#D95757]">{currentAero.dragCoefficient}</td>
+                      <td className="p-2 text-[#69717E]">—</td>
                     </tr>
                     <tr>
-                      <td className="p-2 text-[#9AA9B8]">Lift Coefficient (Cl)</td>
-                      <td className="p-2 font-medium text-[#34D399]">{currentAero.liftCoefficient}</td>
-                      <td className="p-2 text-[#64748B]">—</td>
+                      <td className="p-2 text-[#A4ABB6]">Lift Coefficient (Cl)</td>
+                      <td className="p-2 font-medium text-[#79AFC1]">{currentAero.liftCoefficient}</td>
+                      <td className="p-2 text-[#69717E]">—</td>
                     </tr>
                     <tr>
-                      <td className="p-2 text-[#9AA9B8]">Aerodynamic Drag Force</td>
-                      <td className="p-2 font-medium text-[#F43F5E]">{currentAero.dragForce}</td>
-                      <td className="p-2 text-[#64748B]">kN</td>
+                      <td className="p-2 text-[#A4ABB6]">Aerodynamic Drag Force</td>
+                      <td className="p-2 font-medium text-[#D95757]">{currentAero.dragForce}</td>
+                      <td className="p-2 text-[#69717E]">kN</td>
                     </tr>
                     <tr>
-                      <td className="p-2 text-[#9AA9B8]">Aerodynamic Lift Force</td>
-                      <td className="p-2 font-medium text-[#34D399]">{currentAero.liftForce}</td>
-                      <td className="p-2 text-[#64748B]">kN</td>
+                      <td className="p-2 text-[#A4ABB6]">Aerodynamic Lift Force</td>
+                      <td className="p-2 font-medium text-[#79AFC1]">{currentAero.liftForce}</td>
+                      <td className="p-2 text-[#69717E]">kN</td>
                     </tr>
                     <tr>
-                      <td className="p-2 text-[#9AA9B8]">Stagnation Temperature</td>
-                      <td className="p-2 font-medium text-[#FBBF24]">{currentAero.stagnationTemperature}</td>
-                      <td className="p-2 text-[#64748B]">K</td>
+                      <td className="p-2 text-[#A4ABB6]">Stagnation Temperature</td>
+                      <td className="p-2 font-medium text-[#E6E8EB]">{currentAero.stagnationTemperature}</td>
+                      <td className="p-2 text-[#69717E]">K</td>
                     </tr>
                     <tr>
-                      <td className="p-2 text-[#9AA9B8]">Stagnation Heat Flux</td>
-                      <td className="p-2 font-medium text-[#F43F5E]">{currentAero.maxHeatFlux}</td>
-                      <td className="p-2 text-[#64748B]">kW/m²</td>
+                      <td className="p-2 text-[#A4ABB6]">Stagnation Heat Flux</td>
+                      <td className="p-2 font-medium text-[#D95757]">{currentAero.maxHeatFlux}</td>
+                      <td className="p-2 text-[#69717E]">kW/m²</td>
                     </tr>
                     <tr>
-                      <td className="p-2 text-[#9AA9B8]">Shockwave Conical Angle</td>
-                      <td className="p-2 font-medium text-[#38BDF8]">{currentAero.shockwaveAngle}</td>
-                      <td className="p-2 text-[#64748B]">deg</td>
+                      <td className="p-2 text-[#A4ABB6]">Shockwave Conical Angle</td>
+                      <td className="p-2 font-medium text-[#79AFC1]">{currentAero.shockwaveAngle}</td>
+                      <td className="p-2 text-[#69717E]">deg</td>
                     </tr>
                     <tr>
-                      <td className="p-2 text-[#9AA9B8]">Pitching Moment (My)</td>
+                      <td className="p-2 text-[#A4ABB6]">Pitching Moment (My)</td>
                       <td className="p-2 font-medium">{currentAero.aerodynamicMoment}</td>
-                      <td className="p-2 text-[#64748B]">kN·m</td>
+                      <td className="p-2 text-[#69717E]">kN·m</td>
                     </tr>
                   </tbody>
                 </table>
@@ -352,9 +351,9 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg overflow-x-auto">
+              <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg overflow-x-auto">
                 <table className="w-full text-left font-mono-num text-xs">
-                  <thead className="bg-[#172131] border-b border-[#263548]/60 text-[#9AA9B8] text-[11px]">
+                  <thead className="bg-[#1B1F28] border-b border-[#252B36] text-[#A4ABB6] text-[10.5px]">
                     <tr>
                       <th className="p-2">AoA (α)</th>
                       <th className="p-2">Cd</th>
@@ -362,19 +361,19 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                       <th className="p-2">L/D</th>
                       <th className="p-2">Drag (kN)</th>
                       <th className="p-2">Lift (kN)</th>
-                      <th className="p-2">Moment (kN·m)</th>
+                      <th className="p-2">Temp (K)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1C2938] text-[#E8EDF2]">
-                    {polarSweepData.map(p => (
-                      <tr key={p.aoa} className={p.aoa === effectiveAoA ? 'bg-[#1A3040] font-semibold' : ''}>
-                        <td className="p-2 font-medium text-[#38BDF8]">{p.aoa > 0 ? `+${p.aoa}°` : `${p.aoa}°`}</td>
-                        <td className="p-2 text-[#F43F5E]">{p.dragCoeff}</td>
-                        <td className="p-2 text-[#34D399]">{p.liftCoeff}</td>
-                        <td className="p-2">{p.ldRatio}</td>
-                        <td className="p-2 text-[#F43F5E]">{p.dragKn}</td>
-                        <td className="p-2 text-[#34D399]">{p.liftKn}</td>
-                        <td className="p-2">{p.pitchMoment}</td>
+                  <tbody className="divide-y divide-[#252B36] text-[#E6E8EB] text-[11px]">
+                    {polarSweepData.map(row => (
+                      <tr key={row.aoa} className={row.aoa === effectiveAoA ? 'bg-[#FF8A1F]/10 font-bold' : ''}>
+                        <td className="p-2 text-[#A4ABB6]">{row.aoa > 0 ? `+${row.aoa}°` : `${row.aoa}°`}</td>
+                        <td className="p-2 text-[#D95757]">{row.dragCoeff}</td>
+                        <td className="p-2 text-[#79AFC1]">{row.liftCoeff}</td>
+                        <td className="p-2 text-[#55B982]">{row.ldRatio}</td>
+                        <td className="p-2">{row.dragKn}</td>
+                        <td className="p-2">{row.liftKn}</td>
+                        <td className="p-2 text-[#A4ABB6]">{row.stagTempK}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -384,52 +383,50 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#1C2938] mt-2">
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#252B36]">
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopyMarkdown}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#E8EDF2] font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#E6E8EB] font-medium text-xs transition-colors"
             >
               {copied ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#34D399]" />
-                  <span className="text-[#34D399]">Copied</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#55B982]" />
+                  <span className="text-[#55B982]">Copied</span>
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5 text-[#38BDF8]" />
+                  <Copy className="w-3.5 h-3.5 text-[#79AFC1]" />
                   <span>Copy Markdown</span>
                 </>
               )}
             </button>
 
-            {canvasRef && (
-              <button
-                onClick={handleDownloadSnapshot}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#E8EDF2] font-medium transition-colors"
-              >
-                <Camera className="w-3.5 h-3.5 text-[#FBBF24]" />
-                <span>CFD Snapshot (PNG)</span>
-              </button>
-            )}
+            <button
+              onClick={handleDownloadSnapshot}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] text-xs font-medium transition-colors"
+            >
+              <Camera className="w-3.5 h-3.5 text-[#69717E]" />
+              <span>Snapshot (.png)</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportJSON}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#E8EDF2] font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#E6E8EB] font-medium text-xs transition-colors"
             >
-              <FileCode className="w-3.5 h-3.5 text-[#38BDF8]" />
+              <FileCode className="w-3.5 h-3.5 text-[#79AFC1]" />
               <span>JSON Dataset</span>
             </button>
 
             <button
               onClick={activeTab === 'current' ? handleExportCSV : handleExportPolarCSV}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#34D399] hover:bg-[#2fc08a] text-[#0B0F17] font-semibold transition-all active:scale-98"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-[#FF8A1F] hover:bg-[#FFA24A] text-[#090A0D] font-semibold text-xs transition-all active:scale-98 shadow-sm"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>{activeTab === 'current' ? 'Export CSV (.csv)' : 'Export Polar Curve (.csv)'}</span>
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
             </button>
           </div>
         </div>

@@ -37,32 +37,32 @@ export const CelestialControls: React.FC = () => {
     : null;
 
   return (
-    <aside className="w-[300px] bg-[#121A26] border-r border-[#1C2938] flex flex-col h-full select-none text-xs shrink-0 z-20">
-      <div className="p-3 border-b border-[#1C2938] flex items-center justify-between">
+    <aside className="w-[300px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
+      <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Orbit className="w-4 h-4 text-[#38BDF8]" />
-          <h2 className="font-semibold text-[#E8EDF2] text-xs tracking-tight">N-Body Gravitation</h2>
+          <Orbit className="w-4 h-4 text-[#FF8A1F]" />
+          <h2 className="font-semibold text-[#E6E8EB] text-xs tracking-tight uppercase">Orbital Mechanics</h2>
         </div>
-        <span className="text-[10px] text-[#38BDF8] bg-[#38BDF8]/10 px-2 py-0.5 rounded font-medium">
-          RK4 Active
+        <span className="text-[10px] text-[#79AFC1] bg-[#79AFC1]/10 px-2 py-0.5 rounded font-mono-num font-medium">
+          RK4 Integrator
         </span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {/* Time Control */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2.5">
+        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2.5">
           <div className="flex items-center justify-between text-xs font-medium">
-            <span className="text-[#9AA9B8]">Time Warp</span>
-            <span className="text-[#38BDF8] font-mono-num font-semibold">{timeWarp}x</span>
+            <span className="text-[#A4ABB6]">Time Warp</span>
+            <span className="text-[#FF8A1F] font-mono-num font-semibold">{timeWarp}x</span>
           </div>
 
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsCelestialPaused(!isCelestialPaused)}
-              className={`p-2 rounded-md font-medium border transition-colors flex-1 flex items-center justify-center gap-1.5 ${
+              className={`p-2 rounded font-medium border transition-colors flex-1 flex items-center justify-center gap-1.5 ${
                 isCelestialPaused
-                  ? 'bg-[#FBBF24]/15 border-[#FBBF24]/40 text-[#FBBF24]'
-                  : 'bg-[#121A26] border-[#263548] text-[#E8EDF2] hover:bg-[#1B2838]'
+                  ? 'bg-[#E6B84D]/15 border-[#E6B84D]/40 text-[#E6B84D]'
+                  : 'bg-[#0E1015] border-[#252B36] text-[#E6E8EB] hover:bg-[#222733]'
               }`}
             >
               {isCelestialPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -73,10 +73,10 @@ export const CelestialControls: React.FC = () => {
               <button
                 key={warp}
                 onClick={() => { setTimeWarp(warp); setIsCelestialPaused(false); }}
-                className={`px-2 py-1.5 rounded-md font-mono-num text-xs border transition-colors ${
+                className={`px-2 py-1.5 rounded font-mono-num text-xs border transition-colors ${
                   timeWarp === warp && !isCelestialPaused
-                    ? 'bg-[#38BDF8] text-[#0B0F17] border-[#38BDF8] font-semibold'
-                    : 'bg-[#121A26] border-[#263548]/60 text-[#9AA9B8] hover:text-[#E8EDF2]'
+                    ? 'bg-[#FF8A1F] text-[#090A0D] border-[#FF8A1F] font-bold'
+                    : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB]'
                 }`}
               >
                 {warp}x
@@ -86,153 +86,154 @@ export const CelestialControls: React.FC = () => {
         </div>
 
         {/* Diagnostic Overlays */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2">
-          <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block mb-1">
+        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2">
+          <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block mb-1">
             Display Diagnostics
           </label>
           <button
             onClick={() => setShowSpacetimeGrid(!showSpacetimeGrid)}
-            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md border transition-colors ${
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded border transition-colors ${
               showSpacetimeGrid
-                ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#38BDF8]'
-                : 'bg-[#121A26] border-[#263548]/40 text-[#9AA9B8]'
+                ? 'bg-[#222733] border-[#FF8A1F] text-[#E6E8EB] font-medium'
+                : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB]'
             }`}
           >
             <div className="flex items-center gap-2">
-              <Grid className="w-3.5 h-3.5" />
-              <span>3D Spacetime Grid</span>
+              <Grid className="w-3.5 h-3.5 text-[#79AFC1]" />
+              <span>Spacetime Curvature Grid</span>
             </div>
-            <span className="text-[10px] font-medium">{showSpacetimeGrid ? 'ON' : 'OFF'}</span>
+            <span className={`text-[10px] font-mono-num ${showSpacetimeGrid ? 'text-[#FF8A1F]' : 'text-[#69717E]'}`}>
+              {showSpacetimeGrid ? 'ON' : 'OFF'}
+            </span>
           </button>
 
           <button
             onClick={() => setShowOrbitalTrails(!showOrbitalTrails)}
-            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md border transition-colors ${
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded border transition-colors ${
               showOrbitalTrails
-                ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#38BDF8]'
-                : 'bg-[#121A26] border-[#263548]/40 text-[#9AA9B8]'
+                ? 'bg-[#222733] border-[#FF8A1F] text-[#E6E8EB] font-medium'
+                : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB]'
             }`}
           >
             <div className="flex items-center gap-2">
-              <Orbit className="w-3.5 h-3.5" />
-              <span>Keplerian Trails</span>
+              <Orbit className="w-3.5 h-3.5 text-[#79AFC1]" />
+              <span>Keplerian Trajectory Trails</span>
             </div>
-            <span className="text-[10px] font-medium">{showOrbitalTrails ? 'ON' : 'OFF'}</span>
+            <span className={`text-[10px] font-mono-num ${showOrbitalTrails ? 'text-[#FF8A1F]' : 'text-[#69717E]'}`}>
+              {showOrbitalTrails ? 'ON' : 'OFF'}
+            </span>
           </button>
-        </div>
-
-        {/* Celestial Bodies List */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider">
-              Bodies in System ({celestialBodies.length})
-            </label>
-            <button
-              onClick={() => setShowForgeModal(true)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#38BDF8] text-[#0B0F17] font-semibold text-[10px] transition-colors"
-            >
-              <Plus className="w-3 h-3" />
-              <span>Forge Body</span>
-            </button>
-          </div>
-
-          <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-            {celestialBodies.map(body => {
-              const isSelected = selectedBodyId === body.id;
-              return (
-                <div
-                  key={body.id}
-                  onClick={() => setSelectedBodyId(body.id)}
-                  className={`flex items-center justify-between px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors ${
-                    isSelected
-                      ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#E8EDF2]'
-                      : 'bg-[#172131] border-[#263548]/40 text-[#9AA9B8] hover:text-[#E8EDF2] hover:bg-[#1B2838]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <span 
-                      className="w-2.5 h-2.5 rounded-full shrink-0" 
-                      style={{ backgroundColor: body.color }} 
-                    />
-                    <span className="font-medium truncate">{body.name}</span>
-                  </div>
-
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <span className="text-[10px] text-[#64748B] capitalize">{body.type.replace('_', ' ')}</span>
-                    {!body.isFixed && celestialBodies.length > 2 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeCelestialBody(body.id);
-                        }}
-                        className="p-0.5 text-[#64748B] hover:text-[#F43F5E] ml-1"
-                        title="Delete body"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
 
         {/* Selected Body Inspector */}
         {selectedBody && (
-          <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#1C2938]">
-              <span className="font-semibold text-[#E8EDF2] text-xs">{selectedBody.name}</span>
-              <span className="text-[10px] text-[#38BDF8]">Orbital Parameters</span>
+          <div className="bg-[#1B1F28] border border-[#252B36] rounded-lg p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[#E6E8EB] text-xs uppercase">{selectedBody.name}</span>
+              <span className="text-[10px] text-[#FF8A1F] capitalize font-medium">{selectedBody.type.replace('_', ' ')}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-              <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
-                <span className="text-[#64748B] block">Mass</span>
-                <span className="text-[#E8EDF2] font-mono-num font-medium text-xs mt-0.5 block">{(selectedBody.mass).toExponential(2)} kg</span>
+            <div className="grid grid-cols-2 gap-2 text-[11px] text-[#A4ABB6]">
+              <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+                <span className="text-[#69717E] block text-[10px] uppercase">Mass</span>
+                <span className="text-[#E6E8EB] font-mono-num font-semibold text-xs mt-0.5 block">
+                  {selectedBody.mass.toExponential(2)} kg
+                </span>
               </div>
-              <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
-                <span className="text-[#64748B] block">Radius</span>
-                <span className="text-[#FBBF24] font-mono-num font-medium text-xs mt-0.5 block">{selectedBody.radius.toLocaleString()} km</span>
+              <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+                <span className="text-[#69717E] block text-[10px] uppercase">Radius</span>
+                <span className="text-[#E6E8EB] font-mono-num font-semibold text-xs mt-0.5 block">
+                  {selectedBody.radius.toLocaleString()} km
+                </span>
               </div>
-
-              {orbital && (
-                <>
-                  <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
-                    <span className="text-[#64748B] block">Semi-Major (a)</span>
-                    <span className="text-[#38BDF8] font-mono-num font-medium text-xs mt-0.5 block">{orbital.semiMajorAxis} AU</span>
-                  </div>
-                  <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
-                    <span className="text-[#64748B] block">Eccentricity (e)</span>
-                    <span className="text-[#34D399] font-mono-num font-medium text-xs mt-0.5 block">{orbital.eccentricity}</span>
-                  </div>
-                  <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
-                    <span className="text-[#64748B] block">Velocity</span>
-                    <span className="text-[#E8EDF2] font-mono-num font-medium text-xs mt-0.5 block">{orbital.currentSpeed} km/s</span>
-                  </div>
-                  <div className="bg-[#121A26] p-1.5 rounded border border-[#263548]/40">
-                    <span className="text-[#64748B] block">Escape Velocity</span>
-                    <span className="text-[#F43F5E] font-mono-num font-medium text-xs mt-0.5 block">{orbital.escapeVelocity} km/s</span>
-                  </div>
-                </>
-              )}
             </div>
+
+            {orbital && (
+              <div className="space-y-1.5 pt-2 border-t border-[#252B36]">
+                <div className="text-[10px] text-[#69717E] uppercase tracking-wider font-semibold">Keplerian Elements</div>
+                <div className="grid grid-cols-2 gap-1.5 text-[10.5px]">
+                  <div className="flex justify-between">
+                    <span className="text-[#69717E]">Eccentricity:</span>
+                    <span className="text-[#79AFC1] font-mono-num">{orbital.eccentricity.toFixed(3)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#69717E]">Semi-Major:</span>
+                    <span className="text-[#E6E8EB] font-mono-num">{Math.round(orbital.semiMajorAxis).toLocaleString()} km</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#69717E]">Apoapsis:</span>
+                    <span className="text-[#79AFC1] font-mono-num">{Math.round(orbital.apoapsis).toLocaleString()} km</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#69717E]">Periapsis:</span>
+                    <span className="text-[#79AFC1] font-mono-num">{Math.round(orbital.periapsis).toLocaleString()} km</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!selectedBody.isFixed && (
+              <button
+                onClick={() => removeCelestialBody(selectedBody.id)}
+                className="w-full py-1.5 rounded bg-[#D95757]/10 hover:bg-[#D95757] text-[#D95757] hover:text-[#090A0D] border border-[#D95757]/30 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 mt-2"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Remove Body</span>
+              </button>
+            )}
           </div>
         )}
 
+        {/* Celestial Body List */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">
+              Active Bodies ({celestialBodies.length})
+            </label>
+            <button
+              onClick={() => setShowForgeModal(true)}
+              className="text-[#FF8A1F] hover:text-[#FFA24A] text-xs font-medium flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Forge Body</span>
+            </button>
+          </div>
+
+          <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
+            {celestialBodies.map(body => (
+              <button
+                key={body.id}
+                onClick={() => setSelectedBodyId(body.id)}
+                className={`w-full flex items-center justify-between p-2 rounded border transition-colors ${
+                  selectedBodyId === body.id
+                    ? 'bg-[#222733] border-[#FF8A1F] text-[#E6E8EB] font-medium'
+                    : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] hover:bg-[#1B1F28]'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: body.color }} />
+                  <span className="text-xs">{body.name}</span>
+                </div>
+                <span className="text-[10px] text-[#69717E] font-mono-num capitalize">{body.type}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* System Presets */}
         <div className="space-y-1.5">
-          <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block">
-            Calibrated Systems
+          <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">
+            System Architecture Presets
           </label>
           <div className="space-y-1">
             {CELESTIAL_PRESETS.map(preset => (
               <button
                 key={preset.id}
                 onClick={() => loadCelestialPreset(preset.id)}
-                className="w-full text-left px-2.5 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548]/40 text-[#9AA9B8] hover:text-[#E8EDF2] text-xs truncate transition-colors"
+                className="w-full text-left p-2 rounded bg-[#1B1F28]/60 hover:bg-[#222733] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] transition-colors"
               >
-                {preset.name}
+                <div className="font-medium text-xs text-[#E6E8EB]">{preset.name}</div>
+                <div className="text-[11px] text-[#69717E] line-clamp-1 mt-0.5">{preset.description}</div>
               </button>
             ))}
           </div>

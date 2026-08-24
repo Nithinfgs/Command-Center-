@@ -25,13 +25,13 @@ export const AsteroidConfigurator: React.FC = () => {
   const isOcean = asteroidConfig.targetSurfaceType === 'water_ocean' || asteroidConfig.targetAreaType === 'ocean_deep';
 
   return (
-    <aside className="w-[320px] bg-[#121A26] border-r border-[#1C2938] flex flex-col h-full select-none text-xs shrink-0 z-20">
-      <div className="p-3 border-b border-[#1C2938] flex items-center justify-between">
+    <aside className="w-[320px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
+      <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Target className="w-4 h-4 text-[#F43F5E]" />
-          <h2 className="font-semibold text-[#E8EDF2] text-xs tracking-tight">Kinetic Impact Dynamics</h2>
+          <Target className="w-4 h-4 text-[#FF8A1F]" />
+          <h2 className="font-semibold text-[#E6E8EB] text-xs tracking-tight uppercase">Kinetic Impact Dynamics</h2>
         </div>
-        <span className="text-[10px] text-[#F43F5E] bg-[#F43F5E]/10 px-2 py-0.5 rounded font-medium">
+        <span className="text-[10px] text-[#FF8A1F] bg-[#FF8A1F]/10 px-2 py-0.5 rounded font-mono-num font-medium">
           Ready
         </span>
       </div>
@@ -41,7 +41,7 @@ export const AsteroidConfigurator: React.FC = () => {
         <div>
           <button
             onClick={triggerImpactSimulation}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-md bg-[#F43F5E] hover:bg-[#e12d4d] text-[#0B0F17] font-semibold text-xs transition-all active:scale-98 shadow-sm"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded bg-[#FF8A1F] hover:bg-[#FFA24A] text-[#090A0D] font-semibold text-xs transition-all active:scale-98 shadow-sm uppercase tracking-tight"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>Simulate Kinetic Impact</span>
@@ -49,13 +49,13 @@ export const AsteroidConfigurator: React.FC = () => {
         </div>
 
         {/* Casualty & Lethality Prediction Card */}
-        <div className="bg-[#172131]/80 border border-[#F43F5E]/30 rounded-lg p-3 space-y-2.5">
+        <div className="bg-[#1B1F28] border border-[#D95757]/30 rounded-lg p-3 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-[#E8EDF2] font-semibold flex items-center gap-1.5">
-              <Skull className="w-3.5 h-3.5 text-[#F43F5E]" />
+            <span className="text-[#E6E8EB] font-semibold flex items-center gap-1.5 uppercase text-[11px]">
+              <Skull className="w-3.5 h-3.5 text-[#D95757]" />
               <span>Projected Casualties</span>
             </span>
-            <span className="text-[10px] font-mono-num px-1.5 py-0.5 rounded bg-[#F43F5E]/15 text-[#F43F5E] font-medium">
+            <span className="text-[10px] font-mono-num px-1.5 py-0.5 rounded bg-[#D95757]/15 text-[#D95757] font-semibold">
               {impactTelemetry.targetPopulation > 0
                 ? `${((impactTelemetry.estimatedFatalities / impactTelemetry.targetPopulation) * 100).toFixed(1)}% Mortality`
                 : '0% (Uninhabited)'}
@@ -63,49 +63,49 @@ export const AsteroidConfigurator: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-[#121A26] p-2 rounded border border-[#263548]">
-              <span className="text-[#64748B] text-[10px] block">Estimated Deaths</span>
-              <span className="text-[#F43F5E] font-mono-num font-bold text-sm mt-0.5 block">
+            <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+              <span className="text-[#69717E] text-[10px] uppercase block">Estimated Deaths</span>
+              <span className="text-[#D95757] font-mono-num font-bold text-sm mt-0.5 block">
                 {impactTelemetry.estimatedFatalities.toLocaleString()}
               </span>
             </div>
-            <div className="bg-[#121A26] p-2 rounded border border-[#263548]">
-              <span className="text-[#64748B] text-[10px] block">Injuries / Trauma</span>
-              <span className="text-[#FBBF24] font-mono-num font-bold text-sm mt-0.5 block">
+            <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+              <span className="text-[#69717E] text-[10px] uppercase block">Injuries / Trauma</span>
+              <span className="text-[#E6B84D] font-mono-num font-bold text-sm mt-0.5 block">
                 {impactTelemetry.estimatedInjuries.toLocaleString()}
               </span>
             </div>
           </div>
 
           {isOcean ? (
-            <div className="bg-[#0E1520] p-2 rounded border border-[#38BDF8]/40 space-y-1">
+            <div className="bg-[#0E1015] p-2 rounded border border-[#252B36] space-y-1">
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-[#38BDF8] flex items-center gap-1 font-medium">
+                <span className="text-[#79AFC1] flex items-center gap-1 font-medium">
                   <Waves className="w-3.5 h-3.5" />
                   <span>Megatsunami Wave</span>
                 </span>
-                <span className="text-[#E8EDF2] font-mono-num font-semibold">
+                <span className="text-[#E6E8EB] font-mono-num font-semibold">
                   {impactTelemetry.tsunamiWaveHeightAtImpactM}m
                 </span>
               </div>
-              <div className="flex justify-between text-[10px] text-[#9AA9B8]">
-                <span>100km Coast Wave: <strong className="text-[#38BDF8]">{impactTelemetry.tsunamiWaveHeightAt100kmM}m</strong></span>
-                <span>Inundation: <strong className="text-[#FBBF24]">{impactTelemetry.tsunamiRunupInundationKm}km</strong></span>
+              <div className="flex justify-between text-[10px] text-[#A4ABB6]">
+                <span>100km Coast: <strong className="text-[#79AFC1]">{impactTelemetry.tsunamiWaveHeightAt100kmM}m</strong></span>
+                <span>Inundation: <strong className="text-[#E6B84D]">{impactTelemetry.tsunamiRunupInundationKm}km</strong></span>
               </div>
             </div>
           ) : (
-            <div className="text-[10px] text-[#9AA9B8] flex items-center justify-between pt-1 border-t border-[#1C2938]">
+            <div className="text-[10px] text-[#A4ABB6] flex items-center justify-between pt-1 border-t border-[#252B36]">
               <span>Thermal Ignition Zone:</span>
-              <span className="text-[#FBBF24] font-mono-num font-medium">{impactTelemetry.thermalIgnitionRadius} km</span>
+              <span className="text-[#E6B84D] font-mono-num font-medium">{impactTelemetry.thermalIgnitionRadius} km</span>
             </div>
           )}
         </div>
 
         {/* Target Area & Population Density Selector */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2.5">
+        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2.5">
           <div className="flex items-center justify-between">
-            <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-[#38BDF8]" />
+            <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-[#FF8A1F]" />
               <span>Target Population Area</span>
             </label>
           </div>
@@ -123,22 +123,22 @@ export const AsteroidConfigurator: React.FC = () => {
                 }}
                 className={`p-2 rounded text-left border transition-all ${
                   asteroidConfig.targetAreaType === area.id
-                    ? 'bg-[#1A3040] border-[#38BDF8] text-[#E8EDF2]'
-                    : 'bg-[#121A26] border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2]'
+                    ? 'bg-[#222733] border-[#FF8A1F] text-[#E6E8EB] font-medium shadow-xs'
+                    : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] hover:bg-[#1B1F28]'
                 }`}
               >
                 <div className="font-medium text-[11px] line-clamp-1">{area.name}</div>
-                <div className="text-[10px] text-[#64748B] font-mono-num mt-0.5">
+                <div className="text-[10px] text-[#69717E] font-mono-num mt-0.5">
                   {area.population > 0 ? `${(area.population / 1000).toLocaleString()}k pop` : 'Uninhabited'}
                 </div>
               </button>
             ))}
           </div>
 
-          <div className="border-t border-[#1C2938] pt-2">
+          <div className="border-t border-[#252B36] pt-2">
             <div className="flex items-center justify-between text-xs font-medium mb-1">
-              <span className="text-[#9AA9B8]">Custom Population Value</span>
-              <span className="text-[#38BDF8] font-mono-num font-semibold">
+              <span className="text-[#A4ABB6]">Custom Population Value</span>
+              <span className="text-[#FF8A1F] font-mono-num font-semibold">
                 {(asteroidConfig.customPopulation ?? POPULATION_AREAS[asteroidConfig.targetAreaType || 'dense_metro'].population).toLocaleString()}
               </span>
             </div>
@@ -151,7 +151,7 @@ export const AsteroidConfigurator: React.FC = () => {
               onChange={e => setAsteroidConfig({ customPopulation: parseInt(e.target.value) })}
               className="w-full"
             />
-            <div className="flex justify-between text-[10px] text-[#64748B] mt-1">
+            <div className="flex justify-between text-[10px] text-[#69717E] mt-1">
               <span>0 (Desert)</span>
               <span>1M (City)</span>
               <span>15M (Megacity)</span>
@@ -160,15 +160,15 @@ export const AsteroidConfigurator: React.FC = () => {
         </div>
 
         {/* Bolide Geometry & Specifications */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-3">
-          <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block">
+        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-3">
+          <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">
             Bolide Geometry & Mass
           </label>
 
           <div>
             <div className="flex items-center justify-between text-xs font-medium mb-1">
-              <span className="text-[#9AA9B8]">Impact Diameter</span>
-              <span className="text-[#38BDF8] font-mono-num font-semibold">
+              <span className="text-[#A4ABB6]">Impact Diameter</span>
+              <span className="text-[#FF8A1F] font-mono-num font-semibold">
                 {asteroidConfig.diameter >= 1000 ? `${(asteroidConfig.diameter / 1000).toFixed(1)} km` : `${asteroidConfig.diameter} m`}
               </span>
             </div>
@@ -181,21 +181,21 @@ export const AsteroidConfigurator: React.FC = () => {
               onChange={e => setAsteroidConfig({ diameter: parseInt(e.target.value) })}
               className="w-full"
             />
-            <div className="flex justify-between text-[10px] text-[#64748B] mt-1">
+            <div className="flex justify-between text-[10px] text-[#69717E] mt-1">
               <span>10m (Meteor)</span>
               <span>1km (Regional)</span>
               <span>20km (Extinction)</span>
             </div>
           </div>
 
-          <div className="border-t border-[#1C2938] pt-2.5">
-            <label className="text-[#9AA9B8] text-xs font-medium block mb-1">
+          <div className="border-t border-[#252B36] pt-2.5">
+            <label className="text-[#A4ABB6] text-xs font-medium block mb-1">
               Composition & Density
             </label>
             <select
               value={asteroidConfig.composition}
               onChange={e => setAsteroidConfig({ composition: e.target.value as AsteroidComposition })}
-              className="w-full bg-[#121A26] border border-[#263548] rounded-md px-2.5 py-1.5 text-xs text-[#E8EDF2] focus:outline-none focus:border-[#38BDF8]"
+              className="w-full bg-[#0E1015] border border-[#252B36] rounded px-2.5 py-1.5 text-xs text-[#E6E8EB] focus:outline-none focus:border-[#FF8A1F]"
             >
               <option value="rubble">Porous Rubble Pile (1,500 kg/m³)</option>
               <option value="carbonaceous">Carbonaceous Chondrite (2,200 kg/m³)</option>
@@ -207,15 +207,15 @@ export const AsteroidConfigurator: React.FC = () => {
         </div>
 
         {/* Kinematics */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-3">
-          <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block">
+        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-3">
+          <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">
             Kinematic Entry State
           </label>
 
           <div>
             <div className="flex items-center justify-between text-xs font-medium mb-1">
-              <span className="text-[#9AA9B8]">Impact Velocity</span>
-              <span className="text-[#FBBF24] font-mono-num font-semibold">{asteroidConfig.velocity} km/s</span>
+              <span className="text-[#A4ABB6]">Impact Velocity</span>
+              <span className="text-[#E6B84D] font-mono-num font-semibold">{asteroidConfig.velocity} km/s</span>
             </div>
             <input
               type="range"
@@ -226,17 +226,17 @@ export const AsteroidConfigurator: React.FC = () => {
               onChange={e => setAsteroidConfig({ velocity: parseInt(e.target.value) })}
               className="w-full"
             />
-            <div className="flex justify-between text-[10px] text-[#64748B] mt-1">
+            <div className="flex justify-between text-[10px] text-[#69717E] mt-1">
               <span>11.2 km/s (Min Escape)</span>
               <span>30 km/s</span>
               <span>72 km/s</span>
             </div>
           </div>
 
-          <div className="border-t border-[#1C2938] pt-2.5">
+          <div className="border-t border-[#252B36] pt-2.5">
             <div className="flex items-center justify-between text-xs font-medium mb-1">
-              <span className="text-[#9AA9B8]">Entry Angle (θ)</span>
-              <span className="text-[#38BDF8] font-mono-num font-semibold">{asteroidConfig.entryAngle}°</span>
+              <span className="text-[#A4ABB6]">Entry Angle (θ)</span>
+              <span className="text-[#79AFC1] font-mono-num font-semibold">{asteroidConfig.entryAngle}°</span>
             </div>
             <input
               type="range"
@@ -249,14 +249,14 @@ export const AsteroidConfigurator: React.FC = () => {
             />
           </div>
 
-          <div className="border-t border-[#1C2938] pt-2.5">
-            <label className="text-[#9AA9B8] text-xs font-medium block mb-1">
+          <div className="border-t border-[#252B36] pt-2.5">
+            <label className="text-[#A4ABB6] text-xs font-medium block mb-1">
               Target Surface Material
             </label>
             <select
               value={asteroidConfig.targetSurfaceType}
               onChange={e => setAsteroidConfig({ targetSurfaceType: e.target.value as any })}
-              className="w-full bg-[#121A26] border border-[#263548] rounded-md px-2.5 py-1.5 text-xs text-[#E8EDF2] focus:outline-none focus:border-[#38BDF8]"
+              className="w-full bg-[#0E1015] border border-[#252B36] rounded px-2.5 py-1.5 text-xs text-[#E6E8EB] focus:outline-none focus:border-[#FF8A1F]"
             >
               {Object.entries(TARGET_SURFACES).map(([key, val]) => (
                 <option key={key} value={key}>{val.name}</option>
@@ -267,7 +267,7 @@ export const AsteroidConfigurator: React.FC = () => {
 
         {/* Historical Impact Presets */}
         <div className="space-y-1.5">
-          <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block">
+          <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">
             Impact Event Presets
           </label>
           <div className="space-y-1">
@@ -285,10 +285,10 @@ export const AsteroidConfigurator: React.FC = () => {
                     customPopulation: POPULATION_AREAS[preset.targetAreaType]?.population
                   });
                 }}
-                className="w-full text-left p-2 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548]/40 text-[#9AA9B8] hover:text-[#E8EDF2] transition-colors"
+                className="w-full text-left p-2 rounded bg-[#1B1F28]/60 hover:bg-[#222733] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] transition-colors"
               >
-                <div className="font-medium text-[#E8EDF2] text-xs">{preset.name}</div>
-                <div className="text-[11px] text-[#64748B] line-clamp-1 mt-0.5">{preset.description}</div>
+                <div className="font-medium text-[#E6E8EB] text-xs">{preset.name}</div>
+                <div className="text-[11px] text-[#69717E] line-clamp-1 mt-0.5">{preset.description}</div>
               </button>
             ))}
           </div>

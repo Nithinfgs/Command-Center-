@@ -2,26 +2,42 @@
 
 @layer base {
   :root {
-    --bg-app: #0b0f17;
-    --bg-canvas: #0e1520;
-    --bg-panel: #121a26;
-    --bg-surface: #172131;
-    --bg-surface-hover: #1b2838;
-    --bg-surface-selected: #1a3040;
-    --border-primary: #263548;
-    --border-subtle: #1c2938;
-    --text-primary: #e8edf2;
-    --text-secondary: #9aa9b8;
-    --text-muted: #64748b;
-    --text-disabled: #465466;
-    --accent-primary: #38bdf8;
-    --color-success: #34d399;
-    --color-warning: #fbbf24;
-    --color-error: #f43f5e;
+    /* BACKGROUNDS */
+    --void: #090A0D;
+    --mission-black: #0E1015;
+    --control-surface: #151820;
+    --panel: #1B1F28;
+    --panel-raised: #222733;
+    --panel-hover: #292F3B;
+
+    /* BORDERS */
+    --border-subtle: #252B36;
+    --border: #353D4A;
+    --border-strong: #505A69;
+
+    /* TEXT */
+    --text-primary: #E6E8EB;
+    --text-secondary: #A4ABB6;
+    --text-muted: #69717E;
+
+    /* MISSION ACCENT (SIGNAL ORANGE) */
+    --signal-orange: #FF8A1F;
+    --signal-orange-hover: #FFA24A;
+    --signal-orange-muted: #4A2A12;
+    --signal-orange-subtle: #24160C;
+
+    /* SYSTEM STATES */
+    --nominal: #55B982;
+    --warning: #E6B84D;
+    --critical: #D95757;
+
+    /* DATA / ANALYSIS */
+    --telemetry: #79AFC1;
+    --telemetry-muted: #243B44;
   }
 
   body {
-    background-color: var(--bg-app);
+    background-color: var(--void);
     color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, "Inter", "Geist", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     overflow-x: hidden;
@@ -37,23 +53,23 @@
   }
 }
 
-/* Restrained Custom Scrollbars */
+/* Industrial Restrained Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0f17;
+  background: #090A0D;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1c2938;
-  border-radius: 3px;
+  background: #252B36;
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #263548;
+  background: #353D4A;
 }
 
-/* Range input styling */
+/* Range input styling with Signal Orange */
 input[type="range"] {
-  accent-color: #38bdf8;
+  accent-color: #FF8A1F;
 }

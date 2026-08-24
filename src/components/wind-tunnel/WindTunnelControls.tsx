@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { Wind, Compass, RotateCcw, Download } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
+import { calculateAeroTelemetry } from '../../physics/aerodynamics';
 import { ExportReportModal } from './ExportReportModal';
 
 export const WindTunnelControls: React.FC = () => {
   const { windTunnelState, setWindTunnelState } = useSimulation();
   const [showExportModal, setShowExportModal] = useState(false);
+
+  const liveAero = calculateAeroTelemetry(windTunnelState);
 
   const presets = [
     { name: 'Sea Level Subsonic (Mach 0.4)', mach: 0.4, alt: 0 },
@@ -20,15 +23,15 @@ export const WindTunnelControls: React.FC = () => {
   const effectiveAoA = windAngle - rocketPitch;
 
   return (
-    <aside className="w-[300px] bg-[#121A26] border-r border-[#1C2938] flex flex-col h-full select-none text-xs shrink-0 z-20">
-      <div className="p-3 border-b border-[#1C2938] flex items-center justify-between">
+    <aside className="w-[300px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
+      <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Wind className="w-4 h-4 text-[#38BDF8]" />
-          <h2 className="font-semibold text-[#E8EDF2] text-xs tracking-tight">Wind Tunnel Simulation</h2>
+          <Wind className="w-4 h-4 text-[#FF8A1F]" />
+          <h2 className="font-semibold text-[#E6E8EB] text-xs tracking-tight uppercase">CFD Aerodynamics</h2>
         </div>
         <button
           onClick={() => setShowExportModal(true)}
-          className="flex items-center gap-1 px-2 py-1 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#38BDF8] hover:text-[#E8EDF2] text-[10px] font-medium transition-colors"
+          className="flex items-center gap-1 px-2 py-1 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#79AFC1] hover:text-[#E6E8EB] text-[10px] font-medium transition-colors"
           title="Export Telemetry Data (CSV / JSON / Polar Curve)"
         >
           <Download className="w-3 h-3" />
@@ -39,7 +42,7 @@ export const WindTunnelControls: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {/* Diagnostic Mode */}
         <div className="space-y-1.5">
-          <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block">
+          <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">
             Visualization Field
           </label>
           <div className="grid grid-cols-2 gap-1.5">
@@ -53,10 +56,10 @@ export const WindTunnelControls: React.FC = () => {
               <button
                 key={mode.id}
                 onClick={() => setWindTunnelState({ visualizationMode: mode.id as any })}
-                className={`px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all text-left truncate ${
+                className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-all text-left truncate ${
                   windTunnelState.visualizationMode === mode.id
-                    ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#38BDF8]'
-                    : 'bg-[#172131] border-[#263548]/40 text-[#9AA9B8] hover:text-[#E8EDF2] hover:bg-[#1B2838]'
+                    ? 'bg-[#1B1F28] border-[#FF8A1F] text-[#E6E8EB] font-semibold shadow-xs'
+                    : 'bg-[#1B1F28]/60 border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] hover:bg-[#222733]'
                 }`}
               >
                 {mode.label}
@@ -66,13 +69,13 @@ export const WindTunnelControls: React.FC = () => {
         </div>
 
         {/* 2 INDEPENDENT CONTROLS: ROCKET DIRECTION & WIND DIRECTION */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-3">
-          <div className="flex items-center justify-between pb-1 border-b border-[#1C2938]">
-            <span className="font-medium text-[#E8EDF2] text-xs">Vector & Attitude Controls</span>
+        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-3">
+          <div className="flex items-center justify-between pb-1 border-b border-[#252B36]">
+            <span className="font-medium text-[#E6E8EB] text-xs uppercase tracking-wider text-[11px]">Vector & Attitude Controls</span>
             <button
               onClick={() => setWindTunnelState({ rocketPitch: 0, windAngle: 0 })}
               title="Reset Angles to 0°"
-              className="p-1 rounded hover:bg-[#1B2838] text-[#64748B] hover:text-[#38BDF8] transition-colors"
+              className="p-1 rounded hover:bg-[#222733] text-[#69717E] hover:text-[#FF8A1F] transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
             </button>
@@ -81,11 +84,11 @@ export const WindTunnelControls: React.FC = () => {
           {/* Control 1: Rocket Pitch Attitude */}
           <div>
             <div className="flex items-center justify-between text-xs font-medium mb-1">
-              <span className="text-[#9AA9B8] flex items-center gap-1">
-                <Compass className="w-3.5 h-3.5 text-[#38BDF8]" />
+              <span className="text-[#A4ABB6] flex items-center gap-1">
+                <Compass className="w-3.5 h-3.5 text-[#FF8A1F]" />
                 <span>Rocket Direction</span>
               </span>
-              <span className="text-[#38BDF8] font-mono-num font-semibold">
+              <span className="text-[#FF8A1F] font-mono-num font-semibold">
                 {rocketPitch > 0 ? `+${rocketPitch}°` : `${rocketPitch}°`}
               </span>
             </div>
@@ -98,21 +101,21 @@ export const WindTunnelControls: React.FC = () => {
               onChange={e => setWindTunnelState({ rocketPitch: parseInt(e.target.value) })}
               className="w-full"
             />
-            <div className="flex justify-between text-[10px] text-[#64748B] mt-0.5">
-              <span>-35° Pitch Down</span>
-              <span>0° Level</span>
-              <span>+35° Pitch Up</span>
+            <div className="flex justify-between text-[10px] text-[#69717E] mt-0.5">
+              <span>-35° (Nose Down)</span>
+              <span>0° (Level)</span>
+              <span>+35° (Nose Up)</span>
             </div>
           </div>
 
-          {/* Control 2: Wind Inflow Direction */}
-          <div className="border-t border-[#1C2938] pt-2.5">
+          {/* Control 2: Wind Stream Angle */}
+          <div className="border-t border-[#252B36] pt-2.5">
             <div className="flex items-center justify-between text-xs font-medium mb-1">
-              <span className="text-[#9AA9B8] flex items-center gap-1">
-                <Wind className="w-3.5 h-3.5 text-[#34D399]" />
-                <span>Wind Direction</span>
+              <span className="text-[#A4ABB6] flex items-center gap-1">
+                <Wind className="w-3.5 h-3.5 text-[#79AFC1]" />
+                <span>Wind Vector</span>
               </span>
-              <span className="text-[#34D399] font-mono-num font-semibold">
+              <span className="text-[#79AFC1] font-mono-num font-semibold">
                 {windAngle > 0 ? `+${windAngle}°` : `${windAngle}°`}
               </span>
             </div>
@@ -125,152 +128,122 @@ export const WindTunnelControls: React.FC = () => {
               onChange={e => setWindTunnelState({ windAngle: parseInt(e.target.value) })}
               className="w-full"
             />
-            <div className="flex justify-between text-[10px] text-[#64748B] mt-0.5">
-              <span>-35° Flow Down</span>
-              <span>0° Horizontal</span>
-              <span>+35° Flow Up</span>
+            <div className="flex justify-between text-[10px] text-[#69717E] mt-0.5">
+              <span>-35° (Down Inflow)</span>
+              <span>0° (Horizontal)</span>
+              <span>+35° (Up Inflow)</span>
             </div>
           </div>
 
-          {/* Effective Relative Angle of Attack Badge */}
-          <div className="bg-[#121A26] p-2 rounded border border-[#263548] flex items-center justify-between text-xs font-mono-num">
-            <span className="text-[#64748B]">Effective AoA (α):</span>
-            <span className={`font-semibold ${effectiveAoA === 0 ? 'text-[#34D399]' : 'text-[#FBBF24]'}`}>
+          {/* Effective AoA Result Badge */}
+          <div className="bg-[#0E1015] p-2 rounded border border-[#252B36] flex items-center justify-between">
+            <span className="text-[#69717E] text-[11px]">Effective AoA (α):</span>
+            <span className={`font-mono-num font-bold text-xs ${
+              Math.abs(effectiveAoA) > 18 ? 'text-[#D95757]' : Math.abs(effectiveAoA) > 10 ? 'text-[#E6B84D]' : 'text-[#55B982]'
+            }`}>
               {effectiveAoA > 0 ? `+${effectiveAoA}°` : `${effectiveAoA}°`}
+              <span className="text-[10px] font-normal ml-1 text-[#69717E]">
+                {Math.abs(effectiveAoA) > 18 ? '(Stall Regime)' : '(Attached Flow)'}
+              </span>
             </span>
           </div>
         </div>
 
-        {/* Freestream Airspeed & Altitude */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-3">
-          <div className="flex items-center justify-between text-xs font-medium">
-            <span className="text-[#9AA9B8]">Freestream Airspeed</span>
-            <span className="text-[#38BDF8] font-mono-num font-semibold">Mach {windTunnelState.mach.toFixed(2)}</span>
-          </div>
-          <input
-            type="range"
-            min="0.1"
-            max="15.0"
-            step="0.05"
-            value={windTunnelState.mach}
-            onChange={e => setWindTunnelState({ mach: parseFloat(e.target.value) })}
-            className="w-full"
-          />
-          <div className="flex justify-between text-[10px] text-[#64748B]">
-            <span>Subsonic (0.1)</span>
-            <span>Transonic (1.0)</span>
-            <span>Hypersonic (15.0)</span>
+        {/* Speed & Mach Slider */}
+        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-3">
+          <div>
+            <div className="flex items-center justify-between text-xs font-medium mb-1">
+              <span className="text-[#A4ABB6]">Freestream Velocity</span>
+              <span className="text-[#79AFC1] font-mono-num font-semibold">Mach {windTunnelState.mach.toFixed(2)}</span>
+            </div>
+            <input
+              type="range"
+              min="0.1"
+              max="15.0"
+              step="0.05"
+              value={windTunnelState.mach}
+              onChange={e => setWindTunnelState({ mach: parseFloat(e.target.value) })}
+              className="w-full"
+            />
+            <div className="flex justify-between text-[10px] text-[#69717E] mt-0.5">
+              <span>Subsonic (0.4)</span>
+              <span>Transonic (1.0)</span>
+              <span>Mach 15</span>
+            </div>
           </div>
 
-          <div className="border-t border-[#1C2938] pt-2.5">
+          <div className="border-t border-[#252B36] pt-2.5">
             <div className="flex items-center justify-between text-xs font-medium mb-1">
-              <span className="text-[#9AA9B8]">Simulated Altitude</span>
-              <span className="text-[#38BDF8] font-mono-num font-semibold">{(windTunnelState.altitude / 1000).toFixed(1)} km</span>
+              <span className="text-[#A4ABB6]">Altitude (Atmospheric Density)</span>
+              <span className="text-[#E6E8EB] font-mono-num font-semibold">{(windTunnelState.altitude / 1000).toFixed(1)} km</span>
             </div>
             <input
               type="range"
               min="0"
-              max="90000"
+              max="80000"
               step="1000"
               value={windTunnelState.altitude}
               onChange={e => setWindTunnelState({ altitude: parseInt(e.target.value) })}
               className="w-full"
             />
-            <div className="flex justify-between text-[10px] text-[#64748B] mt-1">
-              <span>Sea Level (0km)</span>
-              <span>Stratosphere (30km)</span>
-              <span>Mesosphere (90km)</span>
+          </div>
+        </div>
+
+        {/* Live Aerodynamic Telemetry */}
+        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between pb-1 border-b border-[#252B36]">
+            <span className="font-medium text-[#E6E8EB] text-xs uppercase tracking-wider text-[11px]">Aerodynamic Telemetry</span>
+            <span className="text-[10px] font-mono-num text-[#79AFC1]">Real-time</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+              <span className="text-[#69717E] block text-[10px] uppercase">Drag Force</span>
+              <span className="text-[#FF8A1F] font-mono-num font-semibold text-xs mt-0.5 block">
+                {liveAero.dragForce} kN
+              </span>
+            </div>
+            <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+              <span className="text-[#69717E] block text-[10px] uppercase">Lift Force</span>
+              <span className="text-[#79AFC1] font-mono-num font-semibold text-xs mt-0.5 block">
+                {liveAero.liftForce} kN
+              </span>
+            </div>
+            <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+              <span className="text-[#69717E] block text-[10px] uppercase">Dynamic Pressure (q)</span>
+              <span className="text-[#E6E8EB] font-mono-num font-semibold text-xs mt-0.5 block">
+                {(windTunnelState.dynamicPressure / 1000).toFixed(1)} kPa
+              </span>
+            </div>
+            <div className="bg-[#0E1015] p-2 rounded border border-[#252B36]">
+              <span className="text-[#69717E] block text-[10px] uppercase">Peak Temp</span>
+              <span className="text-[#E6E8EB] font-mono-num font-semibold text-xs mt-0.5 block">
+                {liveAero.stagnationTemperature} K
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Fin Control Deflection */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2.5">
-          <div className="flex items-center justify-between text-xs font-medium">
-            <span className="text-[#9AA9B8]">Fin Deflection (δ)</span>
-            <span className="text-[#38BDF8] font-mono-num font-semibold">
-              {windTunnelState.finDeflectionAngle > 0 ? `+${windTunnelState.finDeflectionAngle}°` : `${windTunnelState.finDeflectionAngle}°`}
-            </span>
-          </div>
-          <input
-            type="range"
-            min="-20"
-            max="20"
-            step="1"
-            value={windTunnelState.finDeflectionAngle}
-            onChange={e => setWindTunnelState({ finDeflectionAngle: parseInt(e.target.value) })}
-            className="w-full"
-          />
-        </div>
-
-        {/* Nozzle Test Bench */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="font-medium text-[#E8EDF2] text-xs">Engine Hot-Fire Test</span>
-            <button
-              onClick={() => setWindTunnelState({ engineTestActive: !windTunnelState.engineTestActive })}
-              className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
-                windTunnelState.engineTestActive
-                  ? 'bg-[#F43F5E] text-[#0B0F17]'
-                  : 'bg-[#172131] border border-[#263548] text-[#9AA9B8]'
-              }`}
-            >
-              {windTunnelState.engineTestActive ? 'Active' : 'Idle'}
-            </button>
-          </div>
-
-          {windTunnelState.engineTestActive && (
-            <div className="space-y-2 pt-1 border-t border-[#1C2938]">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#9AA9B8]">Chamber Pressure</span>
-                <span className="text-[#FBBF24] font-mono-num font-semibold">{windTunnelState.nozzleChamberPressure} MPa</span>
-              </div>
-              <input
-                type="range"
-                min="5"
-                max="30"
-                step="1"
-                value={windTunnelState.nozzleChamberPressure}
-                onChange={e => setWindTunnelState({ nozzleChamberPressure: parseFloat(e.target.value) })}
-                className="w-full"
-              />
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#9AA9B8]">Throttle</span>
-                <span className="text-[#34D399] font-mono-num font-semibold">{Math.round(windTunnelState.engineThrottle * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0.4"
-                max="1.0"
-                step="0.05"
-                value={windTunnelState.engineThrottle}
-                onChange={e => setWindTunnelState({ engineThrottle: parseFloat(e.target.value) })}
-                className="w-full"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Flight Regime Presets */}
+        {/* Flight Condition Presets */}
         <div className="space-y-1.5">
-          <label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block">
-            Calibrated Regimes
+          <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">
+            Flight Regimes
           </label>
           <div className="space-y-1">
-            {presets.map(p => (
+            {presets.map((p, idx) => (
               <button
-                key={p.name}
+                key={idx}
                 onClick={() => setWindTunnelState({ mach: p.mach, altitude: p.alt })}
-                className="w-full text-left px-2.5 py-1.5 rounded-md bg-[#172131] hover:bg-[#1B2838] border border-[#263548]/40 text-[#9AA9B8] hover:text-[#E8EDF2] text-xs truncate transition-colors"
+                className="w-full text-left p-2 rounded bg-[#1B1F28]/60 hover:bg-[#222733] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] transition-colors"
               >
-                {p.name}
+                <div className="font-medium text-xs text-[#E6E8EB]">{p.name}</div>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      <ExportReportModal
+      <ExportReportModal 
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
       />

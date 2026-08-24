@@ -69,35 +69,35 @@ export const PlanetCreatorModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#0d1422] border border-[#1e293b] rounded-lg max-w-xl w-full p-5 shadow-2xl font-mono text-xs max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between pb-3 border-b border-[#1e293b]">
+    <div className="fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div className="bg-[#151820] border border-[#353D4A] rounded-lg max-w-xl w-full p-4 shadow-2xl font-mono text-xs max-h-[90vh] overflow-y-auto select-none">
+        <div className="flex items-center justify-between pb-3 border-b border-[#252B36]">
           <div className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-[#38bdf8]" />
-            <span className="font-bold text-slate-100 text-sm uppercase">CELESTIAL FORGE - CREATE BODY</span>
+            <Globe className="w-4 h-4 text-[#FF8A1F]" />
+            <span className="font-bold text-[#E6E8EB] text-xs uppercase tracking-wider">CELESTIAL FORGE - CREATE BODY</span>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-[#69717E] hover:text-[#E6E8EB] text-xs font-mono p-1 rounded hover:bg-[#1B1F28]">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="space-y-4 my-4">
+        <div className="space-y-3.5 my-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-slate-400 text-[10px] uppercase font-bold block mb-1">Body Designation</label>
+              <label className="text-[#69717E] text-[10px] uppercase font-bold block mb-1">Body Designation</label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full bg-[#080c14] border border-[#1e293b] rounded px-3 py-1.5 text-slate-200 focus:outline-none focus:border-[#38bdf8]"
+                className="w-full bg-[#0E1015] border border-[#252B36] rounded px-3 py-1.5 text-[#E6E8EB] focus:outline-none focus:border-[#FF8A1F]"
               />
             </div>
             <div>
-              <label className="text-slate-400 text-[10px] uppercase font-bold block mb-1">Classification</label>
+              <label className="text-[#69717E] text-[10px] uppercase font-bold block mb-1">Classification</label>
               <select
                 value={type}
                 onChange={e => setType(e.target.value as CelestialBodyType)}
-                className="w-full bg-[#080c14] border border-[#1e293b] rounded px-3 py-1.5 text-slate-200 focus:outline-none focus:border-[#38bdf8]"
+                className="w-full bg-[#0E1015] border border-[#252B36] rounded px-3 py-1.5 text-[#E6E8EB] focus:outline-none focus:border-[#FF8A1F]"
               >
                 <option value="terrestrial">Terrestrial Planet</option>
                 <option value="ocean">Ocean World</option>
@@ -110,11 +110,11 @@ export const PlanetCreatorModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          <div className="bg-[#080c14] border border-[#1e293b] rounded p-3 space-y-3">
+          <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded p-3 space-y-3">
             <div>
-              <div className="flex justify-between text-slate-300 font-bold mb-1">
+              <div className="flex justify-between text-[#A4ABB6] font-bold mb-1">
                 <span>PLANETARY MASS (10^{massExponent.toFixed(1)} kg)</span>
-                <span className="text-[#38bdf8]">
+                <span className="text-[#79AFC1]">
                   {massKg < 1e25 ? `${(massKg / 1e24).toFixed(2)} M_Earth` : `${(massKg / 1.989e30).toFixed(4)} M_Sun`}
                 </span>
               </div>
@@ -130,9 +130,9 @@ export const PlanetCreatorModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
 
             <div>
-              <div className="flex justify-between text-slate-300 font-bold mb-1">
+              <div className="flex justify-between text-[#A4ABB6] font-bold mb-1">
                 <span>VOLUMETRIC RADIUS</span>
-                <span className="text-amber-400">{radiusKm.toLocaleString()} km</span>
+                <span className="text-[#FF8A1F]">{radiusKm.toLocaleString()} km</span>
               </div>
               <input
                 type="range"
@@ -148,36 +148,36 @@ export const PlanetCreatorModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-slate-400 text-[10px] uppercase font-bold block mb-1">Primary Surface Tint</label>
+              <label className="text-[#69717E] text-[10px] uppercase font-bold block mb-1">Primary Surface Tint</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={color}
                   onChange={e => setColor(e.target.value)}
-                  className="w-8 h-8 rounded border border-[#1e293b] cursor-pointer bg-transparent"
+                  className="w-8 h-8 rounded border border-[#252B36] cursor-pointer bg-transparent"
                 />
-                <span className="text-slate-300 font-bold">{color}</span>
+                <span className="text-[#E6E8EB] font-bold">{color}</span>
               </div>
             </div>
 
             <div>
-              <label className="text-slate-400 text-[10px] uppercase font-bold block mb-1">Secondary Feature Tint</label>
+              <label className="text-[#69717E] text-[10px] uppercase font-bold block mb-1">Secondary Feature Tint</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={secondaryColor}
                   onChange={e => setSecondaryColor(e.target.value)}
-                  className="w-8 h-8 rounded border border-[#1e293b] cursor-pointer bg-transparent"
+                  className="w-8 h-8 rounded border border-[#252B36] cursor-pointer bg-transparent"
                 />
-                <span className="text-slate-300 font-bold">{secondaryColor}</span>
+                <span className="text-[#E6E8EB] font-bold">{secondaryColor}</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#080c14] border border-[#1e293b] rounded p-3 space-y-2.5">
+          <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded p-3 space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="text-slate-300 font-bold">ATMOSPHERE ENVELOPE</label>
-              <span className="text-cyan-400 font-bold">{atmosphereDensity.toFixed(2)} atm</span>
+              <label className="text-[#A4ABB6] font-bold">ATMOSPHERE ENVELOPE</label>
+              <span className="text-[#79AFC1] font-bold">{atmosphereDensity.toFixed(2)} atm</span>
             </div>
             <input
               type="range"
@@ -189,13 +189,13 @@ export const PlanetCreatorModal: React.FC<Props> = ({ isOpen, onClose }) => {
               className="w-full"
             />
 
-            <div className="flex items-center justify-between pt-2 border-t border-[#1e293b]">
-              <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+            <div className="flex items-center justify-between pt-2 border-t border-[#252B36]">
+              <label className="flex items-center gap-2 text-[#A4ABB6] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={hasRings}
                   onChange={e => setHasRings(e.target.checked)}
-                  className="rounded border-[#1e293b] text-[#38bdf8]"
+                  className="rounded border-[#252B36] text-[#FF8A1F]"
                 />
                 <span>Generate Planetary Ring System</span>
               </label>
@@ -205,16 +205,16 @@ export const PlanetCreatorModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   type="color"
                   value={ringColor}
                   onChange={e => setRingColor(e.target.value)}
-                  className="w-6 h-6 rounded border border-[#1e293b] cursor-pointer bg-transparent"
+                  className="w-6 h-6 rounded border border-[#252B36] cursor-pointer bg-transparent"
                 />
               )}
             </div>
           </div>
 
-          <div className="bg-[#080c14] border border-[#1e293b] rounded p-3 space-y-2.5">
+          <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded p-3 space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-300">ORBITAL INSERTION DISTANCE</span>
-              <span className="text-purple-400 font-bold">{distanceFromCenter} AU/Scale</span>
+              <span className="font-bold text-[#A4ABB6]">ORBITAL INSERTION DISTANCE</span>
+              <span className="text-[#FF8A1F] font-bold">{distanceFromCenter} AU/Scale</span>
             </div>
             <input
               type="range"
@@ -226,23 +226,23 @@ export const PlanetCreatorModal: React.FC<Props> = ({ isOpen, onClose }) => {
               className="w-full"
             />
 
-            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+            <div className="flex items-center justify-between text-[11px] text-[#69717E] pt-1">
               <span>CIRCULAR INSERTION VELOCITY:</span>
-              <strong className="text-emerald-400">{vCirc.toFixed(2)} km/s</strong>
+              <strong className="text-[#55B982]">{vCirc.toFixed(2)} km/s</strong>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#1e293b]">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#252B36]">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded bg-[#182334] hover:bg-[#22324b] text-slate-300 transition-colors"
+            className="px-4 py-1.5 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold transition-colors"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-[#FF8A1F] hover:bg-[#FFA24A] text-[#090A0D] font-bold transition-colors shadow-sm"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>FORGE & INJECT BODY</span>
