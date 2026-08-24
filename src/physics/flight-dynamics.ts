@@ -3,11 +3,30 @@ import { calculateRocketProperties, PARTS_CATALOG } from './rocket-math';
 import { calculateAtmosphere } from './aerodynamics';
 
 export const G_EARTH = 9.80665;
-export const EARTH_RADIUS = 6371000;
+export const EARTH_RADIUS = 6371000; // meters
+export const MU_EARTH = 3.986004418e14; // m^3/s^2
+
+export interface JettisonedStage {
+  id: string;
+  stageNumber: number;
+  parts: { partType: string; x: number; y: number; rotation: number }[];
+  worldX: number;
+  worldY: number;
+  vx: number;
+  vy: number;
+  rotation: number;
+  angularVelocity: number;
+  life: number;
+}
 
 export function initFlightState(blueprint: RocketBlueprint): FlightState {
   const props = calculateRocketProperties(blueprint);
-  const initialStage = props.stagesDeltaV.length > 0 ? props.stagesDeltaV[0].stage : 1;
+  
+  let minStage = 1;
+  if (blueprint.parts.length > 0) {
+    const stages = blueprint.parts.map(p => p.stage || 1);
+    minStage = Math.min(...stages);
+  }
 
   return {
     isActive: false,
@@ -22,7 +41,7 @@ export function initFlightState(blueprint: RocketBlueprint): FlightState {
     pitch: 90,
     throttle: 1.0,
     gForce: 1.0,
-    currentStageIndex: initialStage,
+    currentStageIndex: minStage,
     fuelMassRemaining: props.fuelMass,
     burnTimeRemaining: props.stagesDeltaV[0]?.burnTime || 60,
     dynamicPressure: 0,
@@ -37,124 +56,193 @@ export function initFlightState(blueprint: RocketBlueprint): FlightState {
   };
 }
 
+export function calculateCurrentStageMassAndThrust(
+  blueprint: RocketBlueprint,
+  currentStageIndex: number,
+  altitude: number
+): {
+  stageDryMassTons: number;
+  stageFuelMassTons: number;
+  activeVehicleDryMassTons: number;
+  thrustN: number;
+  isp: number;
+  activePartsCount: number;
+} {
+  const atm = calculateAtmosphere(altitude);
+  const atmFactor = Math.min(1, Math.max(0, atm.density / 1.225));
+
+  let activeVehicleDryMass = 0;
+  let stageFuelMass = 0;
+  let stageDryMass = 0;
+  let thrustN = 0;
+  let weightedIsp = 0;
+  let activePartsCount = 0;
+
+  for (const part of blueprint.parts) {
+    const def = PARTS_CATALOG[part.partType];
+    if (!def) continue;
+
+    const partStage = part.stage || 1;
+
+    // Only include parts that have not been dropped yet (partStage >= currentStageIndex)
+    if (partStage >= currentStageIndex) {
+      activeVehicleDryMass += def.dryMass;
+      activePartsCount++;
+
+      // If part belongs to current active burning stage
+      if (partStage === currentStageIndex) {
+        stageDryMass += def.dryMass;
+        stageFuelMass += def.fuelMass * ((part.fuelPercentage ?? 100) / 100);
+
+        if (def.thrust && def.thrust > 0) {
+          const seaThrust = (def.seaLevelThrust || def.thrust * 0.85) * 1000;
+          const vacThrust = def.thrust * 1000;
+          const engineThrust = seaThrust * atmFactor + vacThrust * (1 - atmFactor);
+          const effectiveIsp = (def.ispAtm || 280) * atmFactor + (def.ispVac || 320) * (1 - atmFactor);
+
+          thrustN += engineThrust;
+          weightedIsp += effectiveIsp * engineThrust;
+        }
+      }
+    }
+  }
+
+  const avgIsp = thrustN > 0 ? weightedIsp / thrustN : 300;
+
+  return {
+    stageDryMassTons: stageDryMass,
+    stageFuelMassTons: stageFuelMass,
+    activeVehicleDryMassTons: Math.max(0.5, activeVehicleDryMass),
+    thrustN,
+    isp: avgIsp,
+    activePartsCount
+  };
+}
+
 export function stepFlightPhysics(
   state: FlightState,
   blueprint: RocketBlueprint,
   dt: number,
-  userPitchInput?: number,
-  userThrottleInput?: number
+  guidanceMode: 'manual' | 'auto' = 'manual'
 ): FlightState {
   if (!state.isLaunched || state.isPaused || state.aborted) {
     return state;
   }
 
-  const props = calculateRocketProperties(blueprint);
+  const stageInfo = calculateCurrentStageMassAndThrust(
+    blueprint,
+    state.currentStageIndex,
+    state.altitude
+  );
+
   const atm = calculateAtmosphere(state.altitude);
 
+  // Automatic Gravity Turn Guidance if enabled or pitch steering
   let pitch = state.pitch;
-  if (userPitchInput !== undefined) {
-    pitch = Math.max(0, Math.min(90, pitch + userPitchInput * dt * 15));
-  } else {
-    if (state.altitude > 1500 && state.altitude < 60000) {
-      const turnProgress = (state.altitude - 1500) / 45000;
-      const targetPitch = Math.max(10, 90 - turnProgress * 75);
-      pitch = pitch + (targetPitch - pitch) * dt * 0.4;
+  if (guidanceMode === 'auto') {
+    if (state.altitude > 1000 && state.altitude < 75000) {
+      const turnFraction = Math.min(1, (state.altitude - 1000) / 55000);
+      const targetPitch = Math.max(5, 90 - turnFraction * 85);
+      pitch = pitch + (targetPitch - pitch) * dt * 0.35;
     }
   }
 
-  const throttle = userThrottleInput !== undefined ? Math.max(0, Math.min(1, userThrottleInput)) : state.throttle;
-
+  // Engine Throttle & Fuel Consumption
+  const throttle = state.throttle;
   let currentFuel = Math.max(0, state.fuelMassRemaining);
-  const totalMass = (props.dryMass + currentFuel) * 1000;
 
-  let currentStageThrustN = 0;
-  let currentStageIsp = 300;
-
-  for (const part of blueprint.parts) {
-    if (part.stage === state.currentStageIndex) {
-      const def = PARTS_CATALOG[part.partType];
-      if (def && def.thrust) {
-        const atmFactor = Math.min(1, atm.density / 1.225);
-        const effectiveIsp = (def.ispAtm || 280) * atmFactor + (def.ispVac || 320) * (1 - atmFactor);
-        const seaThrust = (def.seaLevelThrust || def.thrust * 0.85) * 1000;
-        const vacThrust = def.thrust * 1000;
-        const thrustN = seaThrust * atmFactor + vacThrust * (1 - atmFactor);
-
-        currentStageThrustN += thrustN;
-        currentStageIsp = effectiveIsp;
-      }
-    }
+  let engineThrustN = stageInfo.thrustN;
+  if (currentFuel <= 0.001) {
+    engineThrustN = 0;
   }
 
-  if (currentFuel <= 0) {
-    currentStageThrustN = 0;
-  }
-
-  if (currentStageThrustN > 0 && throttle > 0) {
-    const mdot = (currentStageThrustN * throttle) / (currentStageIsp * G_EARTH);
+  if (engineThrustN > 0 && throttle > 0) {
+    const mdot = (engineThrustN * throttle) / (stageInfo.isp * G_EARTH); // kg/s
     currentFuel = Math.max(0, currentFuel - (mdot * dt) / 1000);
   }
 
-  const pitchRad = (pitch * Math.PI) / 180;
-  const thrustX = currentStageThrustN * throttle * Math.cos(pitchRad);
-  const thrustY = currentStageThrustN * throttle * Math.sin(pitchRad);
+  // Total Instantaneous Vehicle Mass
+  const currentTotalMassKg = (stageInfo.activeVehicleDryMassTons + currentFuel) * 1000;
 
-  const currentSpeed = Math.sqrt(state.velocity.vx * state.velocity.vx + state.velocity.vy * state.velocity.vy);
+  // Pitch Angle: 90 = Straight Up (+Y), 0 = Horizontal Downrange (+X)
+  const pitchRad = (pitch * Math.PI) / 180;
+  const thrustX = engineThrustN * throttle * Math.cos(pitchRad);
+  const thrustY = engineThrustN * throttle * Math.sin(pitchRad);
+
+  // Aerodynamic Drag Force
+  const currentSpeed = Math.hypot(state.velocity.vx, state.velocity.vy);
   const q = 0.5 * atm.density * currentSpeed * currentSpeed;
-  const frontalArea = 3.14;
-  const cd = 0.28;
+  const frontalArea = Math.max(1.5, Math.min(12, blueprint.parts.length * 0.4));
+  const cd = 0.26;
   const dragMagnitude = cd * q * frontalArea;
 
-  const dragX = currentSpeed > 0.1 ? -dragMagnitude * (state.velocity.vx / currentSpeed) : 0;
-  const dragY = currentSpeed > 0.1 ? -dragMagnitude * (state.velocity.vy / currentSpeed) : 0;
+  const dragX = currentSpeed > 0.05 ? -dragMagnitude * (state.velocity.vx / currentSpeed) : 0;
+  const dragY = currentSpeed > 0.05 ? -dragMagnitude * (state.velocity.vy / currentSpeed) : 0;
 
-  const rRatio = EARTH_RADIUS / (EARTH_RADIUS + state.altitude);
-  const localG = G_EARTH * rRatio * rRatio;
-  const gravityForceY = -totalMass * localG;
+  // True Radial Gravity Force
+  const rCurrent = EARTH_RADIUS + state.altitude;
+  const localG = MU_EARTH / (rCurrent * rCurrent);
+  const gravityForceY = -currentTotalMassKg * localG;
 
+  // Net Forces and Accelerations
   const netFx = thrustX + dragX;
-  const netFy = thrustY + dragY + gravityForceY;
+  const netFy = thrustY + dragY + (state.altitude <= 0 && (thrustY + gravityForceY < 0) ? -gravityForceY : gravityForceY);
 
-  const ax = netFx / Math.max(100, totalMass);
-  const ay = netFy / Math.max(100, totalMass);
+  const ax = netFx / currentTotalMassKg;
+  let ay = netFy / currentTotalMassKg;
+
+  // Ground collision / launchpad support
+  if (state.altitude <= 0 && ay < 0) {
+    ay = 0;
+  }
 
   const gTotal = Math.sqrt(ax * ax + (ay + localG) * (ay + localG)) / G_EARTH;
 
+  // Integrate Velocity & Position
   const newVx = state.velocity.vx + ax * dt;
-  const newVy = state.velocity.vy + ay * dt;
+  let newVy = state.velocity.vy + ay * dt;
+  if (state.altitude <= 0 && newVy < 0) {
+    newVy = 0;
+  }
+
   const newDownrange = state.downrange + newVx * dt;
   const newAltitude = Math.max(0, state.altitude + newVy * dt);
+  const newSpeed = Math.hypot(newVx, newVy);
 
-  const newSpeed = Math.sqrt(newVx * newVx + newVy * newVy);
-
-  const rCurrent = EARTH_RADIUS + newAltitude;
-  const mu = 3.986004418e14;
-  const specificEnergy = (newSpeed * newSpeed) / 2 - mu / rCurrent;
+  // Orbital Mechanics & Trajectory Prediction (Apoapsis & Periapsis)
+  const rNew = EARTH_RADIUS + newAltitude;
+  const specificEnergy = (newSpeed * newSpeed) / 2 - MU_EARTH / rNew;
   
   let apoapsis = newAltitude;
   let periapsis = 0;
   let inOrbit = false;
 
   if (specificEnergy < 0) {
-    const semiMajorAxis = -mu / (2 * specificEnergy);
-    const angularMomentum = rCurrent * Math.abs(newVx);
-    const eccSq = Math.max(0, 1 - (angularMomentum * angularMomentum) / (mu * semiMajorAxis));
+    const semiMajorAxis = -MU_EARTH / (2 * specificEnergy);
+    const angularMomentum = rNew * Math.abs(newVx);
+    const eccSq = Math.max(0, 1 - (angularMomentum * angularMomentum) / (MU_EARTH * semiMajorAxis));
     const ecc = Math.sqrt(eccSq);
 
     apoapsis = Math.max(newAltitude, semiMajorAxis * (1 + ecc) - EARTH_RADIUS);
     periapsis = Math.max(0, semiMajorAxis * (1 - ecc) - EARTH_RADIUS);
 
-    if (periapsis > 120000 && newAltitude > 120000) {
+    if (periapsis >= 80000 && newAltitude >= 80000) {
       inOrbit = true;
     }
+  } else if (newSpeed > 0) {
+    // Hyperbolic escape trajectory
+    apoapsis = 999999;
+    periapsis = Math.max(0, newAltitude);
   }
 
   const maxQ = Math.max(state.maxQReached, q);
 
+  // Trajectory history trail
   const history = [...state.trajectoryHistory];
-  if (history.length === 0 || Math.hypot(newDownrange - history[history.length - 1].x, newAltitude - history[history.length - 1].y) > 200) {
+  const lastPoint = history[history.length - 1];
+  if (!lastPoint || Math.hypot(newDownrange - lastPoint.x, newAltitude - lastPoint.y) > 150) {
     history.push({ x: newDownrange, y: newAltitude });
-    if (history.length > 500) history.shift();
+    if (history.length > 600) history.shift();
   }
 
   return {
@@ -166,7 +254,6 @@ export function stepFlightPhysics(
     verticalSpeed: parseFloat(newVy.toFixed(1)),
     horizontalSpeed: parseFloat(newVx.toFixed(1)),
     pitch: parseFloat(pitch.toFixed(1)),
-    throttle,
     gForce: parseFloat(gTotal.toFixed(2)),
     fuelMassRemaining: parseFloat(currentFuel.toFixed(2)),
     dynamicPressure: Math.round(q),

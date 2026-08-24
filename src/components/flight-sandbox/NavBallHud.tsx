@@ -3,13 +3,19 @@ import {
   Compass, 
   RotateCcw, 
   Play, 
-  Layers
+  Layers,
+  Flame,
+  Sparkles
 } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
+import { calculateCurrentStageMassAndThrust } from '../../physics/flight-dynamics';
 
 export const NavBallHud: React.FC = () => {
   const {
+    blueprint,
     flightState,
+    guidanceMode,
+    setGuidanceMode,
     launchFlight,
     triggerStaging,
     setFlightThrottle,
@@ -17,6 +23,16 @@ export const NavBallHud: React.FC = () => {
     abortFlight,
     resetFlight
   } = useSimulation();
+
+  const currentStageInfo = calculateCurrentStageMassAndThrust(
+    blueprint,
+    flightState.currentStageIndex,
+    flightState.altitude
+  );
+
+  // Maximum stage number in vehicle
+  const maxStage = Math.max(1, ...blueprint.parts.map(p => p.stage || 1));
+  const hasMoreStages = flightState.currentStageIndex < maxStage;
 
   return (
     <aside className="w-[300px] bg-[#121A26] border-r border-[#1C2938] flex flex-col h-full select-none text-xs shrink-0 z-20">
@@ -37,23 +53,32 @@ export const NavBallHud: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        {/* Launch / Staging Action */}
+        {/* Launch / Staging Primary Action */}
         <div className="space-y-2">
           {!flightState.isLaunched ? (
             <button
               onClick={launchFlight}
-              className="w-full py-2.5 rounded-md bg-[#34D399] hover:bg-[#2fc08a] text-[#0B0F17] font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-md bg-[#34D399] hover:bg-[#2fc08a] text-[#0B0F17] font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 shadow-sm"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Ignition & Launch</span>
+              <span>Ignition & Launch (Space)</span>
             </button>
           ) : (
             <button
               onClick={triggerStaging}
-              className="w-full py-2.5 rounded-md bg-[#38BDF8] hover:bg-[#2ea8dd] text-[#0B0F17] font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2"
+              disabled={!hasMoreStages}
+              className={`w-full py-2.5 rounded-md font-semibold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 ${
+                hasMoreStages
+                  ? 'bg-[#38BDF8] hover:bg-[#2ea8dd] text-[#0B0F17]'
+                  : 'bg-[#172131] text-[#64748B] border border-[#263548] cursor-not-allowed'
+              }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Trigger Staging (Stage {flightState.currentStageIndex})</span>
+              <span>
+                {hasMoreStages 
+                  ? `Stage ${flightState.currentStageIndex} → ${flightState.currentStageIndex + 1} (Space)` 
+                  : 'Final Stage Active'}
+              </span>
             </button>
           )}
 
@@ -75,10 +100,44 @@ export const NavBallHud: React.FC = () => {
           </div>
         </div>
 
-        {/* Throttle Control */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2">
+        {/* Guidance Mode Selector */}
+        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-2.5 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[#9AA9B8]">Flight Guidance Mode</span>
+            <span className="text-[10px] text-[#38BDF8] capitalize font-medium">{guidanceMode}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => setGuidanceMode('manual')}
+              className={`py-1 rounded text-xs font-medium border transition-colors ${
+                guidanceMode === 'manual'
+                  ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#38BDF8]'
+                  : 'bg-[#172131] border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2]'
+              }`}
+            >
+              Manual Steering
+            </button>
+            <button
+              onClick={() => setGuidanceMode('auto')}
+              className={`py-1 rounded text-xs font-medium border transition-colors flex items-center justify-center gap-1 ${
+                guidanceMode === 'auto'
+                  ? 'bg-[#1A3040] border-[#38BDF8]/60 text-[#38BDF8]'
+                  : 'bg-[#172131] border-[#263548] text-[#9AA9B8] hover:text-[#E8EDF2]'
+              }`}
+            >
+              <Sparkles className="w-3 h-3 text-[#FBBF24]" />
+              <span>Auto Gravity Turn</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Throttle & Propellant */}
+        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-3">
           <div className="flex items-center justify-between text-xs font-medium">
-            <span className="text-[#9AA9B8]">Engine Throttle</span>
+            <span className="text-[#9AA9B8] flex items-center gap-1">
+              <Flame className="w-3.5 h-3.5 text-[#FBBF24]" />
+              <span>Engine Throttle</span>
+            </span>
             <span className="text-[#34D399] font-mono-num font-semibold">{Math.round(flightState.throttle * 100)}%</span>
           </div>
           <input
@@ -90,17 +149,54 @@ export const NavBallHud: React.FC = () => {
             onChange={e => setFlightThrottle(parseFloat(e.target.value))}
             className="w-full"
           />
-          <div className="flex justify-between text-[10px] text-[#64748B]">
-            <span>Cutoff (0%)</span>
-            <span>50%</span>
-            <span>Max (100%)</span>
+          <div className="flex justify-between gap-1 text-[10px]">
+            <button
+              onClick={() => setFlightThrottle(0)}
+              className="flex-1 py-1 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#9AA9B8] text-center"
+            >
+              Cutoff (X)
+            </button>
+            <button
+              onClick={() => setFlightThrottle(0.5)}
+              className="flex-1 py-1 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#9AA9B8] text-center"
+            >
+              50%
+            </button>
+            <button
+              onClick={() => setFlightThrottle(1.0)}
+              className="flex-1 py-1 rounded bg-[#172131] hover:bg-[#1B2838] border border-[#263548] text-[#34D399] font-medium text-center"
+            >
+              100% (Z)
+            </button>
+          </div>
+
+          <div className="border-t border-[#1C2938] pt-2.5">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-[#9AA9B8]">Stage Fuel Remaining</span>
+              <span className={`font-mono-num font-semibold ${flightState.fuelMassRemaining < 0.5 ? 'text-[#F43F5E]' : 'text-[#E8EDF2]'}`}>
+                {flightState.fuelMassRemaining.toFixed(1)} t
+              </span>
+            </div>
+            <div className="w-full bg-[#121A26] h-1.5 rounded-full overflow-hidden border border-[#263548]">
+              <div
+                className={`h-full transition-all duration-150 ${
+                  flightState.fuelMassRemaining < 1.0 ? 'bg-[#F43F5E]' : 'bg-[#38BDF8]'
+                }`}
+                style={{
+                  width: `${Math.min(
+                    100,
+                    (flightState.fuelMassRemaining / Math.max(1, currentStageInfo.stageFuelMassTons || 10)) * 100
+                  )}%`
+                }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Pitch Control */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2">
+        {/* Pitch Steering & Artificial Horizon */}
+        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2.5">
           <div className="flex items-center justify-between text-xs font-medium">
-            <span className="text-[#9AA9B8]">Pitch Attitude</span>
+            <span className="text-[#9AA9B8]">Pitch Angle (Steering)</span>
             <span className="text-[#38BDF8] font-mono-num font-semibold">{flightState.pitch}°</span>
           </div>
           <input
@@ -113,16 +209,16 @@ export const NavBallHud: React.FC = () => {
             className="w-full"
           />
           <div className="flex justify-between text-[10px] text-[#64748B]">
-            <span>0° (Horizontal)</span>
+            <span>0° (Horizontal LEO)</span>
             <span>45° (Gravity Turn)</span>
             <span>90° (Vertical)</span>
           </div>
         </div>
 
-        {/* Telemetry Readouts */}
-        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2">
+        {/* Live Flight Telemetry HUD */}
+        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-2.5">
           <div className="flex items-center justify-between pb-1.5 border-b border-[#1C2938]">
-            <span className="font-medium text-[#E8EDF2] text-xs">Live Telemetry</span>
+            <span className="font-medium text-[#E8EDF2] text-xs">Ascent Telemetry</span>
             <span className="text-[10px] font-mono-num text-[#38BDF8]">
               {flightState.altitude > 0 ? 'Active' : 'Standby'}
             </span>
@@ -138,7 +234,7 @@ export const NavBallHud: React.FC = () => {
               </span>
             </div>
             <div className="bg-[#121A26] p-2 rounded border border-[#263548]/40">
-              <span className="text-[#64748B] block">Velocity</span>
+              <span className="text-[#64748B] block">Speed</span>
               <span className="text-[#34D399] font-mono-num font-semibold text-xs mt-0.5 block">
                 {Math.round(flightState.speed)} m/s
               </span>

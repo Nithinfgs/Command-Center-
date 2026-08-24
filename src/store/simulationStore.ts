@@ -64,6 +64,8 @@ export interface GlobalStore {
 
   // Flight Sandbox
   flightState: FlightState;
+  guidanceMode: 'manual' | 'auto';
+  setGuidanceMode: (mode: 'manual' | 'auto') => void;
   launchFlight: () => void;
   triggerStaging: () => void;
   setFlightThrottle: (throttle: number) => void;

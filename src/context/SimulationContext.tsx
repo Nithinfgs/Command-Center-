@@ -12,7 +12,7 @@ import type {
 import { ROCKET_PRESETS } from '../physics/rocket-math';
 import { CELESTIAL_PRESETS, stepNBodySimulation } from '../physics/n-body';
 import { calculateImpactPhysics, ASTEROID_DENSITIES } from '../physics/impact-physics';
-import { initFlightState, stepFlightPhysics } from '../physics/flight-dynamics';
+import { initFlightState, stepFlightPhysics, calculateCurrentStageMassAndThrust } from '../physics/flight-dynamics';
 import { calculateAtmosphere } from '../physics/aerodynamics';
 import { type GlobalStore, createInitialState } from '../store/simulationStore';
 
@@ -213,24 +213,33 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // =====================
   // FLIGHT SANDBOX ACTIONS
   // =====================
+  const [guidanceMode, setGuidanceMode] = useState<'manual' | 'auto'>('manual');
+
   const launchFlight = useCallback(() => {
-    setFlightState(prev => ({
-      ...prev,
-      isLaunched: true,
-      isActive: true,
-      isPaused: false
-    }));
-  }, []);
+    setFlightState(prev => {
+      const stageInfo = calculateCurrentStageMassAndThrust(blueprint, prev.currentStageIndex, 0);
+      return {
+        ...prev,
+        isLaunched: true,
+        isActive: true,
+        isPaused: false,
+        throttle: prev.throttle > 0 ? prev.throttle : 1.0,
+        fuelMassRemaining: stageInfo.stageFuelMassTons > 0 ? stageInfo.stageFuelMassTons : prev.fuelMassRemaining
+      };
+    });
+  }, [blueprint]);
 
   const triggerStaging = useCallback(() => {
     setFlightState(prev => {
       const nextStage = prev.currentStageIndex + 1;
+      const stageInfo = calculateCurrentStageMassAndThrust(blueprint, nextStage, prev.altitude);
       return {
         ...prev,
-        currentStageIndex: nextStage
+        currentStageIndex: nextStage,
+        fuelMassRemaining: stageInfo.stageFuelMassTons
       };
     });
-  }, []);
+  }, [blueprint]);
 
   const setFlightThrottle = useCallback((throttle: number) => {
     setFlightState(prev => ({ ...prev, throttle: Math.max(0, Math.min(1, throttle)) }));
@@ -245,11 +254,17 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const resetFlight = useCallback(() => {
-    setFlightState(initFlightState(blueprint));
+    const init = initFlightState(blueprint);
+    const initialStageInfo = calculateCurrentStageMassAndThrust(blueprint, init.currentStageIndex, 0);
+    init.fuelMassRemaining = initialStageInfo.stageFuelMassTons;
+    setFlightState(init);
   }, [blueprint]);
 
   const transferRocketToFlight = useCallback(() => {
-    setFlightState(initFlightState(blueprint));
+    const init = initFlightState(blueprint);
+    const initialStageInfo = calculateCurrentStageMassAndThrust(blueprint, init.currentStageIndex, 0);
+    init.fuelMassRemaining = initialStageInfo.stageFuelMassTons;
+    setFlightState(init);
     setActiveTab('flight-sandbox');
   }, [blueprint]);
 
@@ -258,11 +273,11 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (activeTab !== 'flight-sandbox' || !flightState.isLaunched || flightState.isPaused) return;
 
     const interval = setInterval(() => {
-      setFlightState(prev => stepFlightPhysics(prev, blueprint, 0.05));
-    }, 50);
+      setFlightState(prev => stepFlightPhysics(prev, blueprint, 0.04, guidanceMode));
+    }, 40);
 
     return () => clearInterval(interval);
-  }, [activeTab, flightState.isLaunched, flightState.isPaused, blueprint]);
+  }, [activeTab, flightState.isLaunched, flightState.isPaused, blueprint, guidanceMode]);
 
   return (
     <SimulationContext.Provider
@@ -306,6 +321,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         triggerImpactSimulation,
         resetImpactSimulation,
         flightState,
+        guidanceMode,
+        setGuidanceMode,
         launchFlight,
         triggerStaging,
         setFlightThrottle,
