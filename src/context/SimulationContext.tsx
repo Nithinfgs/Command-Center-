@@ -132,8 +132,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const soundSpeed = atm.speedOfSound;
       const speed = next.mach * soundSpeed;
       const q = 0.5 * atm.density * speed * speed;
+      const effectiveAoA = (next.windAngle ?? prev.windAngle ?? 0) - (next.rocketPitch ?? prev.rocketPitch ?? 0);
       return {
         ...next,
+        angleToGo: effectiveAoA,
         airDensity: atm.density,
         airTemperature: atm.temperature,
         freestreamSpeed: speed,

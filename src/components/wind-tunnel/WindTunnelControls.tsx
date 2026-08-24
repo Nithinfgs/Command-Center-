@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wind } from 'lucide-react';
+import { Wind, Compass, RotateCcw } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 
 export const WindTunnelControls: React.FC = () => {
@@ -12,6 +12,10 @@ export const WindTunnelControls: React.FC = () => {
     { name: 'Hypersonic Re-entry (Mach 8.0, 60km)', mach: 8.0, alt: 60000 },
     { name: 'Extreme Orbit Decay (Mach 15.0, 80km)', mach: 15.0, alt: 80000 }
   ];
+
+  const rocketPitch = windTunnelState.rocketPitch || 0;
+  const windAngle = windTunnelState.windAngle || 0;
+  const effectiveAoA = windAngle - rocketPitch;
 
   return (
     <aside className="w-[300px] bg-[#121A26] border-r border-[#1C2938] flex flex-col h-full select-none text-xs shrink-0 z-20">
@@ -54,7 +58,83 @@ export const WindTunnelControls: React.FC = () => {
           </div>
         </div>
 
-        {/* Freestream Airspeed */}
+        {/* 2 INDEPENDENT CONTROLS: ROCKET DIRECTION & WIND DIRECTION */}
+        <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-3">
+          <div className="flex items-center justify-between pb-1 border-b border-[#1C2938]">
+            <span className="font-medium text-[#E8EDF2] text-xs">Vector & Attitude Controls</span>
+            <button
+              onClick={() => setWindTunnelState({ rocketPitch: 0, windAngle: 0 })}
+              title="Reset Angles to 0°"
+              className="p-1 rounded hover:bg-[#1B2838] text-[#64748B] hover:text-[#38BDF8] transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+            </button>
+          </div>
+
+          {/* Control 1: Rocket Pitch Attitude */}
+          <div>
+            <div className="flex items-center justify-between text-xs font-medium mb-1">
+              <span className="text-[#9AA9B8] flex items-center gap-1">
+                <Compass className="w-3.5 h-3.5 text-[#38BDF8]" />
+                <span>Rocket Direction</span>
+              </span>
+              <span className="text-[#38BDF8] font-mono-num font-semibold">
+                {rocketPitch > 0 ? `+${rocketPitch}°` : `${rocketPitch}°`}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="-35"
+              max="35"
+              step="1"
+              value={rocketPitch}
+              onChange={e => setWindTunnelState({ rocketPitch: parseInt(e.target.value) })}
+              className="w-full"
+            />
+            <div className="flex justify-between text-[10px] text-[#64748B] mt-0.5">
+              <span>-35° Pitch Down</span>
+              <span>0° Level</span>
+              <span>+35° Pitch Up</span>
+            </div>
+          </div>
+
+          {/* Control 2: Wind Inflow Direction */}
+          <div className="border-t border-[#1C2938] pt-2.5">
+            <div className="flex items-center justify-between text-xs font-medium mb-1">
+              <span className="text-[#9AA9B8] flex items-center gap-1">
+                <Wind className="w-3.5 h-3.5 text-[#34D399]" />
+                <span>Wind Direction</span>
+              </span>
+              <span className="text-[#34D399] font-mono-num font-semibold">
+                {windAngle > 0 ? `+${windAngle}°` : `${windAngle}°`}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="-35"
+              max="35"
+              step="1"
+              value={windAngle}
+              onChange={e => setWindTunnelState({ windAngle: parseInt(e.target.value) })}
+              className="w-full"
+            />
+            <div className="flex justify-between text-[10px] text-[#64748B] mt-0.5">
+              <span>-35° Flow Down</span>
+              <span>0° Horizontal</span>
+              <span>+35° Flow Up</span>
+            </div>
+          </div>
+
+          {/* Effective Relative Angle of Attack Badge */}
+          <div className="bg-[#121A26] p-2 rounded border border-[#263548] flex items-center justify-between text-xs font-mono-num">
+            <span className="text-[#64748B]">Effective AoA (α):</span>
+            <span className={`font-semibold ${effectiveAoA === 0 ? 'text-[#34D399]' : 'text-[#FBBF24]'}`}>
+              {effectiveAoA > 0 ? `+${effectiveAoA}°` : `${effectiveAoA}°`}
+            </span>
+          </div>
+        </div>
+
+        {/* Freestream Airspeed & Altitude */}
         <div className="bg-[#172131]/60 border border-[#263548]/40 rounded-lg p-3 space-y-3">
           <div className="flex items-center justify-between text-xs font-medium">
             <span className="text-[#9AA9B8]">Freestream Airspeed</span>
@@ -73,29 +153,6 @@ export const WindTunnelControls: React.FC = () => {
             <span>Subsonic (0.1)</span>
             <span>Transonic (1.0)</span>
             <span>Hypersonic (15.0)</span>
-          </div>
-
-          <div className="border-t border-[#1C2938] pt-2.5">
-            <div className="flex items-center justify-between text-xs font-medium mb-1">
-              <span className="text-[#9AA9B8]">Angle of Attack (α)</span>
-              <span className="text-[#FBBF24] font-mono-num font-semibold">
-                {windTunnelState.angleToGo > 0 ? `+${windTunnelState.angleToGo}°` : `${windTunnelState.angleToGo}°`}
-              </span>
-            </div>
-            <input
-              type="range"
-              min="-35"
-              max="35"
-              step="1"
-              value={windTunnelState.angleToGo}
-              onChange={e => setWindTunnelState({ angleToGo: parseInt(e.target.value) })}
-              className="w-full"
-            />
-            <div className="flex justify-between text-[10px] text-[#64748B] mt-1">
-              <span>-35° Pitch Down</span>
-              <span>0° Prograde</span>
-              <span>+35° Pitch Up</span>
-            </div>
           </div>
 
           <div className="border-t border-[#1C2938] pt-2.5">

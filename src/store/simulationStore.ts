@@ -91,6 +91,8 @@ export function createInitialState() {
 
   const initialWindTunnel: WindTunnelState = {
     mach: 1.5,
+    rocketPitch: 0,
+    windAngle: 0,
     angleToGo: 0,
     altitude: 10000,
     airDensity: initialAtm.density,

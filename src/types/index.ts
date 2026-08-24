@@ -77,7 +77,9 @@ export type FlowRegime = 'subsonic' | 'transonic' | 'supersonic' | 'hypersonic';
 
 export interface WindTunnelState {
   mach: number; // 0.1 to 15.0
-  angleToGo: number; // Angle of attack in degrees (-45 to 45)
+  rocketPitch?: number; // Vehicle pitch attitude in degrees (-35 to +35)
+  windAngle?: number; // Inflow wind direction in degrees (-35 to +35)
+  angleToGo: number; // Effective Angle of Attack in degrees (-45 to 45)
   altitude: number; // meters (0 to 100,000m)
   airDensity: number; // kg/m^3
   airTemperature: number; // Kelvin
