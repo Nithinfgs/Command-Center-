@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { PARTS_CATALOG, GRID_CELL_SIZE, calculateRocketProperties } from '../../physics/rocket-math';
-import { drawAerospacePart } from './renderRocketPart';
 import type { PlacedPart } from '../../types';
 
 export const RocketBuilderCanvas: React.FC = () => {
@@ -333,24 +332,109 @@ export const RocketBuilderCanvas: React.FC = () => {
       ctx.translate(px, py);
       ctx.rotate((part.rotation * Math.PI) / 180);
 
-      // Subtle drop shadow
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-      ctx.shadowBlur = isSelected ? 12 : 6;
+      // Subtle shadow
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+      ctx.shadowBlur = 8;
       ctx.shadowOffsetY = 2;
 
-      // Draw high-fidelity aerospace component
-      drawAerospacePart({
-        ctx,
-        part,
-        def,
-        pw,
-        ph,
-        zoom,
-        isSelected,
-        isHovered
-      });
+      if (def.texturePattern === 'cone') {
+        const coneGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
+        coneGrad.addColorStop(0, '#1E293B');
+        coneGrad.addColorStop(0.35, def.color);
+        coneGrad.addColorStop(0.65, def.color);
+        coneGrad.addColorStop(1, '#0F172A');
 
-      // Stage Tag Badge
+        ctx.fillStyle = coneGrad;
+        ctx.beginPath();
+        ctx.moveTo(-pw / 2, ph / 2);
+        ctx.quadraticCurveTo(0, -ph / 2 - 10 * zoom, pw / 2, ph / 2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = isSelected ? '#38BDF8' : isHovered ? '#64748B' : '#263548';
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.stroke();
+
+        if (def.category === 'command') {
+          ctx.fillStyle = '#38BDF8';
+          ctx.beginPath();
+          ctx.arc(0, 0, 3.5 * zoom, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (def.texturePattern === 'engine-bell') {
+        ctx.fillStyle = '#1E293B';
+        ctx.fillRect(-pw * 0.35, -ph / 2, pw * 0.7, ph * 0.35);
+
+        const bellGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
+        bellGrad.addColorStop(0, '#0F172A');
+        bellGrad.addColorStop(0.35, def.color);
+        bellGrad.addColorStop(0.65, def.color);
+        bellGrad.addColorStop(1, '#0F172A');
+
+        ctx.fillStyle = bellGrad;
+        ctx.beginPath();
+        ctx.moveTo(-pw * 0.2, -ph / 2 + ph * 0.45);
+        ctx.lineTo(pw * 0.2, -ph / 2 + ph * 0.45);
+        ctx.lineTo(pw / 2, ph / 2);
+        ctx.lineTo(-pw / 2, ph / 2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = isSelected ? '#38BDF8' : isHovered ? '#64748B' : '#263548';
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.stroke();
+      } else if (def.texturePattern === 'fin') {
+        const isRightSide = part.x > 0;
+        ctx.fillStyle = def.color;
+        ctx.beginPath();
+        if (isRightSide) {
+          // Right fin: root at left (-pw/2), tip at right (+pw/2)
+          ctx.moveTo(-pw / 2, -ph / 2);
+          ctx.lineTo(pw / 2, ph * 0.2);
+          ctx.lineTo(pw / 2, ph / 2);
+          ctx.lineTo(-pw / 2, ph / 2);
+        } else {
+          // Left fin: root at right (+pw/2), tip at left (-pw/2)
+          ctx.moveTo(pw / 2, -ph / 2);
+          ctx.lineTo(-pw / 2, ph * 0.2);
+          ctx.lineTo(-pw / 2, ph / 2);
+          ctx.lineTo(pw / 2, ph / 2);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = isSelected ? '#38BDF8' : isHovered ? '#64748B' : '#263548';
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.stroke();
+      } else {
+        const tankGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
+        tankGrad.addColorStop(0, '#1E293B');
+        tankGrad.addColorStop(0.25, def.color);
+        tankGrad.addColorStop(0.75, def.color);
+        tankGrad.addColorStop(1, '#0F172A');
+
+        ctx.fillStyle = tankGrad;
+        ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
+
+        if (def.texturePattern === 'ribbed') {
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+          ctx.lineWidth = 1;
+          const ribCount = Math.floor(def.height * 2);
+          for (let r = 1; r < ribCount; r++) {
+            const ry = -ph / 2 + (r * ph) / ribCount;
+            ctx.beginPath();
+            ctx.moveTo(-pw / 2, ry);
+            ctx.lineTo(pw / 2, ry);
+            ctx.stroke();
+          }
+        }
+
+        ctx.strokeStyle = isSelected ? '#38BDF8' : isHovered ? '#64748B' : '#263548';
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.strokeRect(-pw / 2, -ph / 2, pw, ph);
+      }
+
+      // Stage Tag
       ctx.shadowBlur = 0;
       ctx.fillStyle = '#121A26';
       ctx.strokeStyle = '#263548';
