@@ -89,7 +89,7 @@ export const WindTunnelCanvas: React.FC = () => {
 
     // Pool of live flowing air particles
     const particles: FlowParticle[] = [];
-    const NUM_PARTICLES = 160;
+    const NUM_PARTICLES = 180;
 
     for (let i = 0; i < NUM_PARTICLES; i++) {
       particles.push({
@@ -100,7 +100,7 @@ export const WindTunnelCanvas: React.FC = () => {
         life: Math.random() * 100,
         maxLife: 80 + Math.random() * 60,
         size: 1.2 + Math.random() * 1.5,
-        alpha: 0.2 + Math.random() * 0.5
+        alpha: 0.25 + Math.random() * 0.45
       });
     }
 
@@ -172,7 +172,7 @@ export const WindTunnelCanvas: React.FC = () => {
       ctx.save();
       ctx.scale(dpr, dpr);
 
-      // Clean aerospace CAD canvas background
+      // Aerospace CAD canvas background
       ctx.fillStyle = '#0E1520';
       ctx.fillRect(0, 0, width, height);
 
@@ -185,7 +185,7 @@ export const WindTunnelCanvas: React.FC = () => {
       ctx.strokeRect(0, 0, width, 20);
       ctx.strokeRect(0, height - 20, width, 20);
 
-      // Subtle engineering inspection grid
+      // Engineering grid
       ctx.strokeStyle = '#141C2B';
       ctx.lineWidth = 1;
       for (let x = 0; x < width; x += 40) {
@@ -220,9 +220,31 @@ export const WindTunnelCanvas: React.FC = () => {
       const uWind = Math.cos(windAngleRad);
       const vWind = Math.sin(windAngleRad);
 
+      // Forward-most tip world position across all parts
+      const noseTipOffset = (vehicleGeometry.noseY - vehicleGeometry.centerY) * cellSize;
+      const noseWorldX = rocketX + noseTipOffset * Math.cos(rocketPitchRad);
+      const noseWorldY = rocketY + noseTipOffset * Math.sin(rocketPitchRad);
+
+      // Helper to compute the local rocket radius at any lengthwise slice xb
+      const getLocalSliceRadius = (xb: number): number => {
+        let maxR = 0;
+        const gridY = vehicleGeometry.centerY + xb / cellSize;
+        for (const p of vehicleGeometry.parts) {
+          const def = p.def;
+          if (!def) continue;
+          const pMinY = p.y - p.hh;
+          const pMaxY = p.y + p.hh;
+          if (gridY >= pMinY - 0.1 && gridY <= pMaxY + 0.1) {
+            const hw = (def.width * cellSize) / 2;
+            const centerOff = Math.abs((p.x - vehicleGeometry.centerX) * cellSize);
+            maxR = Math.max(maxR, centerOff + hw);
+          }
+        }
+        return maxR;
+      };
+
       // =====================================================================
       // MULTI-PART EXACT 2D SIGNED DISTANCE & INTERACTION FIELD (SDF)
-      // Every placed part in the blueprint acts as an individual solid obstacle
       // =====================================================================
       const getMultiPartDistance = (wx: number, wy: number): {
         minDist: number;
@@ -232,6 +254,8 @@ export const WindTunnelCanvas: React.FC = () => {
         isInside: boolean;
         inWake: boolean;
         wakeIntensity: number;
+        xb: number;
+        yb: number;
       } => {
         let minDist = 9999;
         let nx = 0;
@@ -241,34 +265,29 @@ export const WindTunnelCanvas: React.FC = () => {
         let inWake = false;
         let wakeIntensity = 0;
 
-        // Transform world point into rocket body coordinate frame
         const dxRocket = wx - rocketX;
         const dyRocket = wy - rocketY;
 
-        const xbGlobal = dxRocket * Math.cos(-rocketPitchRad) - dyRocket * Math.sin(-rocketPitchRad);
-        const ybGlobal = dxRocket * Math.sin(-rocketPitchRad) + dyRocket * Math.cos(-rocketPitchRad);
+        const xb = dxRocket * Math.cos(-rocketPitchRad) - dyRocket * Math.sin(-rocketPitchRad);
+        const yb = dxRocket * Math.sin(-rocketPitchRad) + dyRocket * Math.cos(-rocketPitchRad);
 
         for (const p of vehicleGeometry.parts) {
           const def = p.def;
           if (!def) continue;
 
-          // Part center in body frame
           const pCenterY = (p.y - vehicleGeometry.centerY) * cellSize;
           const pCenterX = (p.x - vehicleGeometry.centerX) * cellSize;
           const pw = def.width * cellSize;
           const ph = def.height * cellSize;
 
-          // Local coordinate relative to part center
-          const lx = xbGlobal - pCenterY;
-          const ly = ybGlobal - pCenterX;
+          const lx = xb - pCenterY;
+          const ly = yb - pCenterX;
 
-          // Compute exact signed distance to this specific part shape
           let dPart = 0;
           let partNx = 0;
           let partNy = 0;
 
           if (def.texturePattern === 'cone') {
-            // Conical ogive nose / fairing
             const hw = pw / 2;
             const hh = ph / 2;
             if (lx < -hh) {
@@ -287,7 +306,6 @@ export const WindTunnelCanvas: React.FC = () => {
               partNy = ly >= 0 ? 1 : -1;
             }
           } else if (def.texturePattern === 'fin') {
-            // Swept delta fin shape
             const hw = pw / 2;
             const hh = ph / 2;
             const isRight = p.x > 0;
@@ -311,7 +329,6 @@ export const WindTunnelCanvas: React.FC = () => {
               partNy = ly >= 0 ? 1 : -1;
             }
           } else {
-            // Rectangular or cylindrical tank / module / engine
             const hw = pw / 2;
             const hh = ph / 2;
             const qx = Math.abs(lx) - hh;
@@ -329,7 +346,6 @@ export const WindTunnelCanvas: React.FC = () => {
             }
           }
 
-          // Check wake region behind this individual part
           if (lx > ph / 2 && Math.abs(ly) < pw / 2 + 10) {
             const wakeDist = lx - ph / 2;
             if (wakeDist < 90) {
@@ -343,7 +359,6 @@ export const WindTunnelCanvas: React.FC = () => {
             nearestPart = p;
             isInside = dPart <= 0;
 
-            // Transform normal back to world coordinates
             const worldNx = partNx * Math.cos(rocketPitchRad) - partNy * Math.sin(rocketPitchRad);
             const worldNy = partNx * Math.sin(rocketPitchRad) + partNy * Math.cos(rocketPitchRad);
             nx = worldNx;
@@ -358,11 +373,13 @@ export const WindTunnelCanvas: React.FC = () => {
           nearestPart,
           isInside,
           inWake,
-          wakeIntensity
+          wakeIntensity,
+          xb,
+          yb
         };
       };
 
-      // Flow Velocity Calculation Engine based on Multi-Obstacle Vector Interaction
+      // Flow Velocity Calculation Engine with Gap Convergence & Cavity Suction
       const getFlowVelocityAt = (wx: number, wy: number): {
         u: number;
         v: number;
@@ -382,7 +399,6 @@ export const WindTunnelCanvas: React.FC = () => {
         const influenceRadius = 45;
 
         if (sdf.isInside) {
-          // Inside a solid part
           return {
             u: 0,
             v: 0,
@@ -393,40 +409,58 @@ export const WindTunnelCanvas: React.FC = () => {
           };
         }
 
+        // 1. Obstacle Boundary Layer & Normal Deflection
         if (sdf.minDist < influenceRadius) {
           const normDist = sdf.minDist / influenceRadius;
           const proximity = Math.pow(1 - normDist, 1.4);
 
-          // Dot product with incoming wind determines stagnation (windward) vs expansion (leeward)
           const dotInflow = uWind * sdf.nx + vWind * sdf.ny;
 
           if (dotInflow < -0.1) {
-            // Forward stagnation compression
             const stagProximity = Math.abs(dotInflow) * proximity;
             speedFactor *= Math.max(0.15, 1 - stagProximity * 0.85);
             tempK = windTunnelState.airTemperature + (aero.stagnationTemperature - windTunnelState.airTemperature) * stagProximity;
             cpLocal = Math.min(1.0, stagProximity * 1.1);
           } else {
-            // Tangential flow acceleration around boundary / expansion
             speedFactor *= (1.0 + proximity * 0.25);
             cpLocal = -0.25 * proximity;
             tempK = windTunnelState.airTemperature + (aero.stagnationTemperature - windTunnelState.airTemperature) * 0.3 * proximity;
           }
 
-          // Deflect velocity vector tangentially along the obstacle surface
           const normalMag = u * sdf.nx + v * sdf.ny;
           if (normalMag < 0) {
-            // Project out normal inward component
             u = u - normalMag * sdf.nx * proximity;
             v = v - normalMag * sdf.ny * proximity;
           }
 
-          // Push flow slightly outward around the obstacle boundary
           u += sdf.nx * proximity * 0.5;
           v += sdf.ny * proximity * 0.5;
         }
 
-        // Local part wake vortex shedding
+        // 2. Cavity Suction & Streamline Inward Convergence (Dipping down into gaps)
+        const tailOffset = (vehicleGeometry.tailY - vehicleGeometry.centerY) * cellSize;
+        if (sdf.xb >= noseTipOffset && sdf.xb <= tailOffset + 80) {
+          const localR = getLocalSliceRadius(sdf.xb);
+          const currentDistFromAxis = Math.abs(sdf.yb);
+
+          // If streamline is above the local slice radius (e.g. over a gap, neck, or smaller stage)
+          if (currentDistFromAxis > localR + 6 && sdf.minDist > 12) {
+            const neckGapDepth = currentDistFromAxis - localR;
+            const inwardPull = Math.min(0.42, neckGapDepth / 65) * Math.max(0.2, 1 - sdf.minDist / 60);
+            const inwardSign = sdf.yb >= 0 ? -1 : 1;
+
+            // Inward vector in world coordinates
+            const inwardWorldX = -inwardSign * Math.sin(rocketPitchRad) * inwardPull;
+            const inwardWorldY = inwardSign * Math.cos(rocketPitchRad) * inwardPull;
+
+            u += inwardWorldX;
+            v += inwardWorldY;
+            speedFactor *= (1.0 + inwardPull * 0.15);
+            cpLocal -= 0.18 * inwardPull;
+          }
+        }
+
+        // 3. Local Wake Vorticity
         if (sdf.inWake) {
           const vortexFreq = time * 0.009 + (wx * 0.05);
           const vortexOffset = Math.sin(vortexFreq) * 0.35 * sdf.wakeIntensity;
@@ -435,16 +469,13 @@ export const WindTunnelCanvas: React.FC = () => {
           cpLocal -= 0.3 * sdf.wakeIntensity;
         }
 
-        // Supersonic bow shock compression
+        // 4. Supersonic Bow Shock
         if (mach >= 1.0) {
           const shockAngleRad = (aero.shockwaveAngle * Math.PI) / 180;
           const standOff = Math.max(6, 18 / Math.pow(mach, 0.75));
-          const noseOffset = (vehicleGeometry.noseY - vehicleGeometry.centerY) * cellSize;
-          const noseApexX = rocketX - Math.abs(noseOffset) * Math.cos(rocketPitchRad);
-          const noseApexY = rocketY - Math.abs(noseOffset) * Math.sin(rocketPitchRad);
 
-          const shockApexX = noseApexX - standOff * Math.cos(windAngleRad);
-          const shockApexY = noseApexY - standOff * Math.sin(windAngleRad);
+          const shockApexX = noseWorldX - standOff * Math.cos(windAngleRad);
+          const shockApexY = noseWorldY - standOff * Math.sin(windAngleRad);
 
           const shockFrontX = shockApexX + Math.abs(wy - shockApexY) / Math.tan(shockAngleRad);
           if (wx >= shockFrontX - 6 && wx <= shockFrontX + 12) {
@@ -486,7 +517,7 @@ export const WindTunnelCanvas: React.FC = () => {
         const stepSize = 7.0;
         let steps = 0;
 
-        while (currX <= width + 15 && currY >= 20 && currY <= height - 20 && steps < 220) {
+        while (currX <= width + 15 && currY >= 20 && currY <= height - 20 && steps < 230) {
           steps++;
           const flow = getFlowVelocityAt(currX, currY);
           pts.push({
@@ -554,7 +585,7 @@ export const WindTunnelCanvas: React.FC = () => {
         ctx.restore();
       }
 
-      // LIVE INTERACTIVE AIRFLOW PARTICLES (Weave through gaps and around models)
+      // LIVE AIRFLOW PARTICLES
       ctx.save();
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
@@ -568,7 +599,6 @@ export const WindTunnelCanvas: React.FC = () => {
         p.life += dt * 30;
 
         if (p.x > width + 10 || p.x < -10 || p.y < 20 || p.y > height - 20 || p.life >= p.maxLife) {
-          // Respawn at wind tunnel inlet
           p.x = -5;
           p.y = 25 + Math.random() * (height - 50);
           p.life = 0;
@@ -589,12 +619,8 @@ export const WindTunnelCanvas: React.FC = () => {
         const shockAngleRad = (aero.shockwaveAngle * Math.PI) / 180;
         const standOffDist = Math.max(6, 18 / Math.pow(mach, 0.75));
 
-        const noseOffset = (vehicleGeometry.noseY - vehicleGeometry.centerY) * cellSize;
-        const noseApexX = rocketX - Math.abs(noseOffset) * Math.cos(rocketPitchRad);
-        const noseApexY = rocketY - Math.abs(noseOffset) * Math.sin(rocketPitchRad);
-
-        const shockApexX = noseApexX - standOffDist * Math.cos(windAngleRad);
-        const shockApexY = noseApexY - standOffDist * Math.sin(windAngleRad);
+        const shockApexX = noseWorldX - standOffDist * Math.cos(windAngleRad);
+        const shockApexY = noseWorldY - standOffDist * Math.sin(windAngleRad);
 
         const shockLength = Math.max(380, width * 0.6);
         const shockGrad = ctx.createLinearGradient(shockApexX, shockApexY, shockApexX + shockLength, shockApexY);
