@@ -76,7 +76,7 @@ export const WindTunnelCanvas: React.FC = () => {
     let animPulseOffset = 0;
     let lastTime = performance.now();
 
-    // Turbo / Jet Rainbow CFD Colormap
+    // Standard Scientific CFD Turbo/Jet Colormap
     const getCfdColor = (valNorm: number, alpha: number = 0.85): string => {
       const val = Math.max(0, Math.min(1, valNorm));
       let r = 0, g = 0, b = 0;
@@ -104,26 +104,27 @@ export const WindTunnelCanvas: React.FC = () => {
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     };
 
-    // Thermal Temperature Colormap
+    // Scientific Thermal Colormap (Physical Blackbody Radiation)
     const getThermalColor = (tempK: number, alpha: number = 0.85): string => {
-      if (tempK < 300) {
+      if (tempK < 320) {
         return `rgba(56, 189, 248, ${alpha})`;
       } else if (tempK < 500) {
-        const t = (tempK - 300) / 200;
-        return `rgba(${Math.round(255 * t)}, 220, 50, ${alpha})`;
-      } else if (tempK < 1000) {
-        const t = (tempK - 500) / 500;
-        return `rgba(255, ${Math.round(180 * (1 - t * 0.6))}, 0, ${alpha})`;
-      } else if (tempK < 1800) {
-        const t = (tempK - 1000) / 800;
-        return `rgba(255, ${Math.round(80 + 120 * t)}, ${Math.round(80 * t)}, ${alpha})`;
+        const t = (tempK - 320) / 180;
+        return `rgba(${Math.round(250 * t)}, ${Math.round(180 + 40 * t)}, 50, ${alpha})`;
+      } else if (tempK < 900) {
+        const t = (tempK - 500) / 400;
+        return `rgba(255, ${Math.round(180 * (1 - t * 0.7))}, 0, ${alpha})`;
+      } else if (tempK < 1600) {
+        const t = (tempK - 900) / 700;
+        return `rgba(255, ${Math.round(60 + 140 * t)}, ${Math.round(80 * t)}, ${alpha})`;
       } else {
         return `rgba(255, 255, 255, ${alpha})`;
       }
     };
 
-    // Pressure Colormap
+    // Symmetric Pressure Colormap (Cp)
     const getPressureColor = (cp: number, alpha: number = 0.85): string => {
+      // Cp: -0.6 (suction/blue) -> 0.0 (freestream/emerald) -> +1.0 (stagnation/red)
       const norm = Math.max(0, Math.min(1, (cp + 0.6) / 1.6));
       return getCfdColor(norm, alpha);
     };
@@ -144,7 +145,7 @@ export const WindTunnelCanvas: React.FC = () => {
       ctx.save();
       ctx.scale(dpr, dpr);
 
-      // Clean dark engineering canvas
+      // Clean aerospace CAD canvas background
       ctx.fillStyle = '#0E1520';
       ctx.fillRect(0, 0, width, height);
 
@@ -157,7 +158,7 @@ export const WindTunnelCanvas: React.FC = () => {
       ctx.strokeRect(0, 0, width, 20);
       ctx.strokeRect(0, height - 20, width, 20);
 
-      // Static inspection grid
+      // Subtle engineering grid
       ctx.strokeStyle = '#141C2B';
       ctx.lineWidth = 1;
       for (let x = 0; x < width; x += 40) {
@@ -186,28 +187,29 @@ export const WindTunnelCanvas: React.FC = () => {
       const noseWorldX = rocketX + noseTipOffset * Math.cos(aoaRad);
       const noseWorldY = rocketY + noseTipOffset * Math.sin(aoaRad);
 
-      const speedPx = 260 + mach * 110;
+      const speedPx = 280 + mach * 120;
       animPulseOffset += dt * speedPx;
 
+      // Exact body hull profile function R(x_b)
       const getBodyRadius = (xb: number): { rUpper: number; rLower: number; dR: number } => {
         if (xb < noseTipOffset) {
           const dist = noseTipOffset - xb;
-          const noseR = 14;
-          const taper = Math.max(0, 1 - dist / 30);
+          const noseR = 12;
+          const taper = Math.max(0, 1 - dist / 28);
           const r = noseR * Math.sqrt(taper);
-          return { rUpper: r, rLower: r, dR: 0.6 };
+          return { rUpper: r, rLower: r, dR: 0.5 };
         }
         if (xb > tailOffset) {
           const dist = xb - tailOffset;
-          const tailR = 24;
-          const taper = Math.max(0, 1 - dist / 160);
-          const r = tailR * Math.pow(taper, 1.4);
-          return { rUpper: r, rLower: r, dR: -0.3 };
+          const tailR = 20;
+          const taper = Math.max(0, 1 - dist / 150);
+          const r = tailR * Math.pow(taper, 1.3);
+          return { rUpper: r, rLower: r, dR: -0.2 };
         }
 
         const gridY = vehicleGeometry.centerY + xb / cellSize;
-        let maxUpper = 12;
-        let maxLower = 12;
+        let maxUpper = 14;
+        let maxLower = 14;
 
         for (const p of vehicleGeometry.parts) {
           const def = p.def;
@@ -216,16 +218,16 @@ export const WindTunnelCanvas: React.FC = () => {
           const partMinY = p.y - p.hh;
           const partMaxY = p.y + p.hh;
 
-          if (gridY >= partMinY - 0.25 && gridY <= partMaxY + 0.25) {
+          if (gridY >= partMinY - 0.15 && gridY <= partMaxY + 0.15) {
             const normY = Math.max(0, Math.min(1, (gridY - partMinY) / (def.height || 1)));
             let widthPx = def.width * cellSize;
 
             if (def.texturePattern === 'cone') {
               widthPx = (def.width * cellSize) * Math.sqrt(normY);
             } else if (def.texturePattern === 'fin') {
-              widthPx = (def.width * cellSize) * (0.35 + 0.65 * normY);
+              widthPx = (def.width * cellSize) * (0.3 + 0.7 * normY);
             } else if (def.texturePattern === 'engine-bell') {
-              widthPx = (def.width * cellSize) * (0.55 + 0.45 * normY);
+              widthPx = (def.width * cellSize) * (0.6 + 0.4 * normY);
             }
 
             const halfW = widthPx / 2;
@@ -249,12 +251,14 @@ export const WindTunnelCanvas: React.FC = () => {
         return { rUpper: maxUpper, rLower: maxLower, dR };
       };
 
+      // Flow Velocity Calculation Engine (Strictly Symmetric at AoA = 0)
       const getFlowVelocityAt = (wx: number, wy: number): { u: number; v: number; speedNorm: number; tempK: number; cp: number; machLocal: number } => {
         const u = 1.0;
 
         const dx = wx - rocketX;
         const dy = wy - rocketY;
 
+        // Transform into vehicle body frame
         const xb = dx * Math.cos(-aoaRad) - dy * Math.sin(-aoaRad);
         const yb = dx * Math.sin(-aoaRad) + dy * Math.cos(-aoaRad);
 
@@ -269,66 +273,90 @@ export const WindTunnelCanvas: React.FC = () => {
         let bodyDeflectY = 0;
         let cpLocal = 0;
 
-        const aoaSideSign = (aoaRad > 0 ? (yb < 0 ? 1 : -1) : (yb > 0 ? 1 : -1));
-        const aoaIntensity = Math.abs(Math.sin(aoaRad));
+        const aoaSin = Math.sin(aoaRad);
+        const aoaEffect = Math.abs(aoaSin) * (yb < 0 ? 1 : -1) * Math.sign(aoaSin || 1);
 
         if (xb < noseTipOffset) {
+          // Flow approaching nose stagnation region
           const distToNose = Math.hypot(xb - noseTipOffset, yb);
-          const noseInfluenceRadius = 60;
+          const noseInfluenceRadius = 45;
 
           if (distToNose < noseInfluenceRadius) {
             const frac = 1 - distToNose / noseInfluenceRadius;
             const pushDir = yb >= 0 ? 1 : -1;
 
-            speedFactor *= Math.max(0.2, 1 - Math.pow(frac, 1.2) * 0.8);
-            tempK = windTunnelState.airTemperature + (aero.stagnationTemperature - windTunnelState.airTemperature) * Math.pow(frac, 1.5);
+            // Deceleration to stagnation point
+            speedFactor *= Math.max(0.15, 1 - Math.pow(frac, 1.2) * 0.85);
+            tempK = windTunnelState.airTemperature + (aero.stagnationTemperature - windTunnelState.airTemperature) * Math.pow(frac, 1.4);
             cpLocal = Math.pow(frac, 1.2);
 
-            bodyDeflectY += pushDir * Math.pow(frac, 1.3) * 0.85;
+            // Deflect flow smoothly around nose curvature
+            bodyDeflectY += pushDir * Math.pow(frac, 1.3) * 0.75;
           }
         } else if (xb >= noseTipOffset && xb <= tailOffset) {
-          const influenceRange = 90;
+          // Flow along fuselage and body contour
+          const influenceRange = 75;
           if (distFromSurface < influenceRange) {
             const normDist = Math.max(0, distFromSurface / influenceRange);
-            const wallProximity = Math.exp(-normDist * 2.5);
+            const wallProximity = Math.exp(-normDist * 2.8);
             const pushDir = yb >= 0 ? 1 : -1;
 
-            bodyDeflectY += pushDir * (wallProximity * 0.45 + profile.dR * 0.4 * wallProximity);
-            speedFactor *= (1.0 + wallProximity * 0.3);
+            // Follow hull expansion and contour slope dR/dx
+            bodyDeflectY += pushDir * (profile.dR * 0.45 * wallProximity);
 
-            const boundaryLayerTemp = windTunnelState.airTemperature + (aero.stagnationTemperature - windTunnelState.airTemperature) * 0.75 * wallProximity;
-            tempK = Math.max(tempK, boundaryLayerTemp);
+            // Boundary layer acceleration around shoulders, recovery along barrel
+            const shoulderDist = Math.abs(xb - noseTipOffset);
+            if (shoulderDist < 30) {
+              // Expansion acceleration over shoulder
+              speedFactor *= (1.0 + (1 - shoulderDist / 30) * 0.25 * wallProximity);
+              cpLocal = -0.35 * (1 - shoulderDist / 30) * wallProximity;
+            } else {
+              // Steady cylindrical flow
+              speedFactor *= (1.0 + wallProximity * 0.08);
+              cpLocal = 0.02 * wallProximity;
+            }
 
-            cpLocal = (aoaSideSign * aoaIntensity * 0.8 * wallProximity) - (profile.dR * 0.4 * wallProximity);
+            // Angle of Attack differential (Windward compression vs Leeward expansion)
+            if (Math.abs(aoaSin) > 0.001) {
+              const aoaPressureShift = aoaEffect * 0.75 * wallProximity;
+              cpLocal += aoaPressureShift;
+              speedFactor *= (1.0 - aoaPressureShift * 0.2);
+            }
 
+            const boundaryLayerTemp = windTunnelState.airTemperature + (aero.stagnationTemperature - windTunnelState.airTemperature) * 0.65 * wallProximity;
+            tempK = Math.max(tempK, boundaryLayerTemp + (aoaEffect > 0 ? aoaEffect * 80 : 0));
+
+            // Fin aerodynamic control deflection
             if (windTunnelState.finDeflectionAngle !== 0 && xb > tailOffset - 45) {
               const finRad = (windTunnelState.finDeflectionAngle * Math.PI) / 180;
-              bodyDeflectY += Math.sin(finRad) * wallProximity * 0.85;
-              cpLocal += Math.sin(finRad) * 0.5 * wallProximity;
+              bodyDeflectY += Math.sin(finRad) * wallProximity * 0.8;
+              cpLocal += Math.sin(finRad) * 0.4 * wallProximity;
             }
           }
         } else {
+          // Base wake & recirculation
           const wakeDist = xb - tailOffset;
-          if (wakeDist < 240 && distFromAxis < bodyR + wakeDist * 0.3) {
-            const wakeDecay = Math.max(0, 1 - wakeDist / 240);
-            const vortexFreq = time * 0.009 + wakeDist * 0.04;
+          if (wakeDist < 200 && distFromAxis < bodyR + wakeDist * 0.25) {
+            const wakeDecay = Math.max(0, 1 - wakeDist / 200);
+            const vortexFreq = time * 0.008 + wakeDist * 0.035;
             const vortexSign = yb >= 0 ? 1 : -1;
 
-            bodyDeflectY += Math.sin(vortexFreq) * 0.35 * wakeDecay * vortexSign;
-            speedFactor *= (0.7 + 0.3 * (1 - wakeDecay));
-            cpLocal = -0.45 * wakeDecay;
+            bodyDeflectY += Math.sin(vortexFreq) * 0.3 * wakeDecay * vortexSign;
+            speedFactor *= (0.75 + 0.25 * (1 - wakeDecay));
+            cpLocal = -0.35 * wakeDecay;
           }
         }
 
+        // Supersonic Shockwaves
         if (mach >= 1.0) {
           const shockAngleRad = (aero.shockwaveAngle * Math.PI) / 180;
-          const standOff = Math.max(8, 26 / Math.pow(mach, 0.75));
+          const standOff = Math.max(6, 20 / Math.pow(mach, 0.75));
           const shockFrontX = (noseWorldX - standOff * Math.cos(aoaRad)) + Math.abs(wy - noseWorldY) / Math.tan(shockAngleRad);
 
-          if (wx >= shockFrontX - 8 && wx <= shockFrontX + 16) {
-            speedFactor *= 0.75;
-            tempK = Math.max(tempK, windTunnelState.airTemperature + (mach - 1) * 120);
-            cpLocal = Math.max(cpLocal, 0.65);
+          if (wx >= shockFrontX - 6 && wx <= shockFrontX + 12) {
+            speedFactor *= 0.8;
+            tempK = Math.max(tempK, windTunnelState.airTemperature + (mach - 1) * 110);
+            cpLocal = Math.max(cpLocal, 0.55);
           }
         }
 
@@ -352,6 +380,7 @@ export const WindTunnelCanvas: React.FC = () => {
         };
       };
 
+      // 48 Continuous Flow Streamlines
       const NUM_STREAMLINES = 48;
       const rakeTop = 26;
       const rakeBottom = height - 26;
@@ -394,6 +423,7 @@ export const WindTunnelCanvas: React.FC = () => {
         }
       }
 
+      // Draw continuous CFD Streamlines
       for (let s = 0; s < streamlines.length; s++) {
         const pts = streamlines[s].points;
         if (pts.length < 2) continue;
@@ -419,6 +449,7 @@ export const WindTunnelCanvas: React.FC = () => {
           ctx.stroke();
         }
 
+        // Animated particles along streamlines
         ctx.save();
         ctx.setLineDash([16, 24]);
         ctx.lineDashOffset = -animPulseOffset * (0.85 + 0.3 * (s % 4));
@@ -433,10 +464,11 @@ export const WindTunnelCanvas: React.FC = () => {
         ctx.restore();
       }
 
+      // Draw Supersonic Bow & Oblique Shock Fronts
       if (mach >= 1.0) {
         ctx.save();
         const shockAngleRad = (aero.shockwaveAngle * Math.PI) / 180;
-        const standOffDist = Math.max(8, 26 / Math.pow(mach, 0.75));
+        const standOffDist = Math.max(6, 20 / Math.pow(mach, 0.75));
 
         const shockApexX = noseWorldX - standOffDist * Math.cos(aoaRad);
         const shockApexY = noseWorldY - standOffDist * Math.sin(aoaRad);
@@ -448,7 +480,7 @@ export const WindTunnelCanvas: React.FC = () => {
         shockGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
 
         ctx.strokeStyle = shockGrad;
-        ctx.lineWidth = Math.min(4.5, 1.8 + mach * 0.5);
+        ctx.lineWidth = Math.min(4.0, 1.6 + mach * 0.4);
 
         ctx.beginPath();
         for (let dist = 0; dist <= 300; dist += 6) {
@@ -475,6 +507,8 @@ export const WindTunnelCanvas: React.FC = () => {
         ctx.restore();
       }
 
+      // RENDER ROCKET WITH PHYSICAL AERODYNAMIC SURFACE SHADING
+      // (Strictly symmetric upper/lower at AoA = 0, physical windward/leeward response when AoA != 0)
       ctx.save();
       ctx.translate(rocketX, rocketY);
       ctx.rotate(-Math.PI / 2 + aoaRad);
@@ -494,71 +528,92 @@ export const WindTunnelCanvas: React.FC = () => {
 
         const isNose = def.category === 'command' || def.texturePattern === 'cone';
         const isFin = def.category === 'aerodynamics' || def.texturePattern === 'fin';
+        const aoaAngle = windTunnelState.angleToGo;
 
-        let cfdSurfaceGrad: CanvasGradient;
+        let partSurfaceGrad: CanvasGradient;
 
         if (windTunnelState.visualizationMode === 'thermal') {
           const maxT = aero.stagnationTemperature;
           if (isNose) {
-            cfdSurfaceGrad = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
-            cfdSurfaceGrad.addColorStop(0, maxT > 1200 ? '#ffffff' : maxT > 600 ? '#ef4444' : '#f59e0b');
-            cfdSurfaceGrad.addColorStop(0.3, maxT > 800 ? '#ef4444' : '#f59e0b');
-            cfdSurfaceGrad.addColorStop(0.7, '#f59e0b');
-            cfdSurfaceGrad.addColorStop(1, '#06b6d4');
+            // Hot stagnation tip cooling downstream
+            partSurfaceGrad = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
+            partSurfaceGrad.addColorStop(0, maxT > 1400 ? '#ffffff' : maxT > 800 ? '#FBBF24' : '#F43F5E');
+            partSurfaceGrad.addColorStop(0.35, maxT > 900 ? '#F43F5E' : '#FBBF24');
+            partSurfaceGrad.addColorStop(0.7, '#1E293B');
+            partSurfaceGrad.addColorStop(1, '#0F172A');
           } else {
-            cfdSurfaceGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
-            cfdSurfaceGrad.addColorStop(0, '#f59e0b');
-            cfdSurfaceGrad.addColorStop(0.3, '#06b6d4');
-            cfdSurfaceGrad.addColorStop(1, '#1e3a8a');
+            // Symmetric blackbody incandescence along body axis
+            partSurfaceGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
+            if (aoaAngle > 2) {
+              // Windward compression on left
+              partSurfaceGrad.addColorStop(0, '#F43F5E');
+              partSurfaceGrad.addColorStop(0.4, '#FBBF24');
+              partSurfaceGrad.addColorStop(1, '#1E293B');
+            } else if (aoaAngle < -2) {
+              // Windward compression on right
+              partSurfaceGrad.addColorStop(0, '#1E293B');
+              partSurfaceGrad.addColorStop(0.6, '#FBBF24');
+              partSurfaceGrad.addColorStop(1, '#F43F5E');
+            } else {
+              // Perfectly symmetric at AoA = 0
+              partSurfaceGrad.addColorStop(0, '#1E293B');
+              partSurfaceGrad.addColorStop(0.5, maxT > 600 ? '#FBBF24' : '#334155');
+              partSurfaceGrad.addColorStop(1, '#1E293B');
+            }
           }
         } else if (windTunnelState.visualizationMode === 'pressure') {
-          const aoaP = windTunnelState.angleToGo;
           if (isNose) {
-            cfdSurfaceGrad = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
-            cfdSurfaceGrad.addColorStop(0, '#ef4444');
-            cfdSurfaceGrad.addColorStop(0.5, '#f59e0b');
-            cfdSurfaceGrad.addColorStop(1, '#06b6d4');
+            // Nose tip has highest positive Cp (+1.0), drops around shoulder (-0.3)
+            partSurfaceGrad = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
+            partSurfaceGrad.addColorStop(0, '#F43F5E');
+            partSurfaceGrad.addColorStop(0.4, '#FBBF24');
+            partSurfaceGrad.addColorStop(0.85, '#38BDF8');
+            partSurfaceGrad.addColorStop(1, '#1E3A8A');
           } else {
-            cfdSurfaceGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
-            if (aoaP > 0) {
-              cfdSurfaceGrad.addColorStop(0, '#ef4444');
-              cfdSurfaceGrad.addColorStop(0.5, '#10b981');
-              cfdSurfaceGrad.addColorStop(1, '#1e3a8a');
-            } else if (aoaP < 0) {
-              cfdSurfaceGrad.addColorStop(0, '#1e3a8a');
-              cfdSurfaceGrad.addColorStop(0.5, '#10b981');
-              cfdSurfaceGrad.addColorStop(1, '#ef4444');
+            partSurfaceGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
+            if (aoaAngle > 2) {
+              // Windward high pressure vs Leeward suction
+              partSurfaceGrad.addColorStop(0, '#F43F5E');
+              partSurfaceGrad.addColorStop(0.4, '#34D399');
+              partSurfaceGrad.addColorStop(1, '#1E3A8A');
+            } else if (aoaAngle < -2) {
+              // Windward high pressure vs Leeward suction
+              partSurfaceGrad.addColorStop(0, '#1E3A8A');
+              partSurfaceGrad.addColorStop(0.6, '#34D399');
+              partSurfaceGrad.addColorStop(1, '#F43F5E');
             } else {
-              cfdSurfaceGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
-              cfdSurfaceGrad.addColorStop(0, '#10b981');
-              cfdSurfaceGrad.addColorStop(0.5, '#06b6d4');
-              cfdSurfaceGrad.addColorStop(1, '#10b981');
+              // Strictly symmetric at AoA = 0 (Freestream boundary recovery)
+              partSurfaceGrad.addColorStop(0, '#1E3A8A');
+              partSurfaceGrad.addColorStop(0.5, '#34D399');
+              partSurfaceGrad.addColorStop(1, '#1E3A8A');
             }
           }
         } else {
+          // Standard CFD velocity streamline shading / realistic aerodynamic skin
           if (isNose) {
-            cfdSurfaceGrad = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
-            cfdSurfaceGrad.addColorStop(0, '#ef4444');
-            cfdSurfaceGrad.addColorStop(0.3, '#f59e0b');
-            cfdSurfaceGrad.addColorStop(0.7, '#eab308');
-            cfdSurfaceGrad.addColorStop(1, '#06b6d4');
+            partSurfaceGrad = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
+            partSurfaceGrad.addColorStop(0, '#F43F5E');
+            partSurfaceGrad.addColorStop(0.3, '#FBBF24');
+            partSurfaceGrad.addColorStop(0.7, '#38BDF8');
+            partSurfaceGrad.addColorStop(1, '#1E293B');
           } else if (isFin) {
-            cfdSurfaceGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
-            cfdSurfaceGrad.addColorStop(0, '#eab308');
-            cfdSurfaceGrad.addColorStop(0.5, '#10b981');
-            cfdSurfaceGrad.addColorStop(1, '#06b6d4');
+            partSurfaceGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
+            partSurfaceGrad.addColorStop(0, '#38BDF8');
+            partSurfaceGrad.addColorStop(0.5, '#1E293B');
+            partSurfaceGrad.addColorStop(1, '#38BDF8');
           } else {
-            cfdSurfaceGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
-            cfdSurfaceGrad.addColorStop(0, '#eab308');
-            cfdSurfaceGrad.addColorStop(0.25, '#84cc16');
-            cfdSurfaceGrad.addColorStop(0.5, '#06b6d4');
-            cfdSurfaceGrad.addColorStop(0.75, '#3b82f6');
-            cfdSurfaceGrad.addColorStop(1, '#6366f1');
+            // Strictly symmetric fuselage cylinder shading
+            partSurfaceGrad = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
+            partSurfaceGrad.addColorStop(0, '#0F172A');
+            partSurfaceGrad.addColorStop(0.25, def.color || '#334155');
+            partSurfaceGrad.addColorStop(0.5, '#475569');
+            partSurfaceGrad.addColorStop(0.75, def.color || '#334155');
+            partSurfaceGrad.addColorStop(1, '#0F172A');
           }
         }
 
         if (def.texturePattern === 'cone') {
-          ctx.fillStyle = cfdSurfaceGrad;
+          ctx.fillStyle = partSurfaceGrad;
           ctx.beginPath();
           ctx.moveTo(-pw / 2, ph / 2);
           ctx.quadraticCurveTo(0, -ph / 2 - 10 * scale, pw / 2, ph / 2);
@@ -569,14 +624,15 @@ export const WindTunnelCanvas: React.FC = () => {
           ctx.lineWidth = 1.5;
           ctx.stroke();
 
-          if (aero.stagnationTemperature > 500) {
+          // Physical incandescence plasma glow at stagnation tip for supersonic/hypersonic
+          if (aero.stagnationTemperature > 450) {
             const stagT = aero.stagnationTemperature;
-            const glowRadius = Math.min(45, 12 + (mach * 3.0));
+            const glowRadius = Math.min(42, 10 + (mach * 2.8));
             const glowGrad = ctx.createRadialGradient(0, -ph / 2 - 4, 1, 0, -ph / 2 - 4, glowRadius);
-            glowGrad.addColorStop(0, stagT > 1500 ? '#ffffff' : stagT > 800 ? '#fef08a' : '#ffb703');
-            glowGrad.addColorStop(0.35, stagT > 1000 ? '#ffb703' : '#ef4444');
-            glowGrad.addColorStop(0.75, 'rgba(239, 68, 68, 0.5)');
-            glowGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+            glowGrad.addColorStop(0, stagT > 1400 ? '#ffffff' : stagT > 800 ? '#FEF08A' : '#FBBF24');
+            glowGrad.addColorStop(0.35, stagT > 900 ? '#FBBF24' : '#F43F5E');
+            glowGrad.addColorStop(0.75, 'rgba(244, 63, 94, 0.4)');
+            glowGrad.addColorStop(1, 'rgba(244, 63, 94, 0)');
             ctx.fillStyle = glowGrad;
             ctx.beginPath();
             ctx.arc(0, -ph / 2 - 4, glowRadius, 0, Math.PI * 2);
@@ -605,6 +661,7 @@ export const WindTunnelCanvas: React.FC = () => {
           ctx.lineWidth = 1.2;
           ctx.stroke();
 
+          // Engine hot-fire test exhaust plume
           if (windTunnelState.engineTestActive) {
             const plumeLength = 140 * scale * windTunnelState.engineThrottle;
             const plumeWidth = pw * 0.85 * (plume.plumeState === 'underexpanded' ? 1.8 : 0.95);
@@ -636,7 +693,7 @@ export const WindTunnelCanvas: React.FC = () => {
             ctx.rotate((windTunnelState.finDeflectionAngle * Math.PI) / 180);
           }
 
-          ctx.fillStyle = cfdSurfaceGrad;
+          ctx.fillStyle = partSurfaceGrad;
           ctx.beginPath();
           ctx.moveTo(-pw / 2, -ph / 2);
           ctx.lineTo(pw / 2, 0);
@@ -651,7 +708,7 @@ export const WindTunnelCanvas: React.FC = () => {
 
           ctx.restore();
         } else {
-          ctx.fillStyle = cfdSurfaceGrad;
+          ctx.fillStyle = partSurfaceGrad;
           ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
 
           ctx.strokeStyle = '#0B0F17';
@@ -664,7 +721,7 @@ export const WindTunnelCanvas: React.FC = () => {
 
       ctx.restore();
 
-      // Force Vectors
+      // Force Vectors (Drag in Red, Lift in Emerald)
       ctx.save();
       ctx.translate(rocketX, rocketY);
 
@@ -787,13 +844,13 @@ export const WindTunnelCanvas: React.FC = () => {
     let tempK = windTunnelState.airTemperature;
     let cp = 0;
 
-    if (distToNose < 60) {
-      const frac = 1 - distToNose / 60;
+    if (distToNose < 50) {
+      const frac = 1 - distToNose / 50;
       speedFactor *= Math.max(0.2, 1 - Math.pow(frac, 1.2) * 0.8);
       tempK += (aero.stagnationTemperature - windTunnelState.airTemperature) * frac;
       cp = frac;
     } else {
-      tempK = windTunnelState.airTemperature + mach * 25;
+      tempK = windTunnelState.airTemperature + mach * 20;
       cp = (Math.abs(Math.sin(aoaRad)) * 0.4) * (yb < 0 ? 1 : -1);
     }
 
@@ -891,7 +948,7 @@ export const WindTunnelCanvas: React.FC = () => {
             <div className="w-36 h-2 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 via-emerald-400 to-red-600 shadow-inner" />
             <div className="flex justify-between text-[9px] text-[#64748B]">
               <span>Suction (-0.6)</span>
-              <span>0</span>
+              <span>0 (Freestream)</span>
               <span>Compression (+1.0)</span>
             </div>
           </>
