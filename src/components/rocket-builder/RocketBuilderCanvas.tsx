@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { PARTS_CATALOG, GRID_CELL_SIZE, calculateRocketProperties, validateStructuralConnectivity } from '../../physics/rocket-math';
+import { drawAerospacePart } from './renderRocketPart';
 import type { PlacedPart, SymmetryMode } from '../../types';
 
 export const RocketBuilderCanvas: React.FC = () => {
@@ -105,7 +106,6 @@ export const RocketBuilderCanvas: React.FC = () => {
 
     if (clickedPart) {
       if (e.button === 0) {
-        // Alt-drag to duplicate part
         if (e.altKey) {
           duplicatePartInBlueprint(clickedPart.instanceId);
           return;
@@ -138,8 +138,8 @@ export const RocketBuilderCanvas: React.FC = () => {
         y: e.clientY - dragStart.y
       });
     } else if (draggingPartId) {
-      let rawX = worldPos.x - partDragOffset.x;
-      let rawY = worldPos.y - partDragOffset.y;
+      const rawX = worldPos.x - partDragOffset.x;
+      const rawY = worldPos.y - partDragOffset.y;
 
       let targetX = Math.round(rawX);
       let targetY = Math.round(rawY);
@@ -162,13 +162,11 @@ export const RocketBuilderCanvas: React.FC = () => {
 
           // Vertical Stacking Snap
           if (Math.abs(targetX - other.x) <= 0.8) {
-            // Stack on top
             if (Math.abs(targetY - (other.y - (otherH + thisH) / 2)) <= 1.0) {
               targetX = other.x;
               targetY = other.y - (otherH + thisH) / 2;
               break;
             }
-            // Stack below
             if (Math.abs(targetY - (other.y + (otherH + thisH) / 2)) <= 1.0) {
               targetX = other.x;
               targetY = other.y + (otherH + thisH) / 2;
@@ -176,7 +174,7 @@ export const RocketBuilderCanvas: React.FC = () => {
             }
           }
 
-          // Radial side snap (Left / Right boosters and fins)
+          // Radial side snap
           if (Math.abs(targetY - other.y) <= 1.0) {
             if (Math.abs(targetX - (other.x - (otherW + thisW) / 2)) <= 1.2) {
               targetX = other.x - (otherW + thisW) / 2;
@@ -285,19 +283,19 @@ export const RocketBuilderCanvas: React.FC = () => {
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
     ctx.clearRect(0, 0, width, height);
 
-    // Deep Void Background
+    // Void Background
     ctx.fillStyle = '#090A0D';
     ctx.fillRect(0, 0, width, height);
 
     const centerX = width / 2 + pan.x;
     const centerY = height / 2 + pan.y;
 
-    // Draw Grid Lines
+    // Blueprint Grid Lines
     const step = GRID_CELL_SIZE * zoom;
     const startX = ((centerX % step) + step) % step;
     const startY = ((centerY % step) + step) % step;
 
-    ctx.strokeStyle = '#151820';
+    ctx.strokeStyle = '#141822';
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let x = startX; x < width; x += step) {
@@ -310,32 +308,32 @@ export const RocketBuilderCanvas: React.FC = () => {
     }
     ctx.stroke();
 
-    // Central Symmetry Centerline
-    ctx.strokeStyle = '#FF8A1F';
-    ctx.globalAlpha = 0.35;
-    ctx.setLineDash([4, 4]);
+    // Subtle center axis
+    ctx.strokeStyle = '#252B36';
     ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 6]);
     ctx.beginPath();
     ctx.moveTo(centerX, 0);
     ctx.lineTo(centerX, height);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.globalAlpha = 1.0;
 
-    // Ground launch base line at bottom
+    // Launchpad Cradle at Ground Level
+    const groundY = centerY + 18 * zoom * GRID_CELL_SIZE;
+    ctx.fillStyle = '#151820';
+    ctx.fillRect(centerX - 160 * zoom, groundY, 320 * zoom, 40 * zoom);
     ctx.strokeStyle = '#353D4A';
     ctx.lineWidth = 2;
-    const groundY = centerY + 18 * zoom * GRID_CELL_SIZE;
-    ctx.beginPath();
-    ctx.moveTo(0, groundY);
-    ctx.lineTo(width, groundY);
-    ctx.stroke();
+    ctx.strokeRect(centerX - 160 * zoom, groundY, 320 * zoom, 40 * zoom);
 
-    // Render Placed Parts
-    ctx.save();
-    ctx.translate(centerX, centerY);
-    ctx.scale(zoom * GRID_CELL_SIZE, zoom * GRID_CELL_SIZE);
+    // Launch mount flame trench
+    ctx.fillStyle = '#0E1015';
+    ctx.fillRect(centerX - 50 * zoom, groundY, 100 * zoom, 35 * zoom);
+    ctx.strokeStyle = '#FF8A1F';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(centerX - 50 * zoom, groundY, 100 * zoom, 35 * zoom);
 
+    // Render Placed Aerospace Parts with drawAerospacePart
     for (const part of blueprint.parts) {
       const def = PARTS_CATALOG[part.partType];
       if (!def) continue;
@@ -344,131 +342,122 @@ export const RocketBuilderCanvas: React.FC = () => {
       const isHovered = part.instanceId === hoveredPartId;
       const isDisconnected = connectivity.disconnectedIds.includes(part.instanceId);
 
+      const screenPos = worldToScreen(part.x, part.y);
+      const pw = def.width * zoom * GRID_CELL_SIZE;
+      const ph = def.height * zoom * GRID_CELL_SIZE;
+
       ctx.save();
-      ctx.translate(part.x, part.y);
+      ctx.translate(screenPos.x, screenPos.y);
       ctx.rotate((part.rotation * Math.PI) / 180);
 
-      const hw = def.width / 2;
-      const hh = def.height / 2;
+      // Call High-Fidelity Aerospace Part Renderer
+      drawAerospacePart({
+        ctx,
+        part,
+        def,
+        pw,
+        ph,
+        zoom,
+        isSelected,
+        isHovered
+      });
 
-      // Part Body Fill
-      ctx.fillStyle = def.color;
-      ctx.fillRect(-hw, -hh, def.width, def.height);
-
-      // Part Border
-      if (isSelected) {
-        ctx.strokeStyle = '#FF8A1F'; // Signal Orange selection
-        ctx.lineWidth = 0.15;
-      } else if (isDisconnected) {
-        ctx.strokeStyle = '#D95757'; // Critical Red Disconnected Warning
-        ctx.lineWidth = 0.12;
-      } else if (isHovered) {
-        ctx.strokeStyle = '#79AFC1'; // Telemetry cyan hover
-        ctx.lineWidth = 0.1;
-      } else {
-        ctx.strokeStyle = '#252B36';
-        ctx.lineWidth = 0.05;
-      }
-      ctx.strokeRect(-hw, -hh, def.width, def.height);
-
-      // Texture pattern / ribbing
-      if (def.texturePattern === 'ribbed') {
-        ctx.strokeStyle = '#1E293B';
-        ctx.lineWidth = 0.04;
-        for (let ry = -hh + 0.5; ry < hh; ry += 0.6) {
-          ctx.beginPath();
-          ctx.moveTo(-hw, ry);
-          ctx.lineTo(hw, ry);
-          ctx.stroke();
-        }
-      } else if (def.texturePattern === 'engine-bell') {
-        // Engine bell nozzle taper
-        ctx.fillStyle = '#0F172A';
-        ctx.beginPath();
-        ctx.moveTo(-hw * 0.4, -hh);
-        ctx.lineTo(hw * 0.4, -hh);
-        ctx.lineTo(hw * 0.9, hh);
-        ctx.lineTo(-hw * 0.9, hh);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#FF8A1F';
-        ctx.lineWidth = 0.04;
-        ctx.stroke();
-      } else if (def.texturePattern === 'cone') {
-        // Ogive nosecone taper
-        ctx.fillStyle = '#F8FAFC';
-        ctx.beginPath();
-        ctx.moveTo(0, -hh);
-        ctx.lineTo(hw, hh);
-        ctx.lineTo(-hw, hh);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      // Disconnected Warning Icon Outline
+      // Disconnected Warning Outline
       if (isDisconnected) {
+        ctx.strokeStyle = '#D95757';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(-pw / 2 - 2, -ph / 2 - 2, pw + 4, ph + 4);
+        ctx.setLineDash([]);
+
         ctx.fillStyle = '#D95757';
-        ctx.font = 'bold 0.6px sans-serif';
+        ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⚠️', 0, 0);
       }
 
       // Connection Nodes
-      for (const node of def.connectionPoints) {
-        ctx.fillStyle = isSelected ? '#FF8A1F' : '#79AFC1';
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, 0.12, 0, Math.PI * 2);
-        ctx.fill();
+      if (isSelected || isHovered) {
+        for (const node of def.connectionPoints) {
+          const nx = node.x * zoom * GRID_CELL_SIZE;
+          const ny = node.y * zoom * GRID_CELL_SIZE;
+          ctx.fillStyle = isSelected ? '#FF8A1F' : '#79AFC1';
+          ctx.beginPath();
+          ctx.arc(nx, ny, Math.max(3, 4 * zoom), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#090A0D';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
       }
 
       ctx.restore();
     }
 
-    // CoM, CoP, CoT Markers
+    // CoM, CoP, CoT Engineering Badges
     if (blueprint.parts.length > 0) {
       if (showCoM) {
+        const comScreen = worldToScreen(metrics.centerOfMass.x, metrics.centerOfMass.y);
         ctx.save();
-        ctx.translate(metrics.centerOfMass.x, metrics.centerOfMass.y);
+        ctx.translate(comScreen.x, comScreen.y);
+        
         ctx.fillStyle = '#55B982';
         ctx.beginPath();
-        ctx.arc(0, 0, 0.35, 0, Math.PI * 2);
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#090A0D';
-        ctx.lineWidth = 0.08;
+        ctx.lineWidth = 2;
         ctx.stroke();
+
+        ctx.fillStyle = '#55B982';
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('CoM', 11, 3);
         ctx.restore();
       }
 
       if (showCoP) {
+        const copScreen = worldToScreen(metrics.centerOfPressure.x, metrics.centerOfPressure.y);
         ctx.save();
-        ctx.translate(metrics.centerOfPressure.x, metrics.centerOfPressure.y);
+        ctx.translate(copScreen.x, copScreen.y);
+        
         ctx.fillStyle = '#79AFC1';
         ctx.beginPath();
-        ctx.arc(0, 0, 0.35, 0, Math.PI * 2);
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#090A0D';
-        ctx.lineWidth = 0.08;
+        ctx.lineWidth = 2;
         ctx.stroke();
+
+        ctx.fillStyle = '#79AFC1';
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('CoP', 11, 3);
         ctx.restore();
       }
 
       if (showCoT && metrics.totalThrust > 0) {
+        const cotScreen = worldToScreen(metrics.centerOfThrust.x, metrics.centerOfThrust.y);
         ctx.save();
-        ctx.translate(metrics.centerOfThrust.x, metrics.centerOfThrust.y);
+        ctx.translate(cotScreen.x, cotScreen.y);
+        
         ctx.fillStyle = '#FF8A1F';
         ctx.beginPath();
-        ctx.arc(0, 0, 0.35, 0, Math.PI * 2);
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#090A0D';
-        ctx.lineWidth = 0.08;
+        ctx.lineWidth = 2;
         ctx.stroke();
+
+        ctx.fillStyle = '#FF8A1F';
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('CoT', 11, 3);
         ctx.restore();
       }
     }
-
-    ctx.restore();
-  }, [blueprint, selectedPartInstanceId, hoveredPartId, zoom, pan, showCoM, showCoP, showCoT, metrics, connectivity]);
+  }, [blueprint, selectedPartInstanceId, hoveredPartId, zoom, pan, showCoM, showCoP, showCoT, metrics, connectivity, worldToScreen]);
 
   const selectedPart = blueprint.parts.find(p => p.instanceId === selectedPartInstanceId);
   const selectedPartDef = selectedPart ? PARTS_CATALOG[selectedPart.partType] : null;
@@ -493,7 +482,6 @@ export const RocketBuilderCanvas: React.FC = () => {
         onMouseDown={e => e.stopPropagation()} 
         className="absolute top-3 left-3 flex items-center gap-1.5 bg-[#151820] border border-[#252B36] p-1.5 rounded-lg shadow-lg text-xs z-20"
       >
-        {/* Undo / Redo */}
         <button
           onClick={undo}
           disabled={!canUndo}
@@ -534,7 +522,6 @@ export const RocketBuilderCanvas: React.FC = () => {
 
         <div className="w-[1px] h-4 bg-[#252B36] mx-0.5" />
 
-        {/* Zoom & Fit */}
         <button
           onClick={() => setZoom(z => Math.min(3.5, z * 1.15))}
           title="Zoom In"
@@ -561,7 +548,6 @@ export const RocketBuilderCanvas: React.FC = () => {
 
         <div className="w-[1px] h-4 bg-[#252B36] mx-0.5" />
 
-        {/* CoM / CoP / CoT Toggles */}
         <button
           onClick={() => setShowCoM(v => !v)}
           className={`px-2 py-0.5 rounded text-[10px] font-mono-num ${
