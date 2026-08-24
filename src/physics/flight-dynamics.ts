@@ -3,19 +3,18 @@ import { calculateRocketProperties, PARTS_CATALOG } from './rocket-math';
 import { calculateAtmosphere } from './aerodynamics';
 
 export const G_EARTH = 9.80665;
-export const EARTH_RADIUS = 6371000; // meters
+export const EARTH_RADIUS = 6371000; // meters (realistic scale)
 export const MU_EARTH = 3.986004418e14; // m^3/s^2
 
-export interface JettisonedStage {
+export interface DebrisObject {
   id: string;
-  stageNumber: number;
-  parts: { partType: string; x: number; y: number; rotation: number }[];
+  partType: string;
   worldX: number;
   worldY: number;
   vx: number;
   vy: number;
   rotation: number;
-  angularVelocity: number;
+  rotSpeed: number;
   life: number;
 }
 
@@ -27,6 +26,8 @@ export function initFlightState(blueprint: RocketBlueprint): FlightState {
     const stages = blueprint.parts.map(p => p.stage || 1);
     minStage = Math.min(...stages);
   }
+
+  const initialStageInfo = calculateCurrentStageMassAndThrust(blueprint, minStage, 0);
 
   return {
     isActive: false,
@@ -42,7 +43,7 @@ export function initFlightState(blueprint: RocketBlueprint): FlightState {
     throttle: 1.0,
     gForce: 1.0,
     currentStageIndex: minStage,
-    fuelMassRemaining: props.fuelMass,
+    fuelMassRemaining: initialStageInfo.stageFuelMassTons > 0 ? initialStageInfo.stageFuelMassTons : props.fuelMass,
     burnTimeRemaining: props.stagesDeltaV[0]?.burnTime || 60,
     dynamicPressure: 0,
     maxQReached: 0,
@@ -84,12 +85,11 @@ export function calculateCurrentStageMassAndThrust(
 
     const partStage = part.stage || 1;
 
-    // Only include parts that have not been dropped yet (partStage >= currentStageIndex)
+    // Only include parts that belong to current active stage or future upper stages
     if (partStage >= currentStageIndex) {
       activeVehicleDryMass += def.dryMass;
       activePartsCount++;
 
-      // If part belongs to current active burning stage
       if (partStage === currentStageIndex) {
         stageDryMass += def.dryMass;
         stageFuelMass += def.fuelMass * ((part.fuelPercentage ?? 100) / 100);
@@ -112,7 +112,7 @@ export function calculateCurrentStageMassAndThrust(
   return {
     stageDryMassTons: stageDryMass,
     stageFuelMassTons: stageFuelMass,
-    activeVehicleDryMassTons: Math.max(0.5, activeVehicleDryMass),
+    activeVehicleDryMassTons: Math.max(0.2, activeVehicleDryMass),
     thrustN,
     isp: avgIsp,
     activePartsCount
@@ -137,79 +137,94 @@ export function stepFlightPhysics(
 
   const atm = calculateAtmosphere(state.altitude);
 
-  // Automatic Gravity Turn Guidance if enabled or pitch steering
+  // Automatic Gravity Turn Guidance or Manual Pitch
   let pitch = state.pitch;
   if (guidanceMode === 'auto') {
-    if (state.altitude > 1000 && state.altitude < 75000) {
-      const turnFraction = Math.min(1, (state.altitude - 1000) / 55000);
-      const targetPitch = Math.max(5, 90 - turnFraction * 85);
-      pitch = pitch + (targetPitch - pitch) * dt * 0.35;
+    if (state.altitude > 1000 && state.altitude < 80000) {
+      const turnFraction = Math.min(1, (state.altitude - 1000) / 60000);
+      const targetPitch = Math.max(0, 90 - turnFraction * 90);
+      pitch = pitch + (targetPitch - pitch) * dt * 0.4;
     }
   }
 
-  // Engine Throttle & Fuel Consumption
+  // SFS-Style Instant Throttle & Fuel Depletion
   const throttle = state.throttle;
   let currentFuel = Math.max(0, state.fuelMassRemaining);
 
-  let engineThrustN = stageInfo.thrustN;
-  if (currentFuel <= 0.001) {
-    engineThrustN = 0;
-  }
-
-  if (engineThrustN > 0 && throttle > 0) {
-    const mdot = (engineThrustN * throttle) / (stageInfo.isp * G_EARTH); // kg/s
+  let engineThrustN = 0;
+  if (throttle > 0 && currentFuel > 0.001) {
+    engineThrustN = stageInfo.thrustN * throttle;
+    const mdot = engineThrustN / (stageInfo.isp * G_EARTH); // kg/s
     currentFuel = Math.max(0, currentFuel - (mdot * dt) / 1000);
   }
 
-  // Total Instantaneous Vehicle Mass
+  // Instantaneous Vehicle Mass (kg)
   const currentTotalMassKg = (stageInfo.activeVehicleDryMassTons + currentFuel) * 1000;
 
-  // Pitch Angle: 90 = Straight Up (+Y), 0 = Horizontal Downrange (+X)
+  // Pitch Angle Orientation (90 deg = Vertical Up, 0 deg = Horizontal Downrange)
   const pitchRad = (pitch * Math.PI) / 180;
-  const thrustX = engineThrustN * throttle * Math.cos(pitchRad);
-  const thrustY = engineThrustN * throttle * Math.sin(pitchRad);
+  const thrustX = engineThrustN * Math.cos(pitchRad);
+  const thrustY = engineThrustN * Math.sin(pitchRad);
 
-  // Aerodynamic Drag Force
-  const currentSpeed = Math.hypot(state.velocity.vx, state.velocity.vy);
+  // True Kinematic Speeds
+  const vx = state.velocity.vx;
+  const vy = state.velocity.vy;
+  const currentSpeed = Math.hypot(vx, vy);
+
+  // Aerodynamic Drag
   const q = 0.5 * atm.density * currentSpeed * currentSpeed;
-  const frontalArea = Math.max(1.5, Math.min(12, blueprint.parts.length * 0.4));
-  const cd = 0.26;
+  const frontalArea = Math.max(1.5, Math.min(12, blueprint.parts.length * 0.45));
+  const cd = 0.25;
   const dragMagnitude = cd * q * frontalArea;
 
-  const dragX = currentSpeed > 0.05 ? -dragMagnitude * (state.velocity.vx / currentSpeed) : 0;
-  const dragY = currentSpeed > 0.05 ? -dragMagnitude * (state.velocity.vy / currentSpeed) : 0;
+  const dragX = currentSpeed > 0.01 ? -dragMagnitude * (vx / currentSpeed) : 0;
+  const dragY = currentSpeed > 0.01 ? -dragMagnitude * (vy / currentSpeed) : 0;
 
-  // True Radial Gravity Force
+  // True Spherical Gravity Vector
   const rCurrent = EARTH_RADIUS + state.altitude;
   const localG = MU_EARTH / (rCurrent * rCurrent);
   const gravityForceY = -currentTotalMassKg * localG;
 
-  // Net Forces and Accelerations
+  // Net Forces
   const netFx = thrustX + dragX;
-  const netFy = thrustY + dragY + (state.altitude <= 0 && (thrustY + gravityForceY < 0) ? -gravityForceY : gravityForceY);
+  let netFy = thrustY + dragY + gravityForceY;
 
-  const ax = netFx / currentTotalMassKg;
-  let ay = netFy / currentTotalMassKg;
-
-  // Ground collision / launchpad support
-  if (state.altitude <= 0 && ay < 0) {
-    ay = 0;
+  // Ground Support Reaction on Launchpad
+  if (state.altitude <= 0 && netFy < 0) {
+    netFy = 0;
   }
+
+  // Accelerations
+  const ax = netFx / currentTotalMassKg;
+  const ay = netFy / currentTotalMassKg;
 
   const gTotal = Math.sqrt(ax * ax + (ay + localG) * (ay + localG)) / G_EARTH;
 
-  // Integrate Velocity & Position
-  const newVx = state.velocity.vx + ax * dt;
-  let newVy = state.velocity.vy + ay * dt;
-  if (state.altitude <= 0 && newVy < 0) {
-    newVy = 0;
+  // Velocity Integration
+  let newVx = vx + ax * dt;
+  let newVy = vy + ay * dt;
+
+  // Altitude & Downrange Integration
+  let newDownrange = state.downrange + newVx * dt;
+  let newAltitude = state.altitude + newVy * dt;
+
+  // Ground Collision / Landing Detection
+  if (newAltitude <= 0) {
+    newAltitude = 0;
+    if (newVy < -12) {
+      // Hard crash
+      newVy = 0;
+      newVx = 0;
+    } else {
+      // Soft touchdown / sitting on pad
+      newVy = 0;
+      newVx = 0;
+    }
   }
 
-  const newDownrange = state.downrange + newVx * dt;
-  const newAltitude = Math.max(0, state.altitude + newVy * dt);
   const newSpeed = Math.hypot(newVx, newVy);
 
-  // Orbital Mechanics & Trajectory Prediction (Apoapsis & Periapsis)
+  // Keplerian Orbital Elements Calculation (Ap & Pe)
   const rNew = EARTH_RADIUS + newAltitude;
   const specificEnergy = (newSpeed * newSpeed) / 2 - MU_EARTH / rNew;
   
@@ -226,11 +241,10 @@ export function stepFlightPhysics(
     apoapsis = Math.max(newAltitude, semiMajorAxis * (1 + ecc) - EARTH_RADIUS);
     periapsis = Math.max(0, semiMajorAxis * (1 - ecc) - EARTH_RADIUS);
 
-    if (periapsis >= 80000 && newAltitude >= 80000) {
+    if (periapsis >= 70000 && newAltitude >= 70000) {
       inOrbit = true;
     }
   } else if (newSpeed > 0) {
-    // Hyperbolic escape trajectory
     apoapsis = 999999;
     periapsis = Math.max(0, newAltitude);
   }
@@ -240,9 +254,9 @@ export function stepFlightPhysics(
   // Trajectory history trail
   const history = [...state.trajectoryHistory];
   const lastPoint = history[history.length - 1];
-  if (!lastPoint || Math.hypot(newDownrange - lastPoint.x, newAltitude - lastPoint.y) > 150) {
+  if (!lastPoint || Math.hypot(newDownrange - lastPoint.x, newAltitude - lastPoint.y) > 100) {
     history.push({ x: newDownrange, y: newAltitude });
-    if (history.length > 600) history.shift();
+    if (history.length > 800) history.shift();
   }
 
   return {
