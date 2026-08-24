@@ -23,7 +23,31 @@ const SimulationContext = createContext<GlobalStore | null>(null);
 export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const initial = createInitialState();
 
-  const [activeTab, setActiveTab] = useState<AppTab>('rocket-builder');
+  const getInitialTab = (): AppTab => {
+    const hash = window.location.hash.replace('#', '') as AppTab;
+    const validTabs: AppTab[] = ['rocket-builder', 'wind-tunnel', 'flight-sandbox', 'celestial-sim', 'asteroid-impact'];
+    return validTabs.includes(hash) ? hash : 'rocket-builder';
+  };
+
+  const [activeTab, setActiveTabState] = useState<AppTab>(getInitialTab);
+
+  const setActiveTab = useCallback((tab: AppTab) => {
+    setActiveTabState(tab);
+    window.location.hash = tab;
+  }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '') as AppTab;
+      const validTabs: AppTab[] = ['rocket-builder', 'wind-tunnel', 'flight-sandbox', 'celestial-sim', 'asteroid-impact'];
+      if (validTabs.includes(hash)) {
+        setActiveTabState(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   
   // Rocket Builder & Undo/Redo History

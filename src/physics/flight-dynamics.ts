@@ -83,7 +83,7 @@ export function calculateCurrentStageMassAndThrust(
   let stageFuelMass = 0;
   let stageDryMass = 0;
   let thrustN = 0;
-  let weightedIsp = 0;
+  let sumMdotCoeff = 0;
   let activePartsCount = 0;
 
   for (const part of blueprint.parts) {
@@ -108,14 +108,14 @@ export function calculateCurrentStageMassAndThrust(
           const effectiveIsp = (def.ispAtm || 280) * atmFactor + (def.ispVac || 320) * (1 - atmFactor);
 
           thrustN += engineThrust;
-          weightedIsp += effectiveIsp * engineThrust;
+          sumMdotCoeff += engineThrust / effectiveIsp;
         }
       }
     }
   }
 
-  // If stage has no active engines, don't burn fuel into a ghost vacuum
-  const avgIsp = thrustN > 0 ? weightedIsp / thrustN : 0;
+  // Exact mass-flow rate weighted multi-engine Isp: I_sp,eff = sum(T_i) / sum(T_i / I_sp,i)
+  const avgIsp = (thrustN > 0 && sumMdotCoeff > 0) ? (thrustN / sumMdotCoeff) : 0;
 
   return {
     stageDryMassTons: stageDryMass,

@@ -672,32 +672,35 @@ export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAer
   for (const stageNum of sortedStages) {
     const stageParts = stagePartsMap.get(stageNum) || [];
     let stageThrust = 0;
-    let weightedIsp = 0;
+    let sumMdotCoeff = 0; // sum(T_i / I_sp_i)
     let stageFuelMass = 0;
 
     for (const part of stageParts) {
       const def = PARTS_CATALOG[part.partType];
       if (!def) continue;
-      const fuel = def.fuelMass * (part.fuelPercentage / 100);
+      const fuel = def.fuelMass * ((part.fuelPercentage ?? 100) / 100);
       stageFuelMass += fuel;
 
-      if (def.thrust && def.ispVac) {
+      if (def.thrust && def.thrust > 0 && def.ispVac && def.ispVac > 0) {
         stageThrust += def.thrust;
-        weightedIsp += def.ispVac * def.thrust;
+        sumMdotCoeff += def.thrust / def.ispVac;
       }
     }
 
-    const effectiveIsp = stageThrust > 0 ? weightedIsp / stageThrust : 300;
+    // Mass-flow rate weighted specific impulse: I_sp,eff = sum(T_i) / sum(T_i / I_sp,i)
+    const effectiveIsp = (stageThrust > 0 && sumMdotCoeff > 0) ? (stageThrust / sumMdotCoeff) : 0;
     const m0 = cumulativeMass;
     const mf = Math.max(0.001, cumulativeMass - stageFuelMass);
 
     let stageDV = 0;
-    if (m0 > mf && stageThrust > 0) {
+    if (m0 > mf && stageThrust > 0 && effectiveIsp > 0) {
       stageDV = effectiveIsp * 9.80665 * Math.log(m0 / mf);
     }
 
     const twr = cumulativeMass > 0 ? stageThrust / (cumulativeMass * 9.80665) : 0;
-    const massFlowRate = stageThrust > 0 ? (stageThrust * 1000) / (effectiveIsp * 9.80665) / 1000 : 0.01;
+    const massFlowRate = (stageThrust > 0 && effectiveIsp > 0) 
+      ? (stageThrust * 1000) / (effectiveIsp * 9.80665) / 1000 
+      : 0;
     const burnTime = massFlowRate > 0 ? stageFuelMass / massFlowRate : 0;
 
     stagesDeltaV.push({
