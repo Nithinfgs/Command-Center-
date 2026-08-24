@@ -32,7 +32,9 @@ export const FlightCanvas: React.FC = () => {
     launchFlight, 
     triggerStaging, 
     setFlightThrottle, 
-    setFlightPitch 
+    setFlightPitch,
+    abortFlight,
+    resetFlight
   } = useSimulation();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -49,7 +51,7 @@ export const FlightCanvas: React.FC = () => {
   const isDraggingRef = useRef<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Keyboard controls (<Space>, Z, X, Shift, Ctrl, A, D)
+  // Keyboard controls (<Space>, Z, X, Shift, Ctrl, A, D, W, S, R, Backspace)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -73,12 +75,16 @@ export const FlightCanvas: React.FC = () => {
         setFlightPitch(Math.max(0, flightState.pitch - 5));
       } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
         setFlightPitch(Math.min(90, flightState.pitch + 5));
+      } else if (e.code === 'KeyR') {
+        resetFlight();
+      } else if (e.code === 'Backspace') {
+        abortFlight();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [flightState, launchFlight, triggerStaging, setFlightThrottle, setFlightPitch]);
+  }, [flightState, launchFlight, triggerStaging, setFlightThrottle, setFlightPitch, resetFlight, abortFlight]);
 
   // Stage separation debris spawning
   useEffect(() => {
