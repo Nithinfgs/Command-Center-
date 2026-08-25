@@ -280,25 +280,85 @@ export const NavBallHud: React.FC = () => {
             </div>
           </div>
 
-          {/* Pitch Steering & Artificial Horizon */}
+          {/* Bidirectional Pitch Steering & Artificial Horizon */}
           <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2.5">
             <div className="flex items-center justify-between text-xs font-medium">
-              <span className="text-[#A4ABB6]">Pitch Angle (Steering)</span>
-              <span className="text-[#FF8A1F] font-mono-num font-semibold">{flightState.pitch}°</span>
+              <span className="text-[#A4ABB6]">Pitch Steering (Bidirectional)</span>
+              <span className="text-[#FF8A1F] font-mono-num font-semibold">
+                {flightState.pitch}° {flightState.pitch === 90 ? '(Vertical)' : flightState.pitch < 90 ? '(East / Right)' : '(West / Left)'}
+              </span>
             </div>
             <input
               type="range"
               min="0"
-              max="90"
+              max="180"
               step="1"
               value={flightState.pitch}
               onChange={e => setFlightPitch(parseInt(e.target.value))}
               className="w-full"
             />
             <div className="flex justify-between text-[10px] text-[#69717E]">
-              <span>0° (Horizontal)</span>
-              <span>45° (Gravity Turn)</span>
-              <span>90° (Vertical)</span>
+              <span className="text-[#79AFC1]">0° (East Horiz →)</span>
+              <span>45° (East)</span>
+              <span className="text-[#34D399] font-medium">90° (Zenith ↑)</span>
+              <span>135° (West)</span>
+              <span className="text-[#E6B84D]">180° (← West / Retro)</span>
+            </div>
+
+            {/* Quick Angle Preset Buttons */}
+            <div className="grid grid-cols-5 gap-1 pt-1">
+              <button
+                type="button"
+                onClick={() => setFlightPitch(Math.min(180, flightState.pitch + 5))}
+                className="py-1 px-1 rounded text-[10px] font-medium bg-[#0E1015] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] hover:bg-[#1B1F28] transition-colors"
+                title="Nudge Left / West (+5°)"
+              >
+                +5° W
+              </button>
+              <button
+                type="button"
+                onClick={() => setFlightPitch(135)}
+                className={`py-1 px-1 rounded text-[10px] font-medium border transition-colors ${
+                  flightState.pitch === 135
+                    ? 'bg-[#FF8A1F] text-[#090A0D] border-[#FF8A1F] font-bold'
+                    : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB]'
+                }`}
+                title="135° West Pitch"
+              >
+                135° W
+              </button>
+              <button
+                type="button"
+                onClick={() => setFlightPitch(90)}
+                className={`py-1 px-1 rounded text-[10px] font-medium border transition-colors ${
+                  flightState.pitch === 90
+                    ? 'bg-[#34D399] text-[#090A0D] border-[#34D399] font-bold'
+                    : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB]'
+                }`}
+                title="90° Vertical SAS"
+              >
+                90° UP
+              </button>
+              <button
+                type="button"
+                onClick={() => setFlightPitch(45)}
+                className={`py-1 px-1 rounded text-[10px] font-medium border transition-colors ${
+                  flightState.pitch === 45
+                    ? 'bg-[#FF8A1F] text-[#090A0D] border-[#FF8A1F] font-bold'
+                    : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB]'
+                }`}
+                title="45° East Orbit Pitch"
+              >
+                45° E
+              </button>
+              <button
+                type="button"
+                onClick={() => setFlightPitch(Math.max(0, flightState.pitch - 5))}
+                className="py-1 px-1 rounded text-[10px] font-medium bg-[#0E1015] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] hover:bg-[#1B1F28] transition-colors"
+                title="Nudge Right / East (-5°)"
+              >
+                -5° E
+              </button>
             </div>
           </div>
 

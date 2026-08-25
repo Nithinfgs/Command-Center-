@@ -125,13 +125,13 @@ export const CockpitHudView: React.FC = () => {
         {/* Pitch Ladder */}
         <div 
           className="absolute w-full h-[600px] flex flex-col items-center justify-center transition-transform duration-75"
-          style={{ transform: `translateY(${(pitch - 45) * 4}px)` }}
+          style={{ transform: `translateY(${(pitch - 90) * 3}px)` }}
         >
           <div className="w-full h-1/2 bg-[#1E3A8A]/30 border-b-2 border-[#38BDF8]" />
           <div className="w-full h-1/2 bg-[#78350F]/30" />
 
-          {[90, 75, 60, 45, 30, 15, 0].map(deg => (
-            <div key={deg} className="absolute flex items-center gap-2 text-[10px] text-[#38BDF8]" style={{ top: `${(90 - deg) * 6}px` }}>
+          {[180, 150, 120, 90, 60, 30, 0].map(deg => (
+            <div key={deg} className="absolute flex items-center gap-2 text-[10px] text-[#38BDF8]" style={{ top: `${(180 - deg) * 3.3}px` }}>
               <div className="w-6 h-[1px] bg-[#38BDF8]" />
               <span>{deg}°</span>
               <div className="w-6 h-[1px] bg-[#38BDF8]" />

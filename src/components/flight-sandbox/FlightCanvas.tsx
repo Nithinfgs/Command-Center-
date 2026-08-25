@@ -72,9 +72,11 @@ export const FlightCanvas: React.FC = () => {
       } else if (e.code === 'ControlLeft' || e.code === 'KeyS' || e.code === 'ArrowDown') {
         setFlightThrottle(Math.max(0.0, flightState.throttle - 0.1));
       } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
-        setFlightPitch(Math.max(0, flightState.pitch - 5));
+        // Pitch Left / West towards 180 deg
+        setFlightPitch(Math.min(180, flightState.pitch + 5));
       } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
-        setFlightPitch(Math.min(90, flightState.pitch + 5));
+        // Pitch Right / East towards 0 deg
+        setFlightPitch(Math.max(0, flightState.pitch - 5));
       } else if (e.code === 'KeyR') {
         resetFlight();
       } else if (e.code === 'Backspace') {
