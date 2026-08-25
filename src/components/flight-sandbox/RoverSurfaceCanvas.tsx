@@ -212,7 +212,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
         const { elevation } = getTerrainElevation(rx, currentRover.surfacePlanetId);
         const rockScreenY = groundBaseY - elevation * PPM;
 
-        const rockRadius = 3 + ((hash * 13) % 4);
+        const rockRadius = Math.max(1.5, 2.5 + Math.abs((hash * 13) % 4));
         ctx.beginPath();
         ctx.arc(rockScreenX, rockScreenY + 1, rockRadius, 0, Math.PI * 2);
         ctx.fill();
@@ -251,7 +251,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
           ? `rgba(244, 63, 94, ${p.alpha})` 
           : `rgba(203, 213, 225, ${p.alpha})`;
         ctx.beginPath();
-        ctx.arc(px, py, p.size, 0, Math.PI * 2);
+        ctx.arc(px, py, Math.max(1, p.size), 0, Math.PI * 2);
         ctx.fill();
       });
 
