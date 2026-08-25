@@ -7,6 +7,17 @@ import {
 import { soundEngine } from '../../audio/soundEngine';
 import { Battery, Sun, Flag, Disc, ArrowLeft, ArrowRight, Hand, RotateCcw } from 'lucide-react';
 
+const PPM = 8.0; // Pixels per meter (crisp visible speed & responsive motion)
+
+interface DustParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  alpha: number;
+  size: number;
+}
+
 export const RoverSurfaceCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,6 +43,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
   const [uiRover, setUiRover] = useState<PlanetaryRoverState>(roverRef.current);
   const throttleInputRef = useRef<number>(0);
   const isBrakingRef = useRef<boolean>(false);
+  const dustParticlesRef = useRef<DustParticle[]>([]);
 
   // Keyboard controls
   useEffect(() => {
@@ -62,7 +74,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
     };
   }, []);
 
-  // Unified Physics + 60 FPS Canvas Render Loop
+  // Unified Physics & 60 FPS Canvas Render Loop
   useEffect(() => {
     let animId: number;
     let lastTime = performance.now();
@@ -81,7 +93,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
       const dt = Math.min(0.05, (time - lastTime) / 1000);
       lastTime = time;
 
-      // 1. Step Physics
+      // Step Physics
       roverRef.current = stepRoverPhysics(
         roverRef.current,
         throttleInputRef.current,
@@ -89,13 +101,35 @@ export const RoverSurfaceCanvas: React.FC = () => {
         dt
       );
 
-      // Update UI state periodically (every ~6 frames for optimal React performance)
+      // Spawn Tire Dust Particles when moving
+      const currentRover = roverRef.current;
+      if (Math.abs(currentRover.vx) > 0.4 && Math.random() < 0.65) {
+        const dir = currentRover.vx > 0 ? -1 : 1;
+        dustParticlesRef.current.push({
+          x: currentRover.posX + (dir * 2.2),
+          y: currentRover.altitude - 0.5,
+          vx: dir * (1.5 + Math.random() * 2),
+          vy: 0.8 + Math.random() * 1.5,
+          alpha: 0.8,
+          size: 2 + Math.random() * 3
+        });
+      }
+
+      // Update Dust Particles
+      dustParticlesRef.current.forEach(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.alpha -= dt * 1.2;
+      });
+      dustParticlesRef.current = dustParticlesRef.current.filter(p => p.alpha > 0.05);
+
+      // React UI telemetry sync
       uiUpdateCounter++;
-      if (uiUpdateCounter % 6 === 0) {
+      if (uiUpdateCounter % 4 === 0) {
         setUiRover({ ...roverRef.current });
       }
 
-      // 2. Render Canvas
+      // Canvas dimensions
       const width = container.clientWidth;
       const height = container.clientHeight;
       if (canvas.width !== width * window.devicePixelRatio || canvas.height !== height * window.devicePixelRatio) {
@@ -107,118 +141,199 @@ export const RoverSurfaceCanvas: React.FC = () => {
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       ctx.clearRect(0, 0, width, height);
 
-      const currentRover = roverRef.current;
-
-      // Sky Background
+      // 1. Sky Gradient
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
       if (currentRover.surfacePlanetId === 'mars') {
-        skyGrad.addColorStop(0, '#1E120B');
-        skyGrad.addColorStop(0.65, '#451A03');
-        skyGrad.addColorStop(1, '#7C2D12');
+        skyGrad.addColorStop(0, '#160B06');
+        skyGrad.addColorStop(0.6, '#381403');
+        skyGrad.addColorStop(1, '#662208');
       } else if (currentRover.surfacePlanetId === 'moon') {
-        skyGrad.addColorStop(0, '#030712');
-        skyGrad.addColorStop(1, '#0F172A');
+        skyGrad.addColorStop(0, '#02040A');
+        skyGrad.addColorStop(1, '#0B1120');
       } else {
-        skyGrad.addColorStop(0, '#064E3B');
-        skyGrad.addColorStop(1, '#065F46');
+        skyGrad.addColorStop(0, '#042F2E');
+        skyGrad.addColorStop(1, '#064E3B');
       }
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, width, height);
 
-      const groundBaseY = height * 0.68;
+      const groundBaseY = height * 0.65;
       const viewCenterX = width / 2;
 
-      // Draw Terrain Profile
-      ctx.fillStyle = currentRover.surfacePlanetId === 'mars' ? '#991B1B' : currentRover.surfacePlanetId === 'moon' ? '#475569' : '#047857';
+      // 2. Parallax Distant Mountains Silhouette (0.15x parallax)
+      const mtnOffset = currentRover.posX * 0.15 * PPM;
+      ctx.fillStyle = currentRover.surfacePlanetId === 'mars' ? '#3B1106' : currentRover.surfacePlanetId === 'moon' ? '#1E293B' : '#064E3B';
       ctx.beginPath();
       ctx.moveTo(0, height);
-
-      for (let screenX = 0; screenX <= width; screenX += 4) {
-        const worldX = currentRover.posX + (screenX - viewCenterX);
-        const { elevation } = getTerrainElevation(worldX, currentRover.surfacePlanetId);
-        const screenY = groundBaseY - elevation;
-        if (screenX === 0) ctx.lineTo(screenX, screenY);
-        else ctx.lineTo(screenX, screenY);
+      for (let sx = 0; sx <= width; sx += 20) {
+        const mx = (sx + mtnOffset) * 0.005;
+        const my = groundBaseY - 60 - Math.sin(mx) * 55 - Math.cos(mx * 2.3) * 25;
+        ctx.lineTo(sx, my);
       }
       ctx.lineTo(width, height);
       ctx.closePath();
       ctx.fill();
 
-      // Terrain Ridge Highlight Line
-      ctx.strokeStyle = currentRover.surfacePlanetId === 'mars' ? '#EF4444' : currentRover.surfacePlanetId === 'moon' ? '#94A3B8' : '#10B981';
-      ctx.lineWidth = 2.5;
+      // 3. Foreground Terrain Surface Profile
+      ctx.fillStyle = currentRover.surfacePlanetId === 'mars' ? '#881337' : currentRover.surfacePlanetId === 'moon' ? '#334155' : '#065F46';
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+
+      for (let screenX = 0; screenX <= width; screenX += 3) {
+        const worldMetersX = currentRover.posX + (screenX - viewCenterX) / PPM;
+        const { elevation } = getTerrainElevation(worldMetersX, currentRover.surfacePlanetId);
+        const screenY = groundBaseY - elevation * PPM;
+        ctx.lineTo(screenX, screenY);
+      }
+      ctx.lineTo(width, height);
+      ctx.closePath();
+      ctx.fill();
+
+      // 4. Crust Highlight Ridge Line
+      ctx.strokeStyle = currentRover.surfacePlanetId === 'mars' ? '#F43F5E' : currentRover.surfacePlanetId === 'moon' ? '#94A3B8' : '#10B981';
+      ctx.lineWidth = 3.0;
       ctx.stroke();
 
-      // Draw Surface Flags
+      // 5. Procedural Surface Rocks & Boulders (Deterministically anchored in world space)
+      const minRockWorldX = Math.floor(currentRover.posX - (viewCenterX / PPM) - 10);
+      const maxRockWorldX = Math.ceil(currentRover.posX + (viewCenterX / PPM) + 10);
+
+      ctx.fillStyle = currentRover.surfacePlanetId === 'mars' ? '#4C0519' : currentRover.surfacePlanetId === 'moon' ? '#1E293B' : '#022C22';
+      ctx.strokeStyle = currentRover.surfacePlanetId === 'mars' ? '#FB7185' : '#CBD5E1';
+      ctx.lineWidth = 1;
+
+      for (let rx = minRockWorldX; rx <= maxRockWorldX; rx += 4) {
+        // Pseudo-random deterministic rock check
+        const hash = Math.sin(rx * 997.13) * 10000;
+        const hasRock = (hash - Math.floor(hash)) > 0.45;
+        if (!hasRock) continue;
+
+        const rockScreenX = viewCenterX + (rx - currentRover.posX) * PPM;
+        const { elevation } = getTerrainElevation(rx, currentRover.surfacePlanetId);
+        const rockScreenY = groundBaseY - elevation * PPM;
+
+        const rockRadius = 3 + ((hash * 13) % 4);
+        ctx.beginPath();
+        ctx.arc(rockScreenX, rockScreenY + 1, rockRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // 6. Draw Planted Base Flags
       currentRover.flagsPlanted.forEach(flag => {
-        const flagScreenX = viewCenterX + (flag.x - currentRover.posX);
+        const flagScreenX = viewCenterX + (flag.x - currentRover.posX) * PPM;
         if (flagScreenX > -50 && flagScreenX < width + 50) {
           const { elevation } = getTerrainElevation(flag.x, flag.planetId);
-          const flagScreenY = groundBaseY - elevation;
+          const flagScreenY = groundBaseY - elevation * PPM;
 
+          // Pole
           ctx.strokeStyle = '#FFFFFF';
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 2.5;
           ctx.beginPath();
           ctx.moveTo(flagScreenX, flagScreenY);
-          ctx.lineTo(flagScreenX, flagScreenY - 32);
+          ctx.lineTo(flagScreenX, flagScreenY - 38);
           ctx.stroke();
 
+          // Cloth
           ctx.fillStyle = '#FF8A1F';
-          ctx.fillRect(flagScreenX, flagScreenY - 32, 22, 14);
+          ctx.fillRect(flagScreenX, flagScreenY - 38, 26, 16);
           ctx.fillStyle = '#090A0D';
-          ctx.font = 'bold 8px sans-serif';
-          ctx.fillText('BASE', flagScreenX + 2, flagScreenY - 22);
+          ctx.font = 'bold 9px sans-serif';
+          ctx.fillText('BASE', flagScreenX + 3, flagScreenY - 26);
         }
       });
 
-      // Draw Rover Vehicle
+      // 7. Render Tire Dust Particles
+      dustParticlesRef.current.forEach(p => {
+        const px = viewCenterX + (p.x - currentRover.posX) * PPM;
+        const py = groundBaseY - p.y * PPM;
+        ctx.fillStyle = currentRover.surfacePlanetId === 'mars' 
+          ? `rgba(244, 63, 94, ${p.alpha})` 
+          : `rgba(203, 213, 225, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(px, py, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 8. Draw Rover Vehicle Chassis & Rotating Spoked Wheels
       ctx.save();
-      ctx.translate(viewCenterX, groundBaseY - currentRover.altitude);
+      const roverScreenY = groundBaseY - currentRover.altitude * PPM;
+      ctx.translate(viewCenterX, roverScreenY);
       ctx.rotate((currentRover.pitchDeg * Math.PI) / 180);
 
       // Chassis Body
-      ctx.fillStyle = '#E2E8F0';
-      ctx.fillRect(-24, -18, 48, 14);
+      ctx.fillStyle = '#F1F5F9';
+      ctx.fillRect(-28, -20, 56, 16);
       ctx.strokeStyle = '#0F172A';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-24, -18, 48, 14);
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(-28, -20, 56, 16);
 
-      // Mastcam Sensor Head
+      // Mission Insignia Badge
+      ctx.fillStyle = '#FF8A1F';
+      ctx.fillRect(-18, -17, 16, 6);
+
+      // Sensor Mastcam
       ctx.fillStyle = '#475569';
-      ctx.fillRect(10, -32, 4, 14);
+      ctx.fillRect(12, -36, 5, 16);
       ctx.fillStyle = '#38BDF8';
       ctx.beginPath();
-      ctx.arc(12, -34, 4, 0, Math.PI * 2);
+      ctx.arc(14.5, -38, 4.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Solar Panel Deck
       ctx.fillStyle = '#1E3A8A';
-      ctx.fillRect(-22, -21, 42, 3);
+      ctx.fillRect(-26, -24, 52, 4);
 
-      // Drill Arm animation
+      // Science Drill Arm
       if (currentRover.isDrilling) {
         ctx.strokeStyle = '#FBBF24';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
-        ctx.moveTo(20, -10);
-        ctx.lineTo(26, 6);
+        ctx.moveTo(24, -12);
+        ctx.lineTo(32, 10);
         ctx.stroke();
 
         ctx.fillStyle = '#F59E0B';
-        for (let s = 0; s < 5; s++) {
-          ctx.fillRect(26 + (Math.random() - 0.5) * 10, 6 + (Math.random() - 0.5) * 6, 2, 2);
+        for (let s = 0; s < 6; s++) {
+          ctx.fillRect(32 + (Math.random() - 0.5) * 12, 10 + (Math.random() - 0.5) * 8, 2.5, 2.5);
         }
       }
 
-      // 4 Wheels
-      [-18, -6, 6, 18].forEach(wx => {
-        ctx.fillStyle = '#1E293B';
+      // 4 Wheels with Rotating Spokes
+      const wheelRadius = 8.0;
+      const wheelRotation = (currentRover.posX * PPM) / wheelRadius; // Exact rotational sync
+
+      [-22, -8, 8, 22].forEach(wx => {
+        ctx.save();
+        ctx.translate(wx, 3);
+        ctx.rotate(wheelRotation);
+
+        // Tire Outer Rim
+        ctx.fillStyle = '#0F172A';
         ctx.beginPath();
-        ctx.arc(wx, 2, 6.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#94A3B8';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2.0;
         ctx.stroke();
+
+        // 4 Rotating Spokes
+        ctx.strokeStyle = '#F8FAFC';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(-wheelRadius + 1, 0);
+        ctx.lineTo(wheelRadius - 1, 0);
+        ctx.moveTo(0, -wheelRadius + 1);
+        ctx.lineTo(0, wheelRadius - 1);
+        ctx.stroke();
+
+        // Center Hubcap
+        ctx.fillStyle = '#FF8A1F';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
       });
 
       ctx.restore();
@@ -324,7 +439,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
           onMouseUp={() => { throttleInputRef.current = 0; }}
           onTouchStart={() => { throttleInputRef.current = -1.0; }}
           onTouchEnd={() => { throttleInputRef.current = 0; }}
-          className="px-4 py-2.5 rounded-xl bg-[#1B1F28] hover:bg-[#252B36] text-[#E6E8EB] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+          className="px-4 py-2.5 rounded-xl bg-[#1B1F28] hover:bg-[#252B36] text-[#E6E8EB] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm cursor-pointer"
           title="Drive Reverse (A / Left Arrow)"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -336,7 +451,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
           onMouseUp={() => { isBrakingRef.current = false; }}
           onTouchStart={() => { isBrakingRef.current = true; }}
           onTouchEnd={() => { isBrakingRef.current = false; }}
-          className="px-4 py-2.5 rounded-xl bg-[#D95757]/20 hover:bg-[#D95757]/30 border border-[#D95757]/50 text-[#D95757] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+          className="px-4 py-2.5 rounded-xl bg-[#D95757]/20 hover:bg-[#D95757]/30 border border-[#D95757]/50 text-[#D95757] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm cursor-pointer"
           title="Handbrake (Spacebar)"
         >
           <Hand className="w-4 h-4" />
@@ -348,7 +463,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
           onMouseUp={() => { throttleInputRef.current = 0; }}
           onTouchStart={() => { throttleInputRef.current = 1.0; }}
           onTouchEnd={() => { throttleInputRef.current = 0; }}
-          className="px-5 py-2.5 rounded-xl bg-[#FF8A1F] hover:bg-[#FFA24A] text-[#090A0D] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-md"
+          className="px-5 py-2.5 rounded-xl bg-[#FF8A1F] hover:bg-[#FFA24A] text-[#090A0D] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-md cursor-pointer"
           title="Drive Forward (D / Right Arrow)"
         >
           <span>Drive Forward</span>
@@ -360,7 +475,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
         <button
           onClick={handleStartDrill}
           disabled={uiRover.isDrilling || uiRover.sampleCount >= uiRover.maxSamples}
-          className="px-3.5 py-2.5 rounded-xl bg-[#38BDF8]/20 hover:bg-[#38BDF8]/30 border border-[#38BDF8]/50 text-[#38BDF8] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40"
+          className="px-3.5 py-2.5 rounded-xl bg-[#38BDF8]/20 hover:bg-[#38BDF8]/30 border border-[#38BDF8]/50 text-[#38BDF8] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
         >
           <Disc className="w-4 h-4" />
           <span>{uiRover.isDrilling ? `Drilling ${uiRover.drillProgress.toFixed(0)}%` : 'Drill Sample'}</span>
@@ -368,7 +483,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
 
         <button
           onClick={handlePlantFlag}
-          className="px-3.5 py-2.5 rounded-xl bg-[#55B982]/20 hover:bg-[#55B982]/30 border border-[#55B982]/50 text-[#55B982] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all"
+          className="px-3.5 py-2.5 rounded-xl bg-[#55B982]/20 hover:bg-[#55B982]/30 border border-[#55B982]/50 text-[#55B982] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
         >
           <Flag className="w-4 h-4" />
           <span>Plant Flag</span>
