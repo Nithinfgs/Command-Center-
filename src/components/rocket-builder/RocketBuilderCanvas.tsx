@@ -504,7 +504,7 @@ export const RocketBuilderCanvas: React.FC = () => {
 
         {/* Symmetry Selector */}
         <div className="flex items-center gap-0.5 bg-[#0E1015] p-0.5 rounded border border-[#252B36]">
-          {(['1x', '2x_mirror', '2x_radial', '3x', '4x'] as SymmetryMode[]).map(mode => (
+          {(['1x', '2x_mirror', '2x_radial', '3x', '4x', '6x', '8x'] as SymmetryMode[]).map(mode => (
             <button
               key={mode}
               onClick={() => setSymmetryMode(mode)}

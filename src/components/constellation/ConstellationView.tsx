@@ -7,19 +7,23 @@ import {
   type ConstellationConfig, 
   type SatelliteNode 
 } from '../../physics/constellations';
-import { Radio } from 'lucide-react';
+import { Radio, Sliders } from 'lucide-react';
 
 export const ConstellationView: React.FC = () => {
   const mountRef = useRef<HTMLDivElement>(null);
   const [selectedPresetKey, setSelectedPresetKey] = useState<string>('starlink_shell1');
   const [activeConfig, setActiveConfig] = useState<ConstellationConfig>(CONSTELLATION_PRESETS.starlink_shell1);
+  const [showCustomSliders, setShowCustomSliders] = useState<boolean>(false);
 
   const satellitesRef = useRef<SatelliteNode[]>([]);
   const timeRef = useRef<number>(0);
 
-  useEffect(() => {
-    setActiveConfig(CONSTELLATION_PRESETS[selectedPresetKey] || CONSTELLATION_PRESETS.starlink_shell1);
-  }, [selectedPresetKey]);
+  const handlePresetSelect = (key: string) => {
+    setSelectedPresetKey(key);
+    if (CONSTELLATION_PRESETS[key]) {
+      setActiveConfig(CONSTELLATION_PRESETS[key]);
+    }
+  };
 
   useEffect(() => {
     const container = mountRef.current;
@@ -78,96 +82,94 @@ export const ConstellationView: React.FC = () => {
     let isDragging = false;
     let prevMouse = { x: 0, y: 0 };
 
-    const handleMouseDown = (e: MouseEvent) => {
+    const onMouseDown = (e: MouseEvent) => {
       isDragging = true;
       prevMouse = { x: e.clientX, y: e.clientY };
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const onMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       const dx = e.clientX - prevMouse.x;
       const dy = e.clientY - prevMouse.y;
       prevMouse = { x: e.clientX, y: e.clientY };
 
-      scene.rotation.y += dx * 0.004;
-      scene.rotation.x += dy * 0.004;
+      scene.rotation.y += dx * 0.005;
+      scene.rotation.x += dy * 0.005;
     };
 
-    const handleMouseUp = () => {
-      isDragging = false;
-    };
-
+    const onMouseUp = () => { isDragging = false; };
     const dom = renderer.domElement;
-    dom.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    dom.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
 
     let animId: number;
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
-      timeRef.current += 1.5;
+      timeRef.current += 0.015;
 
-      const sats = generateWalkerConstellation(activeConfig, timeRef.current);
-      satellitesRef.current = sats;
+      const satellites = generateWalkerConstellation(activeConfig, timeRef.current);
+      satellitesRef.current = satellites;
 
-      // Update Satellite Mesh Positions
-      while (satGroup.children.length < sats.length) {
+      // Update Satellites
+      while (satGroup.children.length > satellites.length) {
+        satGroup.remove(satGroup.children[satGroup.children.length - 1]);
+      }
+      while (satGroup.children.length < satellites.length) {
         const satMesh = new THREE.Mesh(
-          new THREE.BoxGeometry(220, 220, 220),
-          new THREE.MeshBasicMaterial({ color: '#FBBF24' })
+          new THREE.SphereGeometry(140, 8, 8),
+          new THREE.MeshBasicMaterial({ color: '#38BDF8' })
         );
         satGroup.add(satMesh);
       }
-      while (satGroup.children.length > sats.length) {
-        satGroup.remove(satGroup.children[satGroup.children.length - 1]);
-      }
 
-      const satMap = new Map<string, SatelliteNode>();
-      sats.forEach((sat, idx) => {
-        satMap.set(sat.id, sat);
-        const mesh = satGroup.children[idx];
+      satellites.forEach((sat: SatelliteNode, i: number) => {
+        const mesh = satGroup.children[i];
         if (mesh) mesh.position.set(sat.position.x, sat.position.y, sat.position.z);
       });
 
-      // Build Laser Crosslink Geometry
-      const laserPts: THREE.Vector3[] = [];
-      sats.forEach(s1 => {
-        s1.crosslinks.forEach(cId => {
-          const s2 = satMap.get(cId);
-          if (s2) {
-            laserPts.push(new THREE.Vector3(s1.position.x, s1.position.y, s1.position.z));
-            laserPts.push(new THREE.Vector3(s2.position.x, s2.position.y, s2.position.z));
+      // Update Laser Links
+      const laserPositions: number[] = [];
+      satellites.forEach((sat: SatelliteNode) => {
+        sat.crosslinks.forEach((targetId: string) => {
+          const targetSat = satellites.find((s: SatelliteNode) => s.id === targetId);
+          if (targetSat) {
+            laserPositions.push(
+              sat.position.x, sat.position.y, sat.position.z,
+              targetSat.position.x, targetSat.position.y, targetSat.position.z
+            );
           }
         });
       });
-      laserGeo.setFromPoints(laserPts);
+      laserGeo.setAttribute('position', new THREE.Float32BufferAttribute(laserPositions, 3));
 
-      // Build Ground Station Uplinks
-      const uplinkPts: THREE.Vector3[] = [];
-      GROUND_STATIONS.forEach(gs => {
-        const phi = (90 - gs.latitude) * (Math.PI / 180);
-        const theta = (gs.longitude + 180) * (Math.PI / 180);
-        const gx = -(earthRadiusKm * Math.sin(phi) * Math.cos(theta));
-        const gy = earthRadiusKm * Math.cos(phi);
-        const gz = earthRadiusKm * Math.sin(phi) * Math.sin(theta);
+      // Update Ground Station Uplinks
+      const uplinkPositions: number[] = [];
+      GROUND_STATIONS.forEach(ground => {
+        const latRad = (ground.latitude * Math.PI) / 180;
+        const lonRad = (ground.longitude * Math.PI) / 180;
+        const gx = earthRadiusKm * Math.cos(latRad) * Math.cos(lonRad);
+        const gy = earthRadiusKm * Math.sin(latRad);
+        const gz = earthRadiusKm * Math.cos(latRad) * Math.sin(lonRad);
 
+        // Find closest visible satellite
         let closestSat: SatelliteNode | null = null;
-        let minDist = Infinity;
-        sats.forEach(sat => {
-          const d = Math.hypot(sat.position.x - gx, sat.position.y - gy, sat.position.z - gz);
-          if (d < minDist) {
-            minDist = d;
-            closestSat = sat;
+        let minD = Infinity;
+        satellites.forEach(s => {
+          const d = Math.hypot(s.position.x - gx, s.position.y - gy, s.position.z - gz);
+          if (d < minD && d < 3500) {
+            minD = d;
+            closestSat = s;
           }
         });
 
-        if (closestSat && minDist < 2800) {
-          uplinkPts.push(new THREE.Vector3(gx, gy, gz));
-          uplinkPts.push(new THREE.Vector3((closestSat as any).position.x, (closestSat as any).position.y, (closestSat as any).position.z));
+        if (closestSat) {
+          const cs: SatelliteNode = closestSat;
+          uplinkPositions.push(gx, gy, gz, cs.position.x, cs.position.y, cs.position.z);
         }
       });
-      uplinkGeo.setFromPoints(uplinkPts);
+      uplinkGeo.setAttribute('position', new THREE.Float32BufferAttribute(uplinkPositions, 3));
 
       earthMesh.rotation.y += 0.0005;
       renderer.render(scene, camera);
@@ -175,31 +177,11 @@ export const ConstellationView: React.FC = () => {
 
     animate();
 
-    const handleResize = () => {
-      if (!container) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-
-    window.addEventListener('resize', handleResize);
-
     return () => {
       cancelAnimationFrame(animId);
-      dom.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('resize', handleResize);
-
-      scene.traverse(obj => {
-        if (obj instanceof THREE.Mesh) {
-          obj.geometry.dispose();
-          if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
-          else obj.material.dispose();
-        }
-      });
+      dom.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
       renderer.dispose();
       if (container.contains(dom)) container.removeChild(dom);
     };
@@ -210,19 +192,28 @@ export const ConstellationView: React.FC = () => {
       <div ref={mountRef} className="w-full h-full block" />
 
       {/* Top Left Constellation Info Dashboard */}
-      <div className="absolute top-3 left-3 bg-[#151820]/90 border border-[#252B36] p-3 rounded-xl shadow-xl space-y-2 max-w-sm">
-        <div className="flex items-center gap-2 text-[#FF8A1F] font-bold text-xs uppercase">
-          <Radio className="w-4 h-4" />
-          <span>{activeConfig.name}</span>
+      <div className="absolute top-3 left-3 bg-[#151820]/90 border border-[#252B36] p-3 rounded-xl shadow-xl space-y-2 max-w-sm backdrop-blur-sm">
+        <div className="flex items-center justify-between text-[#FF8A1F] font-bold text-xs uppercase">
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4" />
+            <span>{activeConfig.name}</span>
+          </div>
+          <button
+            onClick={() => setShowCustomSliders(s => !s)}
+            className="p-1 rounded bg-[#1B1F28] hover:bg-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB]"
+            title="Toggle Custom (T/P/F) Controls"
+          >
+            <Sliders className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-[11px] text-[#E6E8EB] pt-1 border-t border-[#252B36]">
           <div>
-            <span className="text-[#69717E] block text-[10px]">Satellites:</span>
+            <span className="text-[#69717E] block text-[10px]">Satellites (T):</span>
             <strong>{activeConfig.totalSatellites} Spacecraft</strong>
           </div>
           <div>
-            <span className="text-[#69717E] block text-[10px]">Orbital Planes:</span>
+            <span className="text-[#69717E] block text-[10px]">Planes (P):</span>
             <strong>{activeConfig.planesCount} Planes</strong>
           </div>
           <div>
@@ -234,14 +225,83 @@ export const ConstellationView: React.FC = () => {
             <strong>{activeConfig.inclinationDeg}°</strong>
           </div>
         </div>
+
+        {/* Dynamic Walker (T/P/F) Slider Inputs */}
+        {showCustomSliders && (
+          <div className="pt-2 border-t border-[#252B36] space-y-2 text-xs">
+            <div>
+              <div className="flex justify-between text-[10px] text-[#A4ABB6]">
+                <span>Total Satellites (T):</span>
+                <strong className="text-[#38BDF8]">{activeConfig.totalSatellites}</strong>
+              </div>
+              <input
+                type="range"
+                min="6"
+                max="64"
+                step="2"
+                value={activeConfig.totalSatellites}
+                onChange={(e) => setActiveConfig(c => ({ ...c, totalSatellites: parseInt(e.target.value) }))}
+                className="w-full h-1 bg-[#252B36] rounded accent-[#FF8A1F] cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[10px] text-[#A4ABB6]">
+                <span>Planes (P):</span>
+                <strong className="text-[#38BDF8]">{activeConfig.planesCount}</strong>
+              </div>
+              <input
+                type="range"
+                min="2"
+                max="16"
+                step="1"
+                value={activeConfig.planesCount}
+                onChange={(e) => setActiveConfig(c => ({ ...c, planesCount: parseInt(e.target.value) }))}
+                className="w-full h-1 bg-[#252B36] rounded accent-[#FF8A1F] cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[10px] text-[#A4ABB6]">
+                <span>Altitude (km):</span>
+                <strong className="text-[#38BDF8]">{activeConfig.altitudeKm} km</strong>
+              </div>
+              <input
+                type="range"
+                min="300"
+                max="22000"
+                step="100"
+                value={activeConfig.altitudeKm}
+                onChange={(e) => setActiveConfig(c => ({ ...c, altitudeKm: parseInt(e.target.value) }))}
+                className="w-full h-1 bg-[#252B36] rounded accent-[#FF8A1F] cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[10px] text-[#A4ABB6]">
+                <span>Inclination:</span>
+                <strong className="text-[#38BDF8]">{activeConfig.inclinationDeg}°</strong>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="98"
+                step="1"
+                value={activeConfig.inclinationDeg}
+                onChange={(e) => setActiveConfig(c => ({ ...c, inclinationDeg: parseInt(e.target.value) }))}
+                className="w-full h-1 bg-[#252B36] rounded accent-[#FF8A1F] cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Top Right Preset Selector */}
-      <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-[#151820]/90 border border-[#252B36] p-1.5 rounded-xl shadow-xl text-xs">
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-[#151820]/90 border border-[#252B36] p-1.5 rounded-xl shadow-xl text-xs backdrop-blur-sm">
         {Object.entries(CONSTELLATION_PRESETS).map(([key, cfg]) => (
           <button
             key={key}
-            onClick={() => setSelectedPresetKey(key)}
+            onClick={() => handlePresetSelect(key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               selectedPresetKey === key
                 ? 'bg-[#FF8A1F] text-[#090A0D] shadow-sm'

@@ -317,10 +317,11 @@ export function stepFlightPhysics(
   let isDisintegrated = false;
   let crashImpactSpeed = 0;
 
-  // Ground Impact & Crash Mechanics
+  // Ground Impact & Touchdown Safety Thresholds
   if (newAltitude <= 0) {
     newAltitude = 0;
-    if (newVy < -10 || state.velocity.vy < -10) {
+    const isHardImpact = newVy < -4.0 || Math.abs(newVx) > 3.0 || Math.abs(pitch - 90) > 15;
+    if (isHardImpact) {
       isCrashed = true;
       isDisintegrated = true;
       crashImpactSpeed = Math.hypot(newVx, newVy);

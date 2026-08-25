@@ -72,20 +72,28 @@ class SoundEngine {
     }
   }
 
+  private speechQueue: string[] = [];
+  private isSpeaking: boolean = false;
+
   private startEngineAudio() {
     if (!this.ctx || this.noiseNode) return;
 
-    // Pink / Brown Noise Buffer for Rocket Exhaust
+    // Multi-Pole Kellet Pink Noise Filter for Rocket Exhaust
     const bufferSize = this.ctx.sampleRate * 2;
     const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
 
-    let lastOut = 0.0;
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
     for (let i = 0; i < bufferSize; i++) {
       const white = Math.random() * 2 - 1;
-      output[i] = (lastOut + (0.02 * white)) / 1.02;
-      lastOut = output[i];
-      output[i] *= 3.5;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      b3 = 0.86650 * b3 + white * 0.3104856;
+      b4 = 0.55000 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.0168980;
+      output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.22;
+      b6 = white * 0.115926;
     }
 
     this.noiseNode = this.ctx.createBufferSource();
@@ -98,21 +106,22 @@ class SoundEngine {
     this.engineFilter.Q.value = 3.0;
 
     this.engineGain = this.ctx.createGain();
-    this.engineGain.gain.value = 0;
+    this.engineGain.gain.setValueAtTime(0, this.ctx.currentTime);
 
-    // Sub-bass oscillator for low-end propulsion resonance
+    // Sub-Bass Resonance
     this.bassOsc = this.ctx.createOscillator();
     this.bassOsc.type = 'sawtooth';
     this.bassOsc.frequency.value = 42;
 
     const bassGain = this.ctx.createGain();
-    bassGain.gain.value = 0.4;
+    bassGain.gain.value = 0.45;
 
     this.noiseNode.connect(this.engineFilter);
-    this.bassOsc.connect(bassGain);
-    bassGain.connect(this.engineFilter);
-
     this.engineFilter.connect(this.engineGain);
+
+    this.bassOsc.connect(bassGain);
+    bassGain.connect(this.engineGain);
+
     this.engineGain.connect(this.ctx.destination);
 
     this.noiseNode.start();
@@ -231,18 +240,39 @@ class SoundEngine {
   }
 
   /**
-   * Synthetic Mission Control speech annunciator.
+   * Synthetic Mission Control speech annunciator with non-colliding FIFO queue.
    */
   public speak(message: string) {
     if (this.isMuted) return;
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(message);
-      utterance.rate = 1.08;
-      utterance.pitch = 0.95;
-      utterance.volume = 0.85;
-      window.speechSynthesis.speak(utterance);
-    }
+    if (!('speechSynthesis' in window)) return;
+
+    this.speechQueue.push(message);
+    this.processSpeechQueue();
+  }
+
+  private processSpeechQueue() {
+    if (this.isSpeaking || this.speechQueue.length === 0) return;
+
+    const nextMsg = this.speechQueue.shift();
+    if (!nextMsg) return;
+
+    this.isSpeaking = true;
+    const utterance = new SpeechSynthesisUtterance(nextMsg);
+    utterance.rate = 1.08;
+    utterance.pitch = 0.95;
+    utterance.volume = 0.85;
+
+    utterance.onend = () => {
+      this.isSpeaking = false;
+      this.processSpeechQueue();
+    };
+
+    utterance.onerror = () => {
+      this.isSpeaking = false;
+      this.processSpeechQueue();
+    };
+
+    window.speechSynthesis.speak(utterance);
   }
 }
 

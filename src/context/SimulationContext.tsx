@@ -40,7 +40,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '') as AppTab;
-      const validTabs: AppTab[] = ['rocket-builder', 'wind-tunnel', 'flight-sandbox', 'celestial-sim', 'asteroid-impact'];
+      const validTabs: AppTab[] = ['rocket-builder', 'wind-tunnel', 'flight-sandbox', 'celestial-sim', 'asteroid-impact', 'constellation', 'rover-surface'];
       if (validTabs.includes(hash)) {
         setActiveTabState(hash);
       }

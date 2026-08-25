@@ -432,6 +432,57 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
       { id: 'radial', type: 'radial', x: 0, y: 0 }
     ]
   },
+  'fairing_2m': {
+    type: 'fairing_2m',
+    category: 'aerodynamics',
+    name: 'Aerodynamic Clamshell Payload Fairing (2m)',
+    description: 'Jettisonable composite payload fairing protecting satellites and deep-space probes during atmospheric ascent.',
+    width: 2,
+    height: 4,
+    dryMass: 0.25,
+    fuelMass: 0,
+    dragCoeff: 0.06,
+    heatTolerance: 2400,
+    color: '#f8fafc',
+    texturePattern: 'smooth',
+    connectionPoints: [
+      { id: 'bottom', type: 'bottom', x: 0, y: 2 }
+    ]
+  },
+  'fairing_4m_left': {
+    type: 'fairing_4m_left',
+    category: 'aerodynamics',
+    name: 'Heavy Split Fairing (4m Left)',
+    description: 'Heavy clamshell payload fairing half for large orbital telescopes and space station modules.',
+    width: 2,
+    height: 6,
+    dryMass: 0.45,
+    fuelMass: 0,
+    dragCoeff: 0.07,
+    heatTolerance: 2600,
+    color: '#f1f5f9',
+    texturePattern: 'smooth',
+    connectionPoints: [
+      { id: 'bottom', type: 'bottom', x: 0, y: 3 }
+    ]
+  },
+  'fairing_4m_right': {
+    type: 'fairing_4m_right',
+    category: 'aerodynamics',
+    name: 'Heavy Split Fairing (4m Right)',
+    description: 'Heavy clamshell payload fairing half for large orbital telescopes and space station modules.',
+    width: 2,
+    height: 6,
+    dryMass: 0.45,
+    fuelMass: 0,
+    dragCoeff: 0.07,
+    heatTolerance: 2600,
+    color: '#f1f5f9',
+    texturePattern: 'smooth',
+    connectionPoints: [
+      { id: 'bottom', type: 'bottom', x: 0, y: 3 }
+    ]
+  },
   'heatshield_2m': {
     type: 'heatshield_2m',
     category: 'aerodynamics',
@@ -602,6 +653,30 @@ export function getSymmetricPlacements(
       { x: -y, y: x, rotation: (rotation + 90) % 360, partType },
       { x: y, y: -x, rotation: (rotation + 270) % 360, partType }
     );
+  } else if (symmetry === '6x') {
+    const r = Math.sqrt(x * x + y * y);
+    const angle = Math.atan2(y, x);
+    for (let i = 1; i < 6; i++) {
+      const a = angle + (i * 2 * Math.PI) / 6;
+      results.push({
+        x: Math.round(r * Math.cos(a) * 10) / 10,
+        y: Math.round(r * Math.sin(a) * 10) / 10,
+        rotation: (rotation + i * 60) % 360,
+        partType
+      });
+    }
+  } else if (symmetry === '8x') {
+    const r = Math.sqrt(x * x + y * y);
+    const angle = Math.atan2(y, x);
+    for (let i = 1; i < 8; i++) {
+      const a = angle + (i * 2 * Math.PI) / 8;
+      results.push({
+        x: Math.round(r * Math.cos(a) * 10) / 10,
+        y: Math.round(r * Math.sin(a) * 10) / 10,
+        rotation: (rotation + i * 45) % 360,
+        partType
+      });
+    }
   }
 
   return results;
@@ -731,6 +806,13 @@ export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAer
       }
     }
 
+    let stageDryMass = 0;
+    for (const part of stageParts) {
+      const def = PARTS_CATALOG[part.partType];
+      if (!def) continue;
+      stageDryMass += def.dryMass;
+    }
+
     // Mass-flow rate weighted specific impulse: I_sp,eff = sum(T_i) / sum(T_i / I_sp,i)
     const effectiveIsp = (stageThrust > 0 && sumMdotCoeff > 0) ? (stageThrust / sumMdotCoeff) : 0;
     const m0 = cumulativeMass;
@@ -755,7 +837,8 @@ export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAer
     });
 
     totalDeltaV += stageDV;
-    cumulativeMass = mf;
+    // Decouple both consumed fuel AND jettisoned stage dry mass for subsequent stages
+    cumulativeMass = Math.max(0.001, mf - stageDryMass);
   }
 
   // Aerodynamic Stability Margin: CoP should be behind CoM (higher Y in screen space) for static stability
@@ -781,8 +864,102 @@ export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAer
 
 export const ROCKET_PRESETS: RocketBlueprint[] = [
   {
+    id: 'saturn_v',
+    name: 'Saturn V (Apollo 11)',
+    parts: [
+      { instanceId: 's1', partType: 'crew_heavy', x: 0, y: -11, rotation: 0, stage: 3, fuelPercentage: 100 },
+      { instanceId: 's2', partType: 'heatshield_2m', x: 0, y: -9, rotation: 0, stage: 3, fuelPercentage: 100 },
+      { instanceId: 's3', partType: 'decoupler_stack_4m', x: 0, y: -8, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 's4', partType: 'tank_heavy_4m', x: 0, y: -4, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 's5', partType: 'engine_raptor', x: 0, y: 1, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 's6', partType: 'decoupler_stack_4m', x: 0, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 's7', partType: 'tank_titan_4m', x: 0, y: 9, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 's8', partType: 'engine_cluster_quad', x: 0, y: 15.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 's9', partType: 'fin_delta', x: -4, y: 14, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 's10', partType: 'fin_delta', x: 4, y: 14, rotation: 0, stage: 1, fuelPercentage: 100 }
+    ],
+    staging: [[1], [2], [3]]
+  },
+  {
+    id: 'falcon_heavy',
+    name: 'Falcon Heavy (3-Core)',
+    parts: [
+      { instanceId: 'f1', partType: 'pod_mk1', x: 0, y: -8, rotation: 0, stage: 3, fuelPercentage: 100 },
+      { instanceId: 'f2', partType: 'tank_small_2m', x: 0, y: -5.5, rotation: 0, stage: 3, fuelPercentage: 100 },
+      { instanceId: 'f3', partType: 'engine_vacuum_expand', x: 0, y: -2.5, rotation: 0, stage: 3, fuelPercentage: 100 },
+      { instanceId: 'f4', partType: 'decoupler_stack_2m', x: 0, y: -0.5, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'f5', partType: 'tank_titan_4m', x: 0, y: 5.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f6', partType: 'engine_cluster_quad', x: 0, y: 12, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f7', partType: 'srb_heavy', x: -3, y: 5.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f8', partType: 'nosecone_slant_left', x: -3, y: 0.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f9', partType: 'srb_heavy', x: 3, y: 5.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f10', partType: 'nosecone_slant_right', x: 3, y: 0.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f11', partType: 'landing_leg_heavy', x: -4.5, y: 10.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f12', partType: 'landing_leg_heavy', x: 4.5, y: 10.5, rotation: 0, stage: 1, fuelPercentage: 100 }
+    ],
+    staging: [[1], [2], [3]]
+  },
+  {
+    id: 'starship_superheavy',
+    name: 'Starship / Super Heavy (Full Stack)',
+    parts: [
+      { instanceId: 'st1', partType: 'crew_heavy', x: 0, y: -11, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'st2', partType: 'tank_heavy_4m', x: 0, y: -5, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'st3', partType: 'engine_raptor', x: 0, y: 0, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'st4', partType: 'fin_grid_titanium', x: -2.5, y: -9, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'st5', partType: 'fin_grid_titanium', x: 2.5, y: -9, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'st6', partType: 'decoupler_stack_4m', x: 0, y: 2, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'st7', partType: 'tank_titan_4m', x: 0, y: 7.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'st8', partType: 'engine_cluster_quad', x: 0, y: 14, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'st9', partType: 'fin_grid_titanium', x: -2.5, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'st10', partType: 'fin_grid_titanium', x: 2.5, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 }
+    ],
+    staging: [[1], [2]]
+  },
+  {
+    id: 'space_shuttle',
+    name: 'Space Shuttle Stack (STS)',
+    parts: [
+      { instanceId: 'sh1', partType: 'crew_heavy', x: 0, y: -6, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'sh2', partType: 'tank_heavy_4m', x: 0, y: 0, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'sh3', partType: 'engine_raptor', x: 0, y: 5, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'sh4', partType: 'srb_heavy', x: -3, y: 0, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sh5', partType: 'nosecone_slant_left', x: -3, y: -5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sh6', partType: 'srb_heavy', x: 3, y: 0, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sh7', partType: 'nosecone_slant_right', x: 3, y: -5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sh8', partType: 'fin_delta', x: 0, y: 4, rotation: 0, stage: 2, fuelPercentage: 100 }
+    ],
+    staging: [[1], [2]]
+  },
+  {
+    id: 'electron',
+    name: 'Electron (Electric Turbopump)',
+    parts: [
+      { instanceId: 'el1', partType: 'fairing_2m', x: 0, y: -6, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'el2', partType: 'tank_small_2m', x: 0, y: -2.5, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'el3', partType: 'engine_vacuum_expand', x: 0, y: 0, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'el4', partType: 'decoupler_stack_2m', x: 0, y: 1.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'el5', partType: 'tank_med_2m', x: 0, y: 5.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'el6', partType: 'engine_merlin_1d', x: 0, y: 10, rotation: 0, stage: 1, fuelPercentage: 100 }
+    ],
+    staging: [[1], [2]]
+  },
+  {
+    id: 'sounding_rocket',
+    name: 'Suborbital Sounding Rocket',
+    parts: [
+      { instanceId: 'sr1', partType: 'nosecone_2m', x: 0, y: -4, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sr2', partType: 'tank_small_2m', x: 0, y: -1, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sr3', partType: 'engine_merlin_1d', x: 0, y: 2, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sr4', partType: 'fin_delta', x: -2, y: 2, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sr5', partType: 'fin_delta', x: 2, y: 2, rotation: 0, stage: 1, fuelPercentage: 100 }
+    ],
+    staging: [[1]]
+  },
+  // Compatibility Aliases for Historical Links
+  {
     id: 'preset_falcon_orbit',
-    name: 'Falcon Orbital Heavy',
+    name: 'Falcon 9 Full Thrust',
     parts: [
       { instanceId: 'p1', partType: 'pod_mk1', x: 0, y: -7, rotation: 0, stage: 3, fuelPercentage: 100 },
       { instanceId: 'p2', partType: 'tank_small_2m', x: 0, y: -4.5, rotation: 0, stage: 3, fuelPercentage: 100 },
@@ -812,9 +989,7 @@ export const ROCKET_PRESETS: RocketBlueprint[] = [
       { instanceId: 's9', partType: 'srb_heavy', x: -3, y: 8.5, rotation: 0, stage: 1, fuelPercentage: 100 },
       { instanceId: 's10', partType: 'nosecone_slant_left', x: -3, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 },
       { instanceId: 's11', partType: 'srb_heavy', x: 3, y: 8.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 's12', partType: 'nosecone_slant_right', x: 3, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 's13', partType: 'fin_delta', x: -4, y: 14, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 's14', partType: 'fin_delta', x: 4, y: 14, rotation: 0, stage: 1, fuelPercentage: 100 }
+      { instanceId: 's12', partType: 'nosecone_slant_right', x: 3, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 }
     ],
     staging: [[1], [2], [3]]
   }

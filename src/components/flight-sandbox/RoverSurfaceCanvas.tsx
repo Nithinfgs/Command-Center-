@@ -391,9 +391,89 @@ export const RoverSurfaceCanvas: React.FC = () => {
         ctx.fill();
       });
 
-      // Rover Vehicle Chassis & Rotating Spoked Wheels
-      ctx.save();
+      // Rover Vehicle Chassis & Articulated Rocker-Bogie Suspension
       const roverScreenY = groundBaseY - currentRover.altitude * PPM;
+
+      // 1. Calculate individual wheel terrain contact points for rocker-bogie multi-body kinematics
+      const wheelOffsets = [-22, -8, 8, 22];
+      const wheelContacts = wheelOffsets.map(wx => {
+        const worldX = currentRover.posX + wx / PPM;
+        const { elevation } = getTerrainElevation(worldX, currentRover.surfacePlanetId);
+        const wy = groundBaseY - elevation * PPM;
+        return { wx, wy: Math.min(roverScreenY + 12, wy) };
+      });
+
+      // 2. Draw Articulated Rocker-Bogie Linkages
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Rear Bogie Link (between wheel 0 and wheel 1)
+      ctx.beginPath();
+      ctx.moveTo(viewCenterX + wheelContacts[0].wx, wheelContacts[0].wy);
+      ctx.lineTo(viewCenterX + (wheelContacts[0].wx + wheelContacts[1].wx) / 2, roverScreenY - 4);
+      ctx.lineTo(viewCenterX + wheelContacts[1].wx, wheelContacts[1].wy);
+      ctx.stroke();
+
+      // Main Rocker Link (from rear bogie pivot to front wheel 3)
+      const rearBogiePivotX = viewCenterX + (wheelContacts[0].wx + wheelContacts[1].wx) / 2;
+      const rearBogiePivotY = roverScreenY - 4;
+      const mainChassisPivotX = viewCenterX;
+      const mainChassisPivotY = roverScreenY - 8;
+
+      ctx.strokeStyle = '#64748B';
+      ctx.beginPath();
+      ctx.moveTo(rearBogiePivotX, rearBogiePivotY);
+      ctx.lineTo(mainChassisPivotX, mainChassisPivotY);
+      ctx.lineTo(viewCenterX + wheelContacts[3].wx, wheelContacts[3].wy);
+      ctx.stroke();
+
+      // Intermediate Front Bogie Link (wheel 2)
+      ctx.beginPath();
+      ctx.moveTo(mainChassisPivotX + 6, mainChassisPivotY);
+      ctx.lineTo(viewCenterX + wheelContacts[2].wx, wheelContacts[2].wy);
+      ctx.stroke();
+
+      // 3. Draw 4 Independent Wheels with Rotating Spokes
+      const wheelRadius = 8.0;
+      const wheelRotation = (currentRover.posX * PPM) / wheelRadius;
+
+      wheelContacts.forEach((wc) => {
+        ctx.save();
+        ctx.translate(viewCenterX + wc.wx, wc.wy);
+        ctx.rotate(wheelRotation);
+
+        // Outer Rubber Tread
+        ctx.fillStyle = '#0F172A';
+        ctx.beginPath();
+        ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#94A3B8';
+        ctx.lineWidth = 2.0;
+        ctx.stroke();
+
+        // 4 Spoke Crosshairs
+        ctx.strokeStyle = '#F8FAFC';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(-wheelRadius + 1, 0);
+        ctx.lineTo(wheelRadius - 1, 0);
+        ctx.moveTo(0, -wheelRadius + 1);
+        ctx.lineTo(0, wheelRadius - 1);
+        ctx.stroke();
+
+        // Hubcap Axle Pin
+        ctx.fillStyle = '#FF8A1F';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      });
+
+      // 4. Draw Rover Chassis Body on Top of Differential Suspension
+      ctx.save();
       ctx.translate(viewCenterX, roverScreenY);
       ctx.rotate((currentRover.pitchDeg * Math.PI) / 180);
 
@@ -434,41 +514,6 @@ export const RoverSurfaceCanvas: React.FC = () => {
           ctx.fillRect(32 + (Math.random() - 0.5) * 12, 10 + (Math.random() - 0.5) * 8, 2.5, 2.5);
         }
       }
-
-      // 4 Wheels
-      const wheelRadius = 8.0;
-      const wheelRotation = (currentRover.posX * PPM) / wheelRadius;
-
-      [-22, -8, 8, 22].forEach(wx => {
-        ctx.save();
-        ctx.translate(wx, 3);
-        ctx.rotate(wheelRotation);
-
-        ctx.fillStyle = '#0F172A';
-        ctx.beginPath();
-        ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#94A3B8';
-        ctx.lineWidth = 2.0;
-        ctx.stroke();
-
-        // 4 Spokes
-        ctx.strokeStyle = '#F8FAFC';
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.moveTo(-wheelRadius + 1, 0);
-        ctx.lineTo(wheelRadius - 1, 0);
-        ctx.moveTo(0, -wheelRadius + 1);
-        ctx.lineTo(0, wheelRadius - 1);
-        ctx.stroke();
-
-        ctx.fillStyle = '#FF8A1F';
-        ctx.beginPath();
-        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-      });
 
       ctx.restore();
       ctx.restore();
