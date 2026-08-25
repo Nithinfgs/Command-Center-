@@ -210,7 +210,7 @@ export function stepFlightPhysics(
   state: FlightState,
   blueprint: RocketBlueprint,
   dt: number,
-  guidanceMode: 'manual' | 'auto' = 'manual'
+  guidanceMode: 'manual' | 'auto' | 'booster_recovery' = 'manual'
 ): FlightState {
   if (!state.isLaunched || state.isPaused || state.aborted || state.isCrashed) {
     return state;
@@ -222,12 +222,13 @@ export function stepFlightPhysics(
     state.altitude
   );
 
-  // Prograde-Aligned True Gravity Turn Algorithm
+  // Guidance Autopilot & Booster Return Hoverslam Algorithm
   let pitch = state.pitch;
+  let throttle = state.throttle;
+
   if (guidanceMode === 'auto') {
     if (state.altitude > 800 && state.altitude < 120000) {
       if (state.velocity.vx > 15 && state.speed > 30) {
-        // True zero-AoA prograde angle
         const progradeAngleDeg = (Math.atan2(state.velocity.vy, state.velocity.vx) * 180) / Math.PI;
         pitch = pitch + (progradeAngleDeg - pitch) * Math.min(1, dt * 1.8);
       } else {
@@ -236,10 +237,39 @@ export function stepFlightPhysics(
         pitch = pitch + (targetPitch - pitch) * dt * 0.5;
       }
     }
+  } else if (guidanceMode === 'booster_recovery') {
+    // 1. Boostback Burn: Turn backwards and cancel downrange velocity
+    if (state.altitude > 25000 && state.velocity.vy > 0 && state.fuelMassRemaining > 0.5) {
+      pitch = 175; // Retrograde boostback
+      throttle = state.velocity.vx > 50 ? 1.0 : 0.0;
+    } 
+    // 2. Atmospheric Re-entry & Grid Fin Orientation
+    else if (state.velocity.vy < 0) {
+      pitch = 90; // Upright vertical landing alignment
+
+      // Re-entry Burn to prevent hypersonic skin heating
+      if (state.altitude > 18000 && state.altitude < 38000 && state.speed > 1200) {
+        throttle = 0.65;
+      }
+      // 3. Hoverslam (Suicide Burn) Calculus
+      else if (state.altitude < 8000 && state.fuelMassRemaining > 0.01) {
+        const localG = MU_EARTH / Math.pow(state.altitude + EARTH_RADIUS, 2);
+        const maxAcc = stageInfo.thrustN / Math.max(1, (stageInfo.activeVehicleDryMassTons + state.fuelMassRemaining) * 1000) - localG;
+        const suicideBurnAlt = (Math.pow(state.velocity.vy, 2) / (2 * Math.max(1, maxAcc))) * 1.05;
+
+        if (state.altitude <= suicideBurnAlt) {
+          const reqAcc = (Math.pow(state.velocity.vy, 2) / (2 * Math.max(1, state.altitude))) + localG;
+          const reqThrustN = reqAcc * ((stageInfo.activeVehicleDryMassTons + state.fuelMassRemaining) * 1000);
+          throttle = Math.min(1.0, Math.max(0.3, reqThrustN / Math.max(1, stageInfo.thrustN)));
+        } else {
+          throttle = 0.0;
+        }
+      } else {
+        throttle = 0.0;
+      }
+    }
   }
 
-  // Throttle & Fuel Depletion
-  const throttle = state.throttle;
   let currentFuel = Math.max(0, state.fuelMassRemaining);
   let engineThrustN = 0;
 

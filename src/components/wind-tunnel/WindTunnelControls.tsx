@@ -224,6 +224,35 @@ export const WindTunnelControls: React.FC = () => {
           </div>
         </div>
 
+        {/* Engine Plume Chemistry */}
+        <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between pb-1 border-b border-[#252B36]">
+            <span className="font-medium text-[#E6E8EB] text-xs uppercase tracking-wider text-[11px]">Plume Chemistry</span>
+            <span className="text-[10px] font-mono-num text-[#FF8A1F]">Hot Fire</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            {[
+              { id: 'kerolox', name: 'Kerolox (RP-1)' },
+              { id: 'methalox', name: 'Methalox (CH4)' },
+              { id: 'hydrolox', name: 'Hydrolox (LH2)' },
+              { id: 'solid', name: 'Solid Motor' }
+            ].map(fuel => (
+              <button
+                key={fuel.id}
+                onClick={() => setWindTunnelState({ propellantChemistry: fuel.id as any })}
+                className={`py-1 px-2 rounded text-[10px] font-medium border transition-all ${
+                  (windTunnelState.propellantChemistry || 'kerolox') === fuel.id
+                    ? 'bg-[#FF8A1F] text-[#090A0D] border-[#FF8A1F] font-bold'
+                    : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:bg-[#1B1F28] hover:text-[#E6E8EB]'
+                }`}
+              >
+                {fuel.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Flight Condition Presets */}
         <div className="space-y-1.5">
           <label className="text-[#69717E] text-[11px] font-semibold uppercase tracking-wider block">

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useSimulation } from '../../context/SimulationContext';
-import { calculateSpacetimeDepression } from '../../physics/n-body';
+import { calculateSpacetimeDepression, calculateLagrangePoints } from '../../physics/n-body';
 import type { CelestialBody } from '../../types';
 
 export const CelestialCanvas3D: React.FC = () => {
@@ -18,6 +18,7 @@ export const CelestialCanvas3D: React.FC = () => {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const bodiesMeshesRef = useRef<Map<string, THREE.Group>>(new Map());
   const trailsLinesRef = useRef<Map<string, THREE.Line>>(new Map());
+  const lagrangeGroupRef = useRef<THREE.Group | null>(null);
   const gridMeshRef = useRef<THREE.Mesh | null>(null);
 
   const cameraState = useRef({
@@ -240,6 +241,40 @@ export const CelestialCanvas3D: React.FC = () => {
           trailLine.geometry.setFromPoints(trailPts);
         }
       });
+
+      // Update 3D Lagrange Points (L1 to L5)
+      const primary = bodies.find(b => b.isFixed) || bodies[0];
+      const secondary = bodies.find(b => b.id === selectedIdRef.current && !b.isFixed) || bodies.find(b => !b.isFixed);
+
+      if (primary && secondary && showTrailsRef.current) {
+        if (!lagrangeGroupRef.current) {
+          const lGroup = new THREE.Group();
+          for (let k = 1; k <= 5; k++) {
+            const geo = new THREE.OctahedronGeometry(2.5, 0);
+            const mat = new THREE.MeshBasicMaterial({
+              color: k <= 3 ? '#E6B84D' : '#55B982',
+              wireframe: true
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.name = `l_${k}`;
+            lGroup.add(mesh);
+          }
+          scene.add(lGroup);
+          lagrangeGroupRef.current = lGroup;
+        }
+
+        const lPoints = calculateLagrangePoints(primary, secondary);
+        lPoints.forEach((lp, idx) => {
+          const mesh = lagrangeGroupRef.current?.children[idx];
+          if (mesh) {
+            mesh.position.set(lp.x, lp.y, lp.z);
+            mesh.rotation.y += 0.02;
+            mesh.rotation.x += 0.01;
+          }
+        });
+      } else if (lagrangeGroupRef.current) {
+        lagrangeGroupRef.current.visible = false;
+      }
 
       // Cleanup disposed meshes & free GPU VRAM
       existingMeshes.forEach((mesh, id) => {

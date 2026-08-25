@@ -13,6 +13,7 @@ import {
   POPULATION_AREAS,
   GEOGRAPHIC_TARGETS 
 } from '../../physics/impact-physics';
+import { PlanetaryDefensePanel } from './PlanetaryDefensePanel';
 import type { AsteroidComposition } from '../../types';
 
 export const AsteroidConfigurator: React.FC = () => {
@@ -251,6 +252,9 @@ export const AsteroidConfigurator: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* DART Planetary Defense Mission Module */}
+        <PlanetaryDefensePanel />
       </div>
     </aside>
   );

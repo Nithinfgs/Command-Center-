@@ -10,10 +10,13 @@ import {
   Share2, 
   CheckCircle2,
   ChevronDown,
-  X
+  X,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { ROCKET_PRESETS } from '../../physics/rocket-math';
+import { soundEngine } from '../../audio/soundEngine';
 import type { AppTab } from '../../types';
 
 export const Header: React.FC = () => {
@@ -27,6 +30,7 @@ export const Header: React.FC = () => {
 
   const [showPresetModal, setShowPresetModal] = useState(false);
   const [savedNotification, setSavedNotification] = useState(false);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
 
   const navTabs: { id: AppTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'rocket-builder', label: 'Rocket Builder', icon: Rocket },
@@ -127,6 +131,22 @@ export const Header: React.FC = () => {
               <Save className="w-3.5 h-3.5 text-[#69717E]" />
               <span>Save</span>
             </>
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            const nextMuted = !isAudioMuted;
+            setIsAudioMuted(nextMuted);
+            soundEngine.setMuted(nextMuted);
+          }}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-[#151820] hover:bg-[#1B1F28] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] transition-colors font-medium text-[11px]"
+          title={isAudioMuted ? "Unmute Mission Audio" : "Mute Mission Audio"}
+        >
+          {isAudioMuted ? (
+            <VolumeX className="w-3.5 h-3.5 text-[#D95757]" />
+          ) : (
+            <Volume2 className="w-3.5 h-3.5 text-[#55B982]" />
           )}
         </button>
 

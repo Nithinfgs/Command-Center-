@@ -98,6 +98,7 @@ export interface WindTunnelState {
   engineTestActive: boolean;
   engineThrottle: number; // 0 to 1
   nozzleChamberPressure: number; // MPa
+  propellantChemistry?: 'kerolox' | 'methalox' | 'hydrolox' | 'solid';
 }
 
 export interface AeroTelemetry {

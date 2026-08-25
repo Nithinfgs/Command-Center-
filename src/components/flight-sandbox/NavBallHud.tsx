@@ -252,6 +252,34 @@ export const NavBallHud: React.FC = () => {
             </div>
           </div>
 
+          {/* Guidance Autopilot Mode */}
+          <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between pb-1 border-b border-[#252B36]">
+              <span className="font-medium text-[#E6E8EB] text-xs uppercase tracking-wider text-[11px]">Guidance Mode</span>
+              <span className="text-[10px] font-mono-num text-[#55B982]">SAS Active</span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1">
+              {[
+                { id: 'manual', label: 'Manual' },
+                { id: 'auto', label: 'Gravity Turn' },
+                { id: 'booster_recovery', label: 'Hoverslam' }
+              ].map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setGuidanceMode(m.id as any)}
+                  className={`py-1 px-1.5 rounded text-[10px] font-medium border transition-all text-center ${
+                    guidanceMode === m.id
+                      ? 'bg-[#FF8A1F] text-[#090A0D] border-[#FF8A1F] font-bold'
+                      : 'bg-[#0E1015] border-[#252B36] text-[#A4ABB6] hover:bg-[#1B1F28] hover:text-[#E6E8EB]'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Pitch Steering & Artificial Horizon */}
           <div className="bg-[#1B1F28]/70 border border-[#252B36] rounded-lg p-3 space-y-2.5">
             <div className="flex items-center justify-between text-xs font-medium">

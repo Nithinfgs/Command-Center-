@@ -16,6 +16,7 @@ import { CELESTIAL_PRESETS, stepNBodySimulation } from '../physics/n-body';
 import { calculateImpactPhysics, ASTEROID_DENSITIES } from '../physics/impact-physics';
 import { initFlightState, stepFlightPhysics, calculateCurrentStageMassAndThrust } from '../physics/flight-dynamics';
 import { calculateAtmosphere } from '../physics/aerodynamics';
+import { soundEngine } from '../audio/soundEngine';
 import { type GlobalStore, createInitialState } from '../store/simulationStore';
 
 const SimulationContext = createContext<GlobalStore | null>(null);
@@ -348,6 +349,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // FLIGHT SANDBOX ACTIONS
   // =====================
   const launchFlight = useCallback(() => {
+    soundEngine.speak('Ignition sequence start... 3, 2, 1... Liftoff!');
     setFlightState(prev => ({
       ...prev,
       isLaunched: true,
@@ -358,6 +360,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const triggerStaging = useCallback(() => {
+    soundEngine.playStageSeparation();
+    soundEngine.speak('Stage separation confirmed');
     setFlightState(prev => {
       const maxStage = Math.max(1, ...blueprint.parts.map(p => p.stage || 1));
       if (prev.currentStageIndex >= maxStage) {
@@ -385,6 +389,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const abortFlight = useCallback(() => {
+    soundEngine.speak('Emergency launch abort initiated');
     setFlightState(prev => ({
       ...prev,
       aborted: true,
@@ -393,17 +398,21 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const resetFlight = useCallback(() => {
+    soundEngine.stopEngineAudio();
     setFlightState(initFlightState(blueprint));
   }, [blueprint]);
 
   const transferRocketToFlight = useCallback(() => {
     setFlightState(initFlightState(blueprint));
     setActiveTab('flight-sandbox');
-  }, [blueprint]);
+  }, [blueprint, setActiveTab]);
 
-  // RK4 Flight Physics Loop
+  // RK4 Flight Physics Loop & Audio Engine Sync
   useEffect(() => {
-    if (activeTab !== 'flight-sandbox') return;
+    if (activeTab !== 'flight-sandbox') {
+      soundEngine.stopEngineAudio();
+      return;
+    }
 
     let animFrame: number;
     let lastTime = performance.now();
@@ -412,12 +421,20 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const dt = Math.min(0.04, (time - lastTime) / 1000);
       lastTime = time;
 
-      setFlightState(prev => stepFlightPhysics(prev, blueprint, dt, guidanceMode));
+      setFlightState(prev => {
+        const next = stepFlightPhysics(prev, blueprint, dt, guidanceMode);
+        // Continuous Audio Synthesis update
+        soundEngine.updateEngineSound(next.throttle, next.altitude, next.dynamicPressure);
+        return next;
+      });
       animFrame = requestAnimationFrame(loop);
     };
 
     animFrame = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animFrame);
+    return () => {
+      cancelAnimationFrame(animFrame);
+      soundEngine.stopEngineAudio();
+    };
   }, [activeTab, blueprint, guidanceMode]);
 
   // Global Keyboard Shortcuts (Hotkeys)

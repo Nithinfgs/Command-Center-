@@ -484,3 +484,89 @@ export function calculateHohmannTransfer(
     transferTimeSec: Math.round(transferTime)
   };
 }
+
+export interface LagrangePoint {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  stability: 'unstable_saddle' | 'stable_trojan';
+}
+
+/**
+ * Calculates real-time 3D Lagrange Equilibrium Points (L1 to L5) for a two-body orbital system.
+ */
+export function calculateLagrangePoints(primary: CelestialBody, secondary: CelestialBody): LagrangePoint[] {
+  const dx = secondary.position.x - primary.position.x;
+  const dy = secondary.position.y - primary.position.y;
+  const dz = secondary.position.z - primary.position.z;
+  const R = Math.hypot(dx, dy, dz);
+  if (R < 1) return [];
+
+  // Unit vector from primary to secondary along orbital radius
+  const ux = dx / R;
+  const uy = dy / R;
+  const uz = dz / R;
+
+  // Perpendicular orbital in-plane vector
+  const perpX = -uz;
+  const perpZ = ux;
+
+  const mu = secondary.mass / (primary.mass + secondary.mass);
+
+  // L1: Between M1 and M2
+  const rL1 = R * (1 - Math.cbrt(mu / 3));
+  const l1: LagrangePoint = {
+    id: `${secondary.id}_l1`,
+    name: `${secondary.name} L1`,
+    x: primary.position.x + ux * rL1,
+    y: primary.position.y + uy * rL1,
+    z: primary.position.z + uz * rL1,
+    stability: 'unstable_saddle'
+  };
+
+  // L2: Beyond M2
+  const rL2 = R * (1 + Math.cbrt(mu / 3));
+  const l2: LagrangePoint = {
+    id: `${secondary.id}_l2`,
+    name: `${secondary.name} L2 (JWST)`,
+    x: primary.position.x + ux * rL2,
+    y: primary.position.y + uy * rL2,
+    z: primary.position.z + uz * rL2,
+    stability: 'unstable_saddle'
+  };
+
+  // L3: Opposite M2 beyond M1
+  const rL3 = -R * (1 + (5 * mu) / 12);
+  const l3: LagrangePoint = {
+    id: `${secondary.id}_l3`,
+    name: `${secondary.name} L3`,
+    x: primary.position.x + ux * rL3,
+    y: primary.position.y + uy * rL3,
+    z: primary.position.z + uz * rL3,
+    stability: 'unstable_saddle'
+  };
+
+  // L4: Leading Equilateral Trojan point (60 deg ahead)
+  const l4: LagrangePoint = {
+    id: `${secondary.id}_l4`,
+    name: `${secondary.name} L4 (Trojan)`,
+    x: primary.position.x + 0.5 * R * ux + (Math.sqrt(3) / 2) * R * perpX,
+    y: primary.position.y + uy,
+    z: primary.position.z + 0.5 * R * uz + (Math.sqrt(3) / 2) * R * perpZ,
+    stability: 'stable_trojan'
+  };
+
+  // L5: Trailing Equilateral Greek point (60 deg behind)
+  const l5: LagrangePoint = {
+    id: `${secondary.id}_l5`,
+    name: `${secondary.name} L5 (Greek)`,
+    x: primary.position.x + 0.5 * R * ux - (Math.sqrt(3) / 2) * R * perpX,
+    y: primary.position.y + uy,
+    z: primary.position.z + 0.5 * R * uz - (Math.sqrt(3) / 2) * R * perpZ,
+    stability: 'stable_trojan'
+  };
+
+  return [l1, l2, l3, l4, l5];
+}

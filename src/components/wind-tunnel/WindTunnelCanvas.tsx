@@ -867,15 +867,38 @@ export const WindTunnelCanvas: React.FC = () => {
           if (windTunnelState.engineTestActive) {
             const plumeLength = 140 * scale * windTunnelState.engineThrottle;
             const plumeWidth = pw * 0.85 * (plume.isUnderExpanded ? 1.8 : 0.95);
+            const fuelType = windTunnelState.propellantChemistry || 'kerolox';
 
             ctx.save();
             ctx.translate(0, ph / 2);
 
             const plumeGrad = ctx.createLinearGradient(0, 0, 0, plumeLength);
-            plumeGrad.addColorStop(0, '#ffffff');
-            plumeGrad.addColorStop(0.15, '#38BDF8');
-            plumeGrad.addColorStop(0.6, '#FBBF24');
-            plumeGrad.addColorStop(1, 'rgba(244, 63, 94, 0)');
+            if (fuelType === 'methalox') {
+              // Methalox (CH4/LOX): Violet/Cyan Diamond Core
+              plumeGrad.addColorStop(0, '#ffffff');
+              plumeGrad.addColorStop(0.2, '#38BDF8');
+              plumeGrad.addColorStop(0.55, '#818CF8');
+              plumeGrad.addColorStop(0.85, '#A855F7');
+              plumeGrad.addColorStop(1, 'rgba(168, 85, 247, 0)');
+            } else if (fuelType === 'hydrolox') {
+              // Hydrolox (LH2/LOX): High-expansion Pale Cyan / Transparent
+              plumeGrad.addColorStop(0, '#ffffff');
+              plumeGrad.addColorStop(0.3, '#E0F2FE');
+              plumeGrad.addColorStop(0.7, '#7DD3FC');
+              plumeGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+            } else if (fuelType === 'solid') {
+              // Solid Propellant: Luminous core with dense smoke and sparks
+              plumeGrad.addColorStop(0, '#ffffff');
+              plumeGrad.addColorStop(0.25, '#FDE047');
+              plumeGrad.addColorStop(0.65, '#F97316');
+              plumeGrad.addColorStop(1, 'rgba(120, 113, 108, 0)');
+            } else {
+              // Kerolox (RP-1/LOX): Classic luminous orange & soot
+              plumeGrad.addColorStop(0, '#ffffff');
+              plumeGrad.addColorStop(0.15, '#38BDF8');
+              plumeGrad.addColorStop(0.6, '#FBBF24');
+              plumeGrad.addColorStop(1, 'rgba(244, 63, 94, 0)');
+            }
 
             ctx.fillStyle = plumeGrad;
             ctx.beginPath();
@@ -886,6 +909,23 @@ export const WindTunnelCanvas: React.FC = () => {
             ctx.lineTo(pw * 0.4, 0);
             ctx.closePath();
             ctx.fill();
+
+            // Supersonic Shock Diamond Cells (Prandtl-Meyer expansion nodes)
+            if (windTunnelState.mach > 1.2 && windTunnelState.engineThrottle > 0.4) {
+              const numDiamonds = 4;
+              for (let d = 1; d <= numDiamonds; d++) {
+                const dy = (plumeLength * 0.75 * d) / (numDiamonds + 1);
+                const dw = (pw * 0.25 * (numDiamonds - d + 1)) / numDiamonds;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(0, dy - 4);
+                ctx.lineTo(dw, dy);
+                ctx.lineTo(0, dy + 4);
+                ctx.lineTo(-dw, dy);
+                ctx.closePath();
+                ctx.fill();
+              }
+            }
 
             ctx.restore();
           }
