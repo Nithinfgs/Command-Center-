@@ -216,34 +216,61 @@ export function calculateImpactPhysics(config: AsteroidConfig): ImpactTelemetry 
   if (totalPop > 0 && isEarthTarget) {
     if (isOcean) {
       if (tsunamiWaveHeightAt100kmM > 25) {
-        estimatedFatalities = Math.round(totalPop * 0.85);
-        estimatedInjuries = Math.round(totalPop * 0.12);
+        estimatedFatalities = Math.round(totalPop * 0.75);
+        estimatedInjuries = Math.round(totalPop * 0.22);
       } else if (tsunamiWaveHeightAt100kmM > 10) {
-        estimatedFatalities = Math.round(totalPop * 0.55);
-        estimatedInjuries = Math.round(totalPop * 0.35);
+        estimatedFatalities = Math.round(totalPop * 0.45);
+        estimatedInjuries = Math.round(totalPop * 0.40);
       } else if (tsunamiWaveHeightAt100kmM > 2) {
-        estimatedFatalities = Math.round(totalPop * 0.2);
-        estimatedInjuries = Math.round(totalPop * 0.45);
+        estimatedFatalities = Math.round(totalPop * 0.15);
+        estimatedInjuries = Math.round(totalPop * 0.55);
       } else {
         estimatedFatalities = Math.round(totalPop * 0.02);
-        estimatedInjuries = Math.round(totalPop * 0.1);
+        estimatedInjuries = Math.round(totalPop * 0.18);
       }
     } else {
-      const lethalRadius = Math.max(thermalIgnitionRadiusKm * 0.9, r20psiKm);
-      const lethalArea = Math.PI * Math.pow(lethalRadius, 2);
-      const fatalitiesDirect = Math.min(totalPop, Math.round(lethalArea * popDensity));
+      // Multizone Land Impact Casualty Integration (Collins / NASA Ames HAZUS)
+      const cityRadiusKm = (POPULATION_AREAS[config.targetAreaType || 'dense_metro'] || POPULATION_AREAS.dense_metro).radiusKm || 15;
 
-      const r5psiArea = Math.PI * Math.pow(r5psiKm, 2);
-      const ring5psiArea = Math.max(0, r5psiArea - lethalArea);
-      const fatalities5psi = Math.min(totalPop - fatalitiesDirect, Math.round(ring5psiArea * popDensity * 0.6));
+      // Ring 1: Lethal Fireball & 20 psi overpressure zone (Total destruction)
+      const rLethal = Math.max(thermalIgnitionRadiusKm * 0.9, r20psiKm);
+      const popLethal = Math.min(totalPop, Math.round(Math.PI * Math.pow(rLethal, 2) * popDensity));
+      const deathsLethal = Math.round(popLethal * 0.92);
+      const injuriesLethal = Math.round(popLethal * 0.08);
 
-      const r1psiArea = Math.PI * Math.pow(r1psiKm, 2);
-      const ring1psiArea = Math.max(0, r1psiArea - r5psiArea);
-      const fatalities1psi = Math.min(totalPop - fatalitiesDirect - fatalities5psi, Math.round(ring1psiArea * popDensity * 0.12));
+      // Ring 2: Heavy Blast (5 psi to 20 psi) - Multistory building collapse, severe burns
+      const r5psi = Math.max(rLethal, r5psiKm);
+      const area5psiRing = Math.PI * Math.max(0, Math.pow(r5psi, 2) - Math.pow(rLethal, 2));
+      const density5psi = popDensity * Math.exp(-r5psi / (cityRadiusKm * 1.8));
+      const pop5psi = Math.round(area5psiRing * Math.max(15, density5psi));
+      const deaths5psi = Math.round(pop5psi * 0.50);
+      const injuries5psi = Math.round(pop5psi * 0.45);
 
-      estimatedFatalities = Math.min(totalPop, fatalitiesDirect + fatalities5psi + fatalities1psi);
-      const remainingPop = Math.max(0, totalPop - estimatedFatalities);
-      estimatedInjuries = Math.min(remainingPop, Math.round(ring1psiArea * popDensity * 0.65 + fatalitiesDirect * 0.3));
+      // Ring 3: Moderate Blast (1 psi to 5 psi) - Flying glass, structural trauma, 2nd deg burns
+      const r1psi = Math.max(r5psi, r1psiKm);
+      const area1psiRing = Math.PI * Math.max(0, Math.pow(r1psi, 2) - Math.pow(r5psi, 2));
+      const density1psi = popDensity * Math.exp(-r1psi / (cityRadiusKm * 2.2));
+      const pop1psi = Math.round(area1psiRing * Math.max(10, density1psi));
+      const deaths1psi = Math.round(pop1psi * 0.08);
+      const injuries1psi = Math.round(pop1psi * 0.65);
+
+      // Ring 4: Outer Thermal & Seismic Shaking Zone (up to thermalIgnitionRadius or 1.5 * r1psi)
+      const rOuter = Math.max(r1psi, thermalIgnitionRadiusKm * 1.2);
+      const areaOuterRing = Math.PI * Math.max(0, Math.pow(rOuter, 2) - Math.pow(r1psi, 2));
+      const densityOuter = popDensity * Math.exp(-rOuter / (cityRadiusKm * 3.0));
+      const popOuter = Math.round(areaOuterRing * Math.max(5, densityOuter));
+      const deathsOuter = Math.round(popOuter * 0.01);
+      const injuriesOuter = Math.round(popOuter * 0.30);
+
+      // Sum all zones
+      const totalRawDeaths = deathsLethal + deaths5psi + deaths1psi + deathsOuter;
+      const totalRawInjuries = injuriesLethal + injuries5psi + injuries1psi + injuriesOuter;
+
+      estimatedFatalities = Math.min(totalPop, totalRawDeaths);
+      estimatedInjuries = Math.max(
+        Math.round(estimatedFatalities * 0.35),
+        Math.round(totalRawInjuries)
+      );
     }
   }
 
