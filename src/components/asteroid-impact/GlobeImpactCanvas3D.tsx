@@ -37,30 +37,43 @@ export const GlobeImpactCanvas3D: React.FC = () => {
     sunLight.position.set(20, 10, 20);
     scene.add(sunLight);
 
-    // 3D Earth Globe
+    // 3D Earth Globe with NASA Photorealistic Texture Maps
+    const textureLoader = new THREE.TextureLoader();
+    const earthDayMap = textureLoader.load('/textures/earth_day.jpg');
+    const earthNormalMap = textureLoader.load('/textures/earth_normal.jpg');
+    const earthSpecularMap = textureLoader.load('/textures/earth_specular.jpg');
+    const earthCloudsMap = textureLoader.load('/textures/earth_clouds.png');
+
     const globeRadius = 4.5;
     const earthGeo = new THREE.SphereGeometry(globeRadius, 64, 64);
-    const earthMat = new THREE.MeshStandardMaterial({
-      color: '#1E3A8A',
-      roughness: 0.8,
-      metalness: 0.1,
-      wireframe: false
+    const earthMat = new THREE.MeshPhongMaterial({
+      map: earthDayMap,
+      normalMap: earthNormalMap,
+      normalScale: new THREE.Vector2(0.8, 0.8),
+      specularMap: earthSpecularMap,
+      specular: new THREE.Color('#38BDF8'),
+      shininess: 15
     });
     const earthMesh = new THREE.Mesh(earthGeo, earthMat);
     scene.add(earthMesh);
 
-    // Continents & Landmass Wire Overlay
-    const gridGeo = new THREE.WireframeGeometry(new THREE.SphereGeometry(globeRadius * 1.002, 32, 16));
-    const gridMat = new THREE.LineBasicMaterial({ color: '#38BDF8', transparent: true, opacity: 0.25 });
-    const gridLines = new THREE.LineSegments(gridGeo, gridMat);
-    earthMesh.add(gridLines);
+    // Weather Clouds Layer
+    const cloudsGeo = new THREE.SphereGeometry(globeRadius * 1.008, 64, 64);
+    const cloudsMat = new THREE.MeshStandardMaterial({
+      map: earthCloudsMap,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.NormalBlending
+    });
+    const cloudsMesh = new THREE.Mesh(cloudsGeo, cloudsMat);
+    scene.add(cloudsMesh);
 
     // Atmospheric Glow Halo
-    const atmoGeo = new THREE.SphereGeometry(globeRadius * 1.08, 32, 32);
+    const atmoGeo = new THREE.SphereGeometry(globeRadius * 1.06, 32, 32);
     const atmoMat = new THREE.MeshBasicMaterial({
-      color: '#60A5FA',
+      color: '#38BDF8',
       transparent: true,
-      opacity: 0.15,
+      opacity: 0.2,
       side: THREE.BackSide
     });
     const atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
@@ -144,6 +157,7 @@ export const GlobeImpactCanvas3D: React.FC = () => {
 
       // Auto slow rotation
       earthMesh.rotation.y += 0.001;
+      cloudsMesh.rotation.y += 0.0013;
 
       // Animate Tsunami Ripple
       if (impactTelemetry.isOceanImpact && rippleMesh) {

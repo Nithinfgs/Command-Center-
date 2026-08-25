@@ -11,9 +11,6 @@ import {
   type SatelliteCategory
 } from '../../physics/constellations';
 import { 
-  createEarthTexture, 
-  createMoonTexture, 
-  createMarsTexture, 
   createJupiterTexture 
 } from '../../utils/planet-textures';
 import { 
@@ -199,34 +196,52 @@ export const ConstellationView: React.FC = () => {
     scene.add(sunLight);
 
     // ==========================================
-    // 3D REALISTIC TEXTURED EARTH GLOBE
+    // 3D PHOTOREALISTIC NASA SATELLITE EARTH GLOBE
     // ==========================================
+    const textureLoader = new THREE.TextureLoader();
+    const earthDayMap = textureLoader.load('/textures/earth_day.jpg');
+    const earthNormalMap = textureLoader.load('/textures/earth_normal.jpg');
+    const earthSpecularMap = textureLoader.load('/textures/earth_specular.jpg');
+    const earthCloudsMap = textureLoader.load('/textures/earth_clouds.png');
+    const moonMap = textureLoader.load('/textures/moon.jpg');
+    const marsMap = textureLoader.load('/textures/mars.jpg');
+
     const earthRadiusKm = 6371;
     const earthGeo = new THREE.SphereGeometry(earthRadiusKm, 64, 64);
-    const earthTex = createEarthTexture();
-    const earthMat = new THREE.MeshStandardMaterial({
-      map: earthTex,
-      roughness: 0.65,
-      metalness: 0.1
+    
+    // Photorealistic Earth Surface Material
+    const earthMat = new THREE.MeshPhongMaterial({
+      map: earthDayMap,
+      normalMap: earthNormalMap,
+      normalScale: new THREE.Vector2(0.8, 0.8),
+      specularMap: earthSpecularMap,
+      specular: new THREE.Color('#38BDF8'),
+      shininess: 12
     });
     const earthMesh = new THREE.Mesh(earthGeo, earthMat);
     scene.add(earthMesh);
 
-    // Atmosphere Glow Halo
-    const atmoGeo = new THREE.SphereGeometry(earthRadiusKm * 1.018, 48, 48);
+    // Dynamic Weather Cloud Atmosphere Layer
+    const cloudsGeo = new THREE.SphereGeometry(earthRadiusKm * 1.008, 64, 64);
+    const cloudsMat = new THREE.MeshStandardMaterial({
+      map: earthCloudsMap,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.NormalBlending
+    });
+    const cloudsMesh = new THREE.Mesh(cloudsGeo, cloudsMat);
+    scene.add(cloudsMesh);
+
+    // Rayleigh Scattering Atmosphere Rim Glow Halo
+    const atmoGeo = new THREE.SphereGeometry(earthRadiusKm * 1.025, 48, 48);
     const atmoMat = new THREE.MeshBasicMaterial({
       color: '#38BDF8',
       transparent: true,
-      opacity: 0.18,
+      opacity: 0.22,
       side: THREE.BackSide
     });
     const atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
     scene.add(atmoMesh);
-
-    // Earth Grid Wire Overlay
-    const wireGeo = new THREE.WireframeGeometry(new THREE.SphereGeometry(earthRadiusKm * 1.002, 36, 18));
-    const wireMat = new THREE.LineBasicMaterial({ color: '#38BDF8', transparent: true, opacity: 0.12 });
-    earthMesh.add(new THREE.LineSegments(wireGeo, wireMat));
 
     // ==========================================
     // CELESTIAL BODIES (MOON, MARS, VENUS, JUPITER, SATURN, SUN)
@@ -238,8 +253,7 @@ export const ConstellationView: React.FC = () => {
     const moonRadius = 1737;
     const moonDist = 28000; // Scaled visual distance relative to Earth
     const moonGeo = new THREE.SphereGeometry(moonRadius, 32, 32);
-    const moonTex = createMoonTexture();
-    const moonMat = new THREE.MeshStandardMaterial({ map: moonTex, roughness: 0.9 });
+    const moonMat = new THREE.MeshStandardMaterial({ map: moonMap, roughness: 0.9 });
     const moonMesh = new THREE.Mesh(moonGeo, moonMat);
     planetsGroup.add(moonMesh);
 
@@ -259,8 +273,7 @@ export const ConstellationView: React.FC = () => {
     const marsRadius = 3389 * 0.75;
     const marsDist = 48000;
     const marsGeo = new THREE.SphereGeometry(marsRadius, 32, 32);
-    const marsTex = createMarsTexture();
-    const marsMat = new THREE.MeshStandardMaterial({ map: marsTex, roughness: 0.8 });
+    const marsMat = new THREE.MeshStandardMaterial({ map: marsMap, roughness: 0.8 });
     const marsMesh = new THREE.Mesh(marsGeo, marsMat);
     planetsGroup.add(marsMesh);
 
@@ -570,6 +583,7 @@ export const ConstellationView: React.FC = () => {
       }
 
       earthMesh.rotation.y += 0.0004;
+      cloudsMesh.rotation.y += 0.00055;
       renderer.render(scene, camera);
     };
 
