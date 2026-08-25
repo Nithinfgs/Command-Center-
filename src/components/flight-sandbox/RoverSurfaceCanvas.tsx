@@ -5,19 +5,21 @@ import {
   type PlanetaryRoverState 
 } from '../../physics/rover-physics';
 import { soundEngine } from '../../audio/soundEngine';
-import { Battery, Sun, Flag, Disc, ArrowLeft, ArrowRight, Hand } from 'lucide-react';
+import { Battery, Sun, Flag, Disc, ArrowLeft, ArrowRight, Hand, RotateCcw } from 'lucide-react';
 
 export const RoverSurfaceCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [rover, setRover] = useState<PlanetaryRoverState>({
+  const initialElevation = getTerrainElevation(0, 'mars').elevation;
+
+  const roverRef = useRef<PlanetaryRoverState>({
     posX: 0,
-    altitude: 0,
+    altitude: initialElevation,
     vx: 0,
     vy: 0,
     pitchDeg: 0,
-    batteryPercent: 95,
+    batteryPercent: 100,
     solarPowerWatts: 140,
     sampleCount: 0,
     maxSamples: 5,
@@ -27,23 +29,28 @@ export const RoverSurfaceCanvas: React.FC = () => {
     surfacePlanetId: 'mars'
   });
 
-  const [inputThrottle, setInputThrottle] = useState<number>(0);
-  const [isBraking, setIsBraking] = useState<boolean>(false);
+  const [uiRover, setUiRover] = useState<PlanetaryRoverState>(roverRef.current);
+  const throttleInputRef = useRef<number>(0);
+  const isBrakingRef = useRef<boolean>(false);
 
-  // Keyboard controls for Rover (A/D or Arrows to drive, Space to brake)
+  // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
-      if (e.code === 'KeyD' || e.code === 'ArrowRight') setInputThrottle(1.0);
-      else if (e.code === 'KeyA' || e.code === 'ArrowLeft') setInputThrottle(-1.0);
-      else if (e.code === 'Space') setIsBraking(true);
+      if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+        throttleInputRef.current = 1.0;
+      } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+        throttleInputRef.current = -1.0;
+      } else if (e.code === 'Space') {
+        isBrakingRef.current = true;
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'KeyD' || e.code === 'ArrowRight' || e.code === 'KeyA' || e.code === 'ArrowLeft') {
-        setInputThrottle(0);
+        throttleInputRef.current = 0;
       } else if (e.code === 'Space') {
-        setIsBraking(false);
+        isBrakingRef.current = false;
       }
     };
 
@@ -55,167 +62,202 @@ export const RoverSurfaceCanvas: React.FC = () => {
     };
   }, []);
 
-  // Rover Physics Stepper Loop
+  // Unified Physics + 60 FPS Canvas Render Loop
   useEffect(() => {
     let animId: number;
     let lastTime = performance.now();
+    let uiUpdateCounter = 0;
 
-    const loop = (time: number) => {
-      const dt = Math.min(0.04, (time - lastTime) / 1000);
-      lastTime = time;
-
-      setRover(prev => stepRoverPhysics(prev, inputThrottle, isBraking, dt));
-      animId = requestAnimationFrame(loop);
-    };
-
-    animId = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animId);
-  }, [inputThrottle, isBraking]);
-
-  // Canvas 2D Terrain & Rover Visualizer
-  useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    canvas.width = width * window.devicePixelRatio;
-    canvas.height = height * window.devicePixelRatio;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    ctx.clearRect(0, 0, width, height);
+    const render = (time: number) => {
+      animId = requestAnimationFrame(render);
 
-    // Sky gradient based on planet
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
-    if (rover.surfacePlanetId === 'mars') {
-      skyGrad.addColorStop(0, '#1E120B');
-      skyGrad.addColorStop(0.7, '#451A03');
-      skyGrad.addColorStop(1, '#7C2D12');
-    } else {
-      skyGrad.addColorStop(0, '#030712');
-      skyGrad.addColorStop(1, '#0F172A');
-    }
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, width, height);
+      const dt = Math.min(0.05, (time - lastTime) / 1000);
+      lastTime = time;
 
-    const groundBaseY = height * 0.7;
-    const viewCenterX = width / 2;
+      // 1. Step Physics
+      roverRef.current = stepRoverPhysics(
+        roverRef.current,
+        throttleInputRef.current,
+        isBrakingRef.current,
+        dt
+      );
 
-    // Draw Terrain Surface Profile
-    ctx.fillStyle = rover.surfacePlanetId === 'mars' ? '#991B1B' : '#64748B';
-    ctx.beginPath();
-    ctx.moveTo(0, height);
+      // Update UI state periodically (every ~6 frames for optimal React performance)
+      uiUpdateCounter++;
+      if (uiUpdateCounter % 6 === 0) {
+        setUiRover({ ...roverRef.current });
+      }
 
-    for (let screenX = 0; screenX <= width; screenX += 5) {
-      const worldX = rover.posX + (screenX - viewCenterX);
-      const { elevation } = getTerrainElevation(worldX, rover.surfacePlanetId);
-      const screenY = groundBaseY - elevation;
-      if (screenX === 0) ctx.lineTo(screenX, screenY);
-      else ctx.lineTo(screenX, screenY);
-    }
-    ctx.lineTo(width, height);
-    ctx.closePath();
-    ctx.fill();
+      // 2. Render Canvas
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      if (canvas.width !== width * window.devicePixelRatio || canvas.height !== height * window.devicePixelRatio) {
+        canvas.width = width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+      }
 
-    // Terrain Surface Rock Line
-    ctx.strokeStyle = rover.surfacePlanetId === 'mars' ? '#DC2626' : '#94A3B8';
-    ctx.lineWidth = 3;
-    ctx.stroke();
+      ctx.save();
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.clearRect(0, 0, width, height);
 
-    // Planted Surface Flags
-    rover.flagsPlanted.forEach(flag => {
-      const flagScreenX = viewCenterX + (flag.x - rover.posX);
-      if (flagScreenX > -50 && flagScreenX < width + 50) {
-        const { elevation } = getTerrainElevation(flag.x, flag.planetId);
-        const flagScreenY = groundBaseY - elevation;
+      const currentRover = roverRef.current;
 
-        // Flagpole
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 2;
+      // Sky Background
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      if (currentRover.surfacePlanetId === 'mars') {
+        skyGrad.addColorStop(0, '#1E120B');
+        skyGrad.addColorStop(0.65, '#451A03');
+        skyGrad.addColorStop(1, '#7C2D12');
+      } else if (currentRover.surfacePlanetId === 'moon') {
+        skyGrad.addColorStop(0, '#030712');
+        skyGrad.addColorStop(1, '#0F172A');
+      } else {
+        skyGrad.addColorStop(0, '#064E3B');
+        skyGrad.addColorStop(1, '#065F46');
+      }
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      const groundBaseY = height * 0.68;
+      const viewCenterX = width / 2;
+
+      // Draw Terrain Profile
+      ctx.fillStyle = currentRover.surfacePlanetId === 'mars' ? '#991B1B' : currentRover.surfacePlanetId === 'moon' ? '#475569' : '#047857';
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+
+      for (let screenX = 0; screenX <= width; screenX += 4) {
+        const worldX = currentRover.posX + (screenX - viewCenterX);
+        const { elevation } = getTerrainElevation(worldX, currentRover.surfacePlanetId);
+        const screenY = groundBaseY - elevation;
+        if (screenX === 0) ctx.lineTo(screenX, screenY);
+        else ctx.lineTo(screenX, screenY);
+      }
+      ctx.lineTo(width, height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Terrain Ridge Highlight Line
+      ctx.strokeStyle = currentRover.surfacePlanetId === 'mars' ? '#EF4444' : currentRover.surfacePlanetId === 'moon' ? '#94A3B8' : '#10B981';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Draw Surface Flags
+      currentRover.flagsPlanted.forEach(flag => {
+        const flagScreenX = viewCenterX + (flag.x - currentRover.posX);
+        if (flagScreenX > -50 && flagScreenX < width + 50) {
+          const { elevation } = getTerrainElevation(flag.x, flag.planetId);
+          const flagScreenY = groundBaseY - elevation;
+
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(flagScreenX, flagScreenY);
+          ctx.lineTo(flagScreenX, flagScreenY - 32);
+          ctx.stroke();
+
+          ctx.fillStyle = '#FF8A1F';
+          ctx.fillRect(flagScreenX, flagScreenY - 32, 22, 14);
+          ctx.fillStyle = '#090A0D';
+          ctx.font = 'bold 8px sans-serif';
+          ctx.fillText('BASE', flagScreenX + 2, flagScreenY - 22);
+        }
+      });
+
+      // Draw Rover Vehicle
+      ctx.save();
+      ctx.translate(viewCenterX, groundBaseY - currentRover.altitude);
+      ctx.rotate((currentRover.pitchDeg * Math.PI) / 180);
+
+      // Chassis Body
+      ctx.fillStyle = '#E2E8F0';
+      ctx.fillRect(-24, -18, 48, 14);
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-24, -18, 48, 14);
+
+      // Mastcam Sensor Head
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(10, -32, 4, 14);
+      ctx.fillStyle = '#38BDF8';
+      ctx.beginPath();
+      ctx.arc(12, -34, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Solar Panel Deck
+      ctx.fillStyle = '#1E3A8A';
+      ctx.fillRect(-22, -21, 42, 3);
+
+      // Drill Arm animation
+      if (currentRover.isDrilling) {
+        ctx.strokeStyle = '#FBBF24';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(flagScreenX, flagScreenY);
-        ctx.lineTo(flagScreenX, flagScreenY - 35);
+        ctx.moveTo(20, -10);
+        ctx.lineTo(26, 6);
         ctx.stroke();
 
-        // Flag cloth
-        ctx.fillStyle = '#FF8A1F';
-        ctx.fillRect(flagScreenX, flagScreenY - 35, 20, 12);
-        ctx.fillStyle = '#090A0D';
-        ctx.font = 'bold 8px sans-serif';
-        ctx.fillText('BASE', flagScreenX + 2, flagScreenY - 26);
+        ctx.fillStyle = '#F59E0B';
+        for (let s = 0; s < 5; s++) {
+          ctx.fillRect(26 + (Math.random() - 0.5) * 10, 6 + (Math.random() - 0.5) * 6, 2, 2);
+        }
       }
-    });
 
-    // Draw Planetary Rover Chassis
-    ctx.save();
-    ctx.translate(viewCenterX, groundBaseY - rover.altitude);
-    ctx.rotate((rover.pitchDeg * Math.PI) / 180);
+      // 4 Wheels
+      [-18, -6, 6, 18].forEach(wx => {
+        ctx.fillStyle = '#1E293B';
+        ctx.beginPath();
+        ctx.arc(wx, 2, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#94A3B8';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      });
 
-    // Rover Main Body Box
-    ctx.fillStyle = '#E2E8F0';
-    ctx.fillRect(-22, -18, 44, 14);
-    ctx.strokeStyle = '#0F172A';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-22, -18, 44, 14);
+      ctx.restore();
+      ctx.restore();
+    };
 
-    // Mastcam & Science Sensor Head
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(10, -32, 4, 14);
-    ctx.fillStyle = '#38BDF8';
-    ctx.beginPath();
-    ctx.arc(12, -34, 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Solar Panel Array Deck
-    ctx.fillStyle = '#1E3A8A';
-    ctx.fillRect(-20, -21, 38, 3);
-
-    // Robotic Drill Arm
-    if (rover.isDrilling) {
-      ctx.strokeStyle = '#FBBF24';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(18, -10);
-      ctx.lineTo(24, 6);
-      ctx.stroke();
-
-      // Drilling Dust Sparks
-      ctx.fillStyle = '#F59E0B';
-      for (let s = 0; s < 5; s++) {
-        ctx.fillRect(24 + (Math.random() - 0.5) * 8, 6 + (Math.random() - 0.5) * 4, 2, 2);
-      }
-    }
-
-    // Rocker-Bogie Suspension & 4 Wheels
-    [-18, -6, 6, 18].forEach(wx => {
-      ctx.fillStyle = '#1E293B';
-      ctx.beginPath();
-      ctx.arc(wx, 2, 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#94A3B8';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    });
-
-    ctx.restore();
-  }, [rover]);
+    animId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animId);
+  }, []);
 
   const handlePlantFlag = () => {
-    soundEngine.speak('Surface flag planted. Outpost established.');
-    setRover(prev => ({
-      ...prev,
-      flagsPlanted: [...prev.flagsPlanted, { x: prev.posX, label: 'Outpost Alpha', planetId: prev.surfacePlanetId }]
-    }));
+    soundEngine.speak('Surface flag planted. Planetary outpost established.');
+    roverRef.current.flagsPlanted = [
+      ...roverRef.current.flagsPlanted,
+      { x: roverRef.current.posX, label: 'Outpost Alpha', planetId: roverRef.current.surfacePlanetId }
+    ];
+    setUiRover({ ...roverRef.current });
   };
 
   const handleStartDrill = () => {
-    if (rover.sampleCount >= rover.maxSamples || rover.batteryPercent < 10) return;
+    if (roverRef.current.sampleCount >= roverRef.current.maxSamples || roverRef.current.batteryPercent < 10) return;
     soundEngine.speak('Science drill active. Extracting core regolith sample.');
-    setRover(prev => ({ ...prev, isDrilling: true, drillProgress: 0 }));
+    roverRef.current.isDrilling = true;
+    roverRef.current.drillProgress = 0;
+    setUiRover({ ...roverRef.current });
+  };
+
+  const handleResetRover = () => {
+    const el = getTerrainElevation(0, roverRef.current.surfacePlanetId).elevation;
+    roverRef.current = {
+      ...roverRef.current,
+      posX: 0,
+      altitude: el,
+      vx: 0,
+      pitchDeg: 0,
+      batteryPercent: 100,
+      flagsPlanted: []
+    };
+    setUiRover({ ...roverRef.current });
   };
 
   return (
@@ -223,86 +265,112 @@ export const RoverSurfaceCanvas: React.FC = () => {
       <canvas ref={canvasRef} className="w-full h-full block" />
 
       {/* Top Rover Status Dashboard */}
-      <div className="absolute top-3 left-3 flex items-center gap-4 bg-[#151820]/85 border border-[#252B36] p-2.5 rounded-xl text-xs shadow-lg backdrop-blur-sm">
+      <div className="absolute top-3 left-3 flex items-center gap-4 bg-[#151820]/90 border border-[#252B36] p-3 rounded-xl text-xs shadow-xl backdrop-blur-sm">
         <div className="flex items-center gap-1.5 text-[#55B982]">
           <Battery className="w-4 h-4" />
-          <span>{rover.batteryPercent}%</span>
+          <span>{uiRover.batteryPercent.toFixed(0)}%</span>
         </div>
         <div className="flex items-center gap-1.5 text-[#FBBF24]">
           <Sun className="w-4 h-4" />
-          <span>{rover.solarPowerWatts} W</span>
+          <span>{uiRover.solarPowerWatts} W</span>
         </div>
         <div className="flex items-center gap-1.5 text-[#38BDF8]">
           <Disc className="w-4 h-4" />
-          <span>Samples: <strong>{rover.sampleCount}/{rover.maxSamples}</strong></span>
+          <span>Samples: <strong>{uiRover.sampleCount}/{uiRover.maxSamples}</strong></span>
         </div>
         <div className="text-[#E6E8EB]">
-          Speed: <strong>{rover.vx.toFixed(1)} m/s</strong>
+          Speed: <strong className="text-[#FF8A1F]">{uiRover.vx.toFixed(1)} m/s</strong>
+        </div>
+        <div className="text-[#A4ABB6]">
+          Distance: <strong>{Math.round(uiRover.posX)} m</strong>
         </div>
       </div>
 
       {/* Planet Surface Selector */}
-      <div className="absolute top-3 right-3 flex items-center gap-1 bg-[#151820]/85 border border-[#252B36] p-1 rounded-lg text-xs shadow-lg">
+      <div className="absolute top-3 right-3 flex items-center gap-1 bg-[#151820]/90 border border-[#252B36] p-1.5 rounded-xl text-xs shadow-xl">
         {(['moon', 'mars', 'titan'] as const).map(p => (
           <button
             key={p}
-            onClick={() => setRover(prev => ({ ...prev, surfacePlanetId: p, posX: 0, flagsPlanted: [] }))}
-            className={`px-2.5 py-1 rounded text-[11px] uppercase transition-all ${
-              rover.surfacePlanetId === p
-                ? 'bg-[#FF8A1F] text-[#090A0D] font-bold'
-                : 'text-[#A4ABB6] hover:text-[#E6E8EB]'
+            onClick={() => {
+              roverRef.current.surfacePlanetId = p;
+              roverRef.current.posX = 0;
+              roverRef.current.altitude = getTerrainElevation(0, p).elevation;
+              roverRef.current.vx = 0;
+              roverRef.current.flagsPlanted = [];
+              setUiRover({ ...roverRef.current });
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs uppercase font-semibold transition-all ${
+              uiRover.surfacePlanetId === p
+                ? 'bg-[#FF8A1F] text-[#090A0D] shadow-sm'
+                : 'text-[#A4ABB6] hover:text-[#E6E8EB] hover:bg-[#1B1F28]'
             }`}
           >
             {p}
           </button>
         ))}
+        <button
+          onClick={handleResetRover}
+          className="p-1.5 rounded-lg text-[#A4ABB6] hover:text-[#E6E8EB] hover:bg-[#1B1F28] ml-1"
+          title="Reset Rover to Origin"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      {/* Bottom Rover Action Controls */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#151820]/90 border border-[#252B36] p-2 rounded-xl shadow-2xl">
+      {/* Bottom Rover Action & Drive Controls */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#151820]/95 border border-[#252B36] p-2.5 rounded-2xl shadow-2xl backdrop-blur-md">
         <button
-          onMouseDown={() => setInputThrottle(-1.0)}
-          onMouseUp={() => setInputThrottle(0)}
-          className="p-2 rounded bg-[#1B1F28] hover:bg-[#222733] text-[#E6E8EB] active:scale-95"
-          title="Drive Reverse (A)"
+          onMouseDown={() => { throttleInputRef.current = -1.0; }}
+          onMouseUp={() => { throttleInputRef.current = 0; }}
+          onTouchStart={() => { throttleInputRef.current = -1.0; }}
+          onTouchEnd={() => { throttleInputRef.current = 0; }}
+          className="px-4 py-2.5 rounded-xl bg-[#1B1F28] hover:bg-[#252B36] text-[#E6E8EB] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+          title="Drive Reverse (A / Left Arrow)"
         >
           <ArrowLeft className="w-4 h-4" />
+          <span>Reverse</span>
         </button>
 
         <button
-          onMouseDown={() => setIsBraking(true)}
-          onMouseUp={() => setIsBraking(false)}
-          className="px-3 py-1.5 rounded bg-[#D95757]/20 border border-[#D95757]/40 text-[#D95757] font-semibold text-xs active:scale-95"
-          title="Handbrake (Space)"
+          onMouseDown={() => { isBrakingRef.current = true; }}
+          onMouseUp={() => { isBrakingRef.current = false; }}
+          onTouchStart={() => { isBrakingRef.current = true; }}
+          onTouchEnd={() => { isBrakingRef.current = false; }}
+          className="px-4 py-2.5 rounded-xl bg-[#D95757]/20 hover:bg-[#D95757]/30 border border-[#D95757]/50 text-[#D95757] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+          title="Handbrake (Spacebar)"
         >
-          <Hand className="w-3.5 h-3.5" />
+          <Hand className="w-4 h-4" />
+          <span>Brake</span>
         </button>
 
         <button
-          onMouseDown={() => setInputThrottle(1.0)}
-          onMouseUp={() => setInputThrottle(0)}
-          className="p-2 rounded bg-[#1B1F28] hover:bg-[#222733] text-[#E6E8EB] active:scale-95"
-          title="Drive Forward (D)"
+          onMouseDown={() => { throttleInputRef.current = 1.0; }}
+          onMouseUp={() => { throttleInputRef.current = 0; }}
+          onTouchStart={() => { throttleInputRef.current = 1.0; }}
+          onTouchEnd={() => { throttleInputRef.current = 0; }}
+          className="px-5 py-2.5 rounded-xl bg-[#FF8A1F] hover:bg-[#FFA24A] text-[#090A0D] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-md"
+          title="Drive Forward (D / Right Arrow)"
         >
+          <span>Drive Forward</span>
           <ArrowRight className="w-4 h-4" />
         </button>
 
-        <div className="w-[1px] h-5 bg-[#252B36] mx-1" />
+        <div className="w-[1px] h-6 bg-[#252B36] mx-1" />
 
         <button
           onClick={handleStartDrill}
-          disabled={rover.isDrilling || rover.sampleCount >= rover.maxSamples}
-          className="px-3 py-1.5 rounded bg-[#38BDF8]/20 border border-[#38BDF8]/40 text-[#38BDF8] font-semibold text-xs flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+          disabled={uiRover.isDrilling || uiRover.sampleCount >= uiRover.maxSamples}
+          className="px-3.5 py-2.5 rounded-xl bg-[#38BDF8]/20 hover:bg-[#38BDF8]/30 border border-[#38BDF8]/50 text-[#38BDF8] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40"
         >
-          <Disc className="w-3.5 h-3.5" />
-          <span>{rover.isDrilling ? `Drilling ${rover.drillProgress.toFixed(0)}%` : 'Drill Sample'}</span>
+          <Disc className="w-4 h-4" />
+          <span>{uiRover.isDrilling ? `Drilling ${uiRover.drillProgress.toFixed(0)}%` : 'Drill Sample'}</span>
         </button>
 
         <button
           onClick={handlePlantFlag}
-          className="px-3 py-1.5 rounded bg-[#FF8A1F] text-[#090A0D] font-bold text-xs flex items-center gap-1.5 active:scale-95"
+          className="px-3.5 py-2.5 rounded-xl bg-[#55B982]/20 hover:bg-[#55B982]/30 border border-[#55B982]/50 text-[#55B982] font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all"
         >
-          <Flag className="w-3.5 h-3.5" />
+          <Flag className="w-4 h-4" />
           <span>Plant Flag</span>
         </button>
       </div>

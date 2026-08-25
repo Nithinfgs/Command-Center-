@@ -21,16 +21,14 @@ export interface PlanetaryRoverState {
 }
 
 export function getTerrainElevation(x: number, planetId: string): { elevation: number; slopeRad: number } {
-  // Procedural multi-frequency sine terrain
   const scale = planetId === 'moon' ? 0.008 : 0.012;
-  const h1 = Math.sin(x * scale) * 18;
-  const h2 = Math.sin(x * scale * 2.8 + 1.2) * 6;
-  const h3 = Math.cos(x * scale * 0.4) * 35;
+  const h1 = Math.sin(x * scale) * 16;
+  const h2 = Math.sin(x * scale * 2.5 + 1.2) * 5;
+  const h3 = Math.cos(x * scale * 0.35) * 25;
   const elevation = h1 + h2 + h3;
 
-  // Numerical slope derivative dh/dx
   const dx = 0.5;
-  const eNext = Math.sin((x + dx) * scale) * 18 + Math.sin((x + dx) * scale * 2.8 + 1.2) * 6 + Math.cos((x + dx) * scale * 0.4) * 35;
+  const eNext = Math.sin((x + dx) * scale) * 16 + Math.sin((x + dx) * scale * 2.5 + 1.2) * 5 + Math.cos((x + dx) * scale * 0.35) * 25;
   const slopeRad = Math.atan2(eNext - elevation, dx);
 
   return { elevation, slopeRad };
@@ -53,8 +51,8 @@ export function stepRoverPhysics(
 
   // Drilling operation
   if (isDrilling) {
-    drillProg += dt * 30;
-    battery = Math.max(0, battery - dt * 2.5);
+    drillProg += dt * 35;
+    battery = Math.max(0, battery - dt * 2.0);
     if (drillProg >= 100) {
       isDrilling = false;
       drillProg = 0;
@@ -72,29 +70,31 @@ export function stepRoverPhysics(
   }
 
   // Solar generation
-  const solarGen = rover.surfacePlanetId === 'moon' ? 240 : rover.surfacePlanetId === 'mars' ? 140 : 40;
-  battery = Math.min(100, battery + (solarGen / 1000) * dt * 4);
+  const solarGen = rover.surfacePlanetId === 'moon' ? 240 : rover.surfacePlanetId === 'mars' ? 140 : 50;
+  battery = Math.min(100, battery + (solarGen / 1000) * dt * 3.5);
 
-  // Wheel Motor Traction
-  if (battery > 1 && !isBraking && throttleInput !== 0) {
-    const motorAcc = throttleInput * 2.5;
+  // High-Torque Wheel Motor Traction
+  if (battery > 0.5 && !isBraking && throttleInput !== 0) {
+    const motorAcc = throttleInput * 8.5; // High responsiveness
     vx += motorAcc * dt;
-    battery = Math.max(0, battery - Math.abs(throttleInput) * dt * 1.2);
-  } else if (isBraking || throttleInput === 0) {
-    // Rolling resistance & braking
-    vx *= Math.pow(0.85, dt * 60);
+    battery = Math.max(0, battery - Math.abs(throttleInput) * dt * 0.8);
+  } else if (isBraking) {
+    vx *= Math.pow(0.5, dt * 60); // Strong braking
+  } else {
+    // Natural friction rolling resistance
+    vx *= Math.pow(0.92, dt * 60);
   }
 
-  // Gravity slope component (accelerates downhill)
-  const slopeGravityAcc = -gSurface * Math.sin(slopeRad) * 0.8;
+  // Gravity slope component (natural downhill acceleration)
+  const slopeGravityAcc = -gSurface * Math.sin(slopeRad) * 0.6;
   vx += slopeGravityAcc * dt;
 
-  // Max rover speed limit
-  vx = Math.max(-8, Math.min(12, vx));
+  // Clamped speed limit
+  vx = Math.max(-12, Math.min(18, vx));
 
   const newPosX = rover.posX + vx * dt;
   const targetSlopeDeg = (slopeRad * 180) / Math.PI;
-  const newPitch = rover.pitchDeg + (targetSlopeDeg - rover.pitchDeg) * Math.min(1, dt * 8);
+  const newPitch = rover.pitchDeg + (targetSlopeDeg - rover.pitchDeg) * Math.min(1, dt * 10);
 
   return {
     ...rover,
