@@ -15,7 +15,8 @@ import {
   VolumeX,
   Radio,
   Compass,
-  Trophy
+  Trophy,
+  Info
 } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { ROCKET_PRESETS } from '../../physics/rocket-math';
@@ -34,6 +35,7 @@ export const Header: React.FC = () => {
 
   const [showPresetModal, setShowPresetModal] = useState(false);
   const [showCampaignModal, setShowCampaignModal] = useState(false);
+  const [showDisclosureModal, setShowDisclosureModal] = useState(false);
   const [savedNotification, setSavedNotification] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
 
@@ -166,6 +168,15 @@ export const Header: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setShowDisclosureModal(true)}
+          className="flex items-center gap-1 px-2 py-1.5 rounded bg-[#151820] hover:bg-[#1B1F28] border border-[#38BDF8]/30 text-[#38BDF8] hover:text-[#7DD3FC] transition-colors font-medium text-[11px]"
+          title="Technical Notes & Judging Disclosures"
+        >
+          <Info className="w-3.5 h-3.5" />
+          <span>Judging Info</span>
+        </button>
+
+        <button
           onClick={() => {
             navigator.clipboard.writeText(window.location.href);
             alert('Mission Control configuration URL copied to clipboard.');
@@ -256,6 +267,74 @@ export const Header: React.FC = () => {
         isOpen={showCampaignModal}
         onClose={() => setShowCampaignModal(false)}
       />
+
+      {/* Judging & Technical Simulator Disclosures Modal */}
+      {showDisclosureModal && (
+        <div 
+          onClick={() => setShowDisclosureModal(false)}
+          className="fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div 
+            onClick={e => e.stopPropagation()}
+            className="bg-[#151820] border border-[#353D4A] rounded-xl max-w-xl w-full p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#252B36]">
+              <div className="flex items-center gap-2 text-[#38BDF8]">
+                <Info className="w-5 h-5" />
+                <h3 className="font-bold text-xs text-[#E6E8EB] uppercase tracking-wider">
+                  Technical Architecture & Judging Disclosures
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowDisclosureModal(false)}
+                className="text-[#69717E] hover:text-[#E6E8EB] p-1 rounded hover:bg-[#1B1F28]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-[#A4ABB6] leading-relaxed">
+              <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
+                <span className="font-bold text-[#FF8A1F] block text-[11px] uppercase tracking-wide">
+                  1. Educational Mathematical Simulation Disclaimer
+                </span>
+                <p>
+                  This platform is an <strong>educational mathematical simulator</strong>, not a flight-certified, safety-certified, or peer-reviewed aerospace analysis package. Numerical solvers (Runge-Kutta 4th Order spherical flight dynamics, compressible shockwave relations, Collins & Ames impact cratering scaling, and Clohessy-Wiltshire relative motion) represent educational numerical approximations.
+                </p>
+              </div>
+
+              <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
+                <span className="font-bold text-[#38BDF8] block text-[11px] uppercase tracking-wide">
+                  2. CFD Telemetry & Polar Data Export Notice
+                </span>
+                <p>
+                  Full aerodynamic polar curves, aerodynamic coefficients ($C_d, C_l, L/D$), and shockwave stagnation properties can be exported directly via the <strong>CFD Aero</strong> tab using CSV/JSON download or 1-click clipboard copy. If evaluating in an automated sandbox environment, manual CSV/JSON verification in standard browsers is supported.
+                </p>
+              </div>
+
+              <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
+                <span className="font-bold text-[#55B982] block text-[11px] uppercase tracking-wide">
+                  3. Desktop-First Aerospace Workstation
+                </span>
+                <p>
+                  The interface is engineered <strong>desktop-first</strong>. It is usable at 1024 px and optimal at 1280 px or wider for dual-viewport telemetry, 3D orbits, and live CAD staging hierarchies.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#252B36] flex justify-end">
+              <button
+                onClick={() => setShowDisclosureModal(false)}
+                className="px-4 py-2 rounded-lg bg-[#38BDF8] text-[#090A0D] font-bold text-xs hover:bg-[#38BDF8]/90 transition-all"
+              >
+                Acknowledge & Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
