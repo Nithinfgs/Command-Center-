@@ -1,4 +1,4 @@
-export type AppTab = 'rocket-builder' | 'wind-tunnel' | 'celestial-sim' | 'asteroid-impact' | 'flight-sandbox';
+export type AppTab = 'rocket-builder' | 'wind-tunnel' | 'flight-sandbox' | 'celestial-sim' | 'asteroid-impact' | 'constellation' | 'rover-surface';
 
 // ==========================================
 // ROCKET BUILDER TYPES (SFS-STYLE GRID ASSEMBLY)

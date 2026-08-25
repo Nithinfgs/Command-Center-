@@ -12,11 +12,15 @@ import {
   ChevronDown,
   X,
   Volume2,
-  VolumeX
+  VolumeX,
+  Radio,
+  Compass,
+  Trophy
 } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { ROCKET_PRESETS } from '../../physics/rocket-math';
 import { soundEngine } from '../../audio/soundEngine';
+import { CampaignMissionModal } from '../campaigns/CampaignMissionModal';
 import type { AppTab } from '../../types';
 
 export const Header: React.FC = () => {
@@ -29,15 +33,18 @@ export const Header: React.FC = () => {
   } = useSimulation();
 
   const [showPresetModal, setShowPresetModal] = useState(false);
+  const [showCampaignModal, setShowCampaignModal] = useState(false);
   const [savedNotification, setSavedNotification] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
 
   const navTabs: { id: AppTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'rocket-builder', label: 'Rocket Builder', icon: Rocket },
-    { id: 'wind-tunnel', label: 'Simulation & CFD', icon: Wind },
+    { id: 'wind-tunnel', label: 'CFD Aero', icon: Wind },
     { id: 'flight-sandbox', label: 'Flight Test', icon: Play },
-    { id: 'celestial-sim', label: 'Orbital Mechanics', icon: Orbit },
+    { id: 'celestial-sim', label: 'Orbital Mech', icon: Orbit },
     { id: 'asteroid-impact', label: 'Impact Physics', icon: Target },
+    { id: 'constellation', label: 'Constellations', icon: Radio },
+    { id: 'rover-surface', label: 'Surface Rover', icon: Compass },
   ];
 
   const handleSave = () => {
@@ -108,6 +115,14 @@ export const Header: React.FC = () => {
 
       {/* Action Suite & Launch Primary Button */}
       <div className="flex items-center gap-2 text-xs">
+        <button
+          onClick={() => setShowCampaignModal(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-[#151820] hover:bg-[#1B1F28] border border-[#FF8A1F]/40 text-[#FF8A1F] hover:text-[#FFA24A] transition-colors font-semibold text-[11px]"
+        >
+          <Trophy className="w-3.5 h-3.5" />
+          <span>Campaigns</span>
+        </button>
+
         <button
           onClick={() => setShowPresetModal(true)}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-[#151820] hover:bg-[#1B1F28] border border-[#252B36] text-[#A4ABB6] hover:text-[#E6E8EB] transition-colors font-medium text-[11px]"
@@ -235,6 +250,12 @@ export const Header: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Historical Campaign Scenarios Modal */}
+      <CampaignMissionModal
+        isOpen={showCampaignModal}
+        onClose={() => setShowCampaignModal(false)}
+      />
     </header>
   );
 };

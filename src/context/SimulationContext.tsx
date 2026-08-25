@@ -26,7 +26,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const getInitialTab = (): AppTab => {
     const hash = window.location.hash.replace('#', '') as AppTab;
-    const validTabs: AppTab[] = ['rocket-builder', 'wind-tunnel', 'flight-sandbox', 'celestial-sim', 'asteroid-impact'];
+    const validTabs: AppTab[] = ['rocket-builder', 'wind-tunnel', 'flight-sandbox', 'celestial-sim', 'asteroid-impact', 'constellation', 'rover-surface'];
     return validTabs.includes(hash) ? hash : 'rocket-builder';
   };
 

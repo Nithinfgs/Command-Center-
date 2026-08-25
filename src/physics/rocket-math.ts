@@ -249,6 +249,50 @@ export const PARTS_CATALOG: Record<string, PartDefinition> = {
       { id: 'top', type: 'top', x: 0, y: -4 }
     ]
   },
+  'engine_ion_xenon': {
+    type: 'engine_ion_xenon',
+    category: 'engine',
+    name: 'NEXT-C Xenon Hall-Effect Ion Engine',
+    description: 'Ultra-high efficiency deep-space continuous electrostatic propulsion with extreme specific impulse (Isp 3,850s).',
+    width: 2,
+    height: 1.5,
+    dryMass: 0.25,
+    fuelMass: 0,
+    thrust: 65,
+    seaLevelThrust: 10,
+    ispVac: 3850,
+    ispAtm: 400,
+    dragCoeff: 0.25,
+    heatTolerance: 2800,
+    gimbalAngle: 3,
+    color: '#38BDF8',
+    texturePattern: 'smooth',
+    connectionPoints: [
+      { id: 'top', type: 'top', x: 0, y: -0.75 }
+    ]
+  },
+  'engine_ntr_nuclear': {
+    type: 'engine_ntr_nuclear',
+    category: 'engine',
+    name: 'NERVA II Bimodal Nuclear Thermal Rocket',
+    description: 'Uranium core solid-core thermal reactor heating liquid hydrogen to extreme exhaust velocities for interplanetary transit (Isp 920s).',
+    width: 2,
+    height: 3,
+    dryMass: 2.1,
+    fuelMass: 0,
+    thrust: 1200,
+    seaLevelThrust: 850,
+    ispVac: 920,
+    ispAtm: 520,
+    dragCoeff: 0.38,
+    heatTolerance: 3600,
+    gimbalAngle: 5,
+    color: '#55B982',
+    texturePattern: 'engine-bell',
+    connectionPoints: [
+      { id: 'top', type: 'top', x: 0, y: -1.5 }
+    ]
+  },
   'decoupler_stack_2m': {
     type: 'decoupler_stack_2m',
     category: 'staging',
