@@ -109,3 +109,85 @@ export function stepRoverPhysics(
     sampleCount
   };
 }
+
+export interface RoverMissionLevel {
+  id: string;
+  title: string;
+  planetId: 'moon' | 'mars' | 'titan';
+  targetDistanceM: number;
+  requiredSamples: number;
+  timeLimitSec: number;
+  description: string;
+  hazard: string;
+  rewardBadge: string;
+  anomalySites: number[];
+  outpostTargetX: number;
+}
+
+export const ROVER_MISSIONS: RoverMissionLevel[] = [
+  {
+    id: 'lvl_1_moon_ice',
+    title: 'Level 1: Shackleton Ice Extraction',
+    planetId: 'moon',
+    targetDistanceM: 160,
+    requiredSamples: 2,
+    timeLimitSec: 90,
+    description: 'Traverse the rugged crater rim, locate volatile water-ice anomalies in the shadowed floor, drill 2 samples, and plant the Artemis Base Flag at 160m.',
+    hazard: 'Low Lunar Gravity (1.62 m/s²) causes long wheel slip upon high speed braking.',
+    rewardBadge: 'Lunar Hydro-Prospector Badge',
+    anomalySites: [50, 110],
+    outpostTargetX: 160
+  },
+  {
+    id: 'lvl_2_mars_jezero',
+    title: 'Level 2: Jezero Delta Microfossil Search',
+    planetId: 'mars',
+    targetDistanceM: 280,
+    requiredSamples: 3,
+    timeLimitSec: 120,
+    description: 'Cross the ancient dried riverbed dunes, collect 3 clay biosignature core samples, and establish Outpost Perseverance at 280m.',
+    hazard: 'Dust storm haze limits solar charging efficiency to 70W.',
+    rewardBadge: 'Astrobiology Pioneer Badge',
+    anomalySites: [65, 140, 220],
+    outpostTargetX: 280
+  },
+  {
+    id: 'lvl_3_mars_olympus',
+    title: 'Level 3: Olympus Mons Ridge Climb',
+    planetId: 'mars',
+    targetDistanceM: 400,
+    requiredSamples: 3,
+    timeLimitSec: 140,
+    description: 'Scale the high-altitude volcanic scarp slopes, drill basaltic mantle samples, and reach the high ridge summit at 400m.',
+    hazard: 'Steep 22° incline slope gravity can roll you backwards down cliffs.',
+    rewardBadge: 'Olympus Summit Shield',
+    anomalySites: [90, 210, 330],
+    outpostTargetX: 400
+  },
+  {
+    id: 'lvl_4_titan_kraken',
+    title: 'Level 4: Kraken Mare Cryo-Survey',
+    planetId: 'titan',
+    targetDistanceM: 500,
+    requiredSamples: 4,
+    timeLimitSec: 160,
+    description: 'Navigate hydrocarbon ice dunes along the liquid methane shoreline, extract 4 cryogenic organic samples, and deploy Dragonfly Outpost at 500m.',
+    hazard: 'Dim sunlight produces low solar generation (50W) — manage power carefully.',
+    rewardBadge: 'Outer Solar Explorer Gold Pin',
+    anomalySites: [80, 190, 320, 440],
+    outpostTargetX: 500
+  },
+  {
+    id: 'lvl_5_moon_speedrun',
+    title: 'Level 5: Artemis Lunar Rally Grand Prix',
+    planetId: 'moon',
+    targetDistanceM: 350,
+    requiredSamples: 1,
+    timeLimitSec: 45,
+    description: 'High-speed time-attack rally across crater ridges! Collect 1 fast sample and reach the finish outpost in under 45 seconds.',
+    hazard: 'Extreme speed risk: crashing or rolling over disables rover.',
+    rewardBadge: 'Lunar Grand Prix Gold Trophy',
+    anomalySites: [150],
+    outpostTargetX: 350
+  }
+];

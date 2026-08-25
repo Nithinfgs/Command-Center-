@@ -2,12 +2,27 @@ import React, { useRef, useState, useEffect } from 'react';
 import { 
   stepRoverPhysics, 
   getTerrainElevation, 
-  type PlanetaryRoverState 
+  ROVER_MISSIONS,
+  type PlanetaryRoverState,
+  type RoverMissionLevel 
 } from '../../physics/rover-physics';
 import { soundEngine } from '../../audio/soundEngine';
-import { Battery, Sun, Flag, Disc, ArrowLeft, ArrowRight, Hand, RotateCcw } from 'lucide-react';
+import { 
+  Battery, 
+  Sun, 
+  Flag, 
+  Disc, 
+  ArrowLeft, 
+  ArrowRight, 
+  Hand, 
+  RotateCcw, 
+  Trophy, 
+  Clock, 
+  XCircle,
+  Play
+} from 'lucide-react';
 
-const PPM = 8.0; // Pixels per meter (crisp visible speed & responsive motion)
+const PPM = 8.0; // Pixels per meter
 
 interface DustParticle {
   x: number;
@@ -22,7 +37,11 @@ export const RoverSurfaceCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const initialElevation = getTerrainElevation(0, 'mars').elevation;
+  const [activeMission, setActiveMission] = useState<RoverMissionLevel | null>(ROVER_MISSIONS[0]);
+  const [missionTimer, setMissionTimer] = useState<number>(ROVER_MISSIONS[0].timeLimitSec);
+  const [missionState, setMissionState] = useState<'playing' | 'victory' | 'failed'>('playing');
+
+  const initialElevation = getTerrainElevation(0, activeMission ? activeMission.planetId : 'mars').elevation;
 
   const roverRef = useRef<PlanetaryRoverState>({
     posX: 0,
@@ -33,17 +52,47 @@ export const RoverSurfaceCanvas: React.FC = () => {
     batteryPercent: 100,
     solarPowerWatts: 140,
     sampleCount: 0,
-    maxSamples: 5,
+    maxSamples: activeMission ? activeMission.requiredSamples : 5,
     flagsPlanted: [],
     isDrilling: false,
     drillProgress: 0,
-    surfacePlanetId: 'mars'
+    surfacePlanetId: activeMission ? activeMission.planetId : 'mars'
   });
 
   const [uiRover, setUiRover] = useState<PlanetaryRoverState>(roverRef.current);
   const throttleInputRef = useRef<number>(0);
   const isBrakingRef = useRef<boolean>(false);
   const dustParticlesRef = useRef<DustParticle[]>([]);
+
+  // Select Level / Free Roam
+  const startLevel = (mission: RoverMissionLevel | null) => {
+    setActiveMission(mission);
+    setMissionState('playing');
+    const planet = mission ? mission.planetId : 'mars';
+    const el = getTerrainElevation(0, planet).elevation;
+
+    roverRef.current = {
+      posX: 0,
+      altitude: el,
+      vx: 0,
+      vy: 0,
+      pitchDeg: 0,
+      batteryPercent: 100,
+      solarPowerWatts: planet === 'moon' ? 240 : planet === 'mars' ? 140 : 50,
+      sampleCount: 0,
+      maxSamples: mission ? mission.requiredSamples : 5,
+      flagsPlanted: [],
+      isDrilling: false,
+      drillProgress: 0,
+      surfacePlanetId: planet
+    };
+
+    setMissionTimer(mission ? mission.timeLimitSec : 999);
+    setUiRover({ ...roverRef.current });
+    if (mission) {
+      soundEngine.speak(`Mission started: ${mission.title}`);
+    }
+  };
 
   // Keyboard controls
   useEffect(() => {
@@ -74,11 +123,43 @@ export const RoverSurfaceCanvas: React.FC = () => {
     };
   }, []);
 
-  // Unified Physics & 60 FPS Canvas Render Loop
+  // Mission Timer countdown loop
+  useEffect(() => {
+    if (!activeMission || missionState !== 'playing') return;
+
+    const timerInterval = setInterval(() => {
+      setMissionTimer(prev => {
+        if (prev <= 1) {
+          setMissionState('failed');
+          soundEngine.speak('Mission failed. Time limit expired.');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerInterval);
+  }, [activeMission, missionState]);
+
+  // Check Victory Condition
+  useEffect(() => {
+    if (!activeMission || missionState !== 'playing') return;
+
+    const hasEnoughSamples = uiRover.sampleCount >= activeMission.requiredSamples;
+    const hasReachedOutpost = uiRover.posX >= activeMission.outpostTargetX - 10;
+    const hasPlantedFlag = uiRover.flagsPlanted.length > 0;
+
+    if (hasEnoughSamples && hasReachedOutpost && hasPlantedFlag) {
+      setMissionState('victory');
+      soundEngine.speak('Mission accomplished! All planetary science objectives completed.');
+    }
+  }, [uiRover, activeMission, missionState]);
+
+  // 60 FPS Physics & Canvas Render Loop
   useEffect(() => {
     let animId: number;
     let lastTime = performance.now();
-    let uiUpdateCounter = 0;
+    let uiCounter = 0;
 
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -93,16 +174,19 @@ export const RoverSurfaceCanvas: React.FC = () => {
       const dt = Math.min(0.05, (time - lastTime) / 1000);
       lastTime = time;
 
-      // Step Physics
-      roverRef.current = stepRoverPhysics(
-        roverRef.current,
-        throttleInputRef.current,
-        isBrakingRef.current,
-        dt
-      );
+      // 1. Step Physics
+      if (missionState !== 'victory' && missionState !== 'failed') {
+        roverRef.current = stepRoverPhysics(
+          roverRef.current,
+          throttleInputRef.current,
+          isBrakingRef.current,
+          dt
+        );
+      }
 
-      // Spawn Tire Dust Particles when moving
       const currentRover = roverRef.current;
+
+      // 2. Spawn Tire Dust Particles
       if (Math.abs(currentRover.vx) > 0.4 && Math.random() < 0.65) {
         const dir = currentRover.vx > 0 ? -1 : 1;
         dustParticlesRef.current.push({
@@ -111,11 +195,10 @@ export const RoverSurfaceCanvas: React.FC = () => {
           vx: dir * (1.5 + Math.random() * 2),
           vy: 0.8 + Math.random() * 1.5,
           alpha: 0.8,
-          size: 2 + Math.random() * 3
+          size: Math.max(1, 2 + Math.random() * 3)
         });
       }
 
-      // Update Dust Particles
       dustParticlesRef.current.forEach(p => {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
@@ -123,9 +206,9 @@ export const RoverSurfaceCanvas: React.FC = () => {
       });
       dustParticlesRef.current = dustParticlesRef.current.filter(p => p.alpha > 0.05);
 
-      // React UI telemetry sync
-      uiUpdateCounter++;
-      if (uiUpdateCounter % 4 === 0) {
+      // React UI state sync
+      uiCounter++;
+      if (uiCounter % 4 === 0) {
         setUiRover({ ...roverRef.current });
       }
 
@@ -141,7 +224,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Sky Gradient
+      // Sky Background
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
       if (currentRover.surfacePlanetId === 'mars') {
         skyGrad.addColorStop(0, '#160B06');
@@ -160,7 +243,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
       const groundBaseY = height * 0.65;
       const viewCenterX = width / 2;
 
-      // 2. Parallax Distant Mountains Silhouette (0.15x parallax)
+      // Parallax Distant Mountains
       const mtnOffset = currentRover.posX * 0.15 * PPM;
       ctx.fillStyle = currentRover.surfacePlanetId === 'mars' ? '#3B1106' : currentRover.surfacePlanetId === 'moon' ? '#1E293B' : '#064E3B';
       ctx.beginPath();
@@ -174,7 +257,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
       ctx.closePath();
       ctx.fill();
 
-      // 3. Foreground Terrain Surface Profile
+      // Foreground Terrain Profile
       ctx.fillStyle = currentRover.surfacePlanetId === 'mars' ? '#881337' : currentRover.surfacePlanetId === 'moon' ? '#334155' : '#065F46';
       ctx.beginPath();
       ctx.moveTo(0, height);
@@ -189,12 +272,12 @@ export const RoverSurfaceCanvas: React.FC = () => {
       ctx.closePath();
       ctx.fill();
 
-      // 4. Crust Highlight Ridge Line
+      // Ridge Highlight
       ctx.strokeStyle = currentRover.surfacePlanetId === 'mars' ? '#F43F5E' : currentRover.surfacePlanetId === 'moon' ? '#94A3B8' : '#10B981';
       ctx.lineWidth = 3.0;
       ctx.stroke();
 
-      // 5. Procedural Surface Rocks & Boulders (Deterministically anchored in world space)
+      // Surface Rocks
       const minRockWorldX = Math.floor(currentRover.posX - (viewCenterX / PPM) - 10);
       const maxRockWorldX = Math.ceil(currentRover.posX + (viewCenterX / PPM) + 10);
 
@@ -203,7 +286,6 @@ export const RoverSurfaceCanvas: React.FC = () => {
       ctx.lineWidth = 1;
 
       for (let rx = minRockWorldX; rx <= maxRockWorldX; rx += 4) {
-        // Pseudo-random deterministic rock check
         const hash = Math.sin(rx * 997.13) * 10000;
         const hasRock = (hash - Math.floor(hash)) > 0.45;
         if (!hasRock) continue;
@@ -219,14 +301,69 @@ export const RoverSurfaceCanvas: React.FC = () => {
         ctx.stroke();
       }
 
-      // 6. Draw Planted Base Flags
+      // Mission Science Anomaly Beacons (Glowing Hologram Pillars)
+      if (activeMission) {
+        activeMission.anomalySites.forEach((siteX, idx) => {
+          const beaconScreenX = viewCenterX + (siteX - currentRover.posX) * PPM;
+          if (beaconScreenX > -60 && beaconScreenX < width + 60) {
+            const { elevation } = getTerrainElevation(siteX, activeMission.planetId);
+            const beaconScreenY = groundBaseY - elevation * PPM;
+
+            // Holographic Vertical Light Column
+            const colGrad = ctx.createLinearGradient(beaconScreenX, beaconScreenY, beaconScreenX, beaconScreenY - 80);
+            colGrad.addColorStop(0, 'rgba(56, 189, 248, 0.7)');
+            colGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+            ctx.fillStyle = colGrad;
+            ctx.fillRect(beaconScreenX - 8, beaconScreenY - 80, 16, 80);
+
+            // Floating Diamond Anomaly Icon
+            const floatY = Math.sin(time * 0.005 + idx) * 6;
+            ctx.save();
+            ctx.translate(beaconScreenX, beaconScreenY - 45 + floatY);
+            ctx.fillStyle = '#38BDF8';
+            ctx.beginPath();
+            ctx.moveTo(0, -9);
+            ctx.lineTo(8, 0);
+            ctx.lineTo(0, 9);
+            ctx.lineTo(-8, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            ctx.fillStyle = '#E0F2FE';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.fillText(`ANOMALY #${idx + 1}`, beaconScreenX - 25, beaconScreenY - 60);
+          }
+        });
+
+        // Target Outpost Finish Line Flagpole Marker
+        const targetScreenX = viewCenterX + (activeMission.outpostTargetX - currentRover.posX) * PPM;
+        if (targetScreenX > -80 && targetScreenX < width + 80) {
+          const { elevation } = getTerrainElevation(activeMission.outpostTargetX, activeMission.planetId);
+          const targetScreenY = groundBaseY - elevation * PPM;
+
+          // Outpost Holo Dome Target
+          ctx.strokeStyle = '#55B982';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.arc(targetScreenX, targetScreenY, 35, Math.PI, 0);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = '#55B982';
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillText('OUTPOST BASE TARGET', targetScreenX - 55, targetScreenY - 45);
+        }
+      }
+
+      // Planted Flags
       currentRover.flagsPlanted.forEach(flag => {
         const flagScreenX = viewCenterX + (flag.x - currentRover.posX) * PPM;
         if (flagScreenX > -50 && flagScreenX < width + 50) {
           const { elevation } = getTerrainElevation(flag.x, flag.planetId);
           const flagScreenY = groundBaseY - elevation * PPM;
 
-          // Pole
           ctx.strokeStyle = '#FFFFFF';
           ctx.lineWidth = 2.5;
           ctx.beginPath();
@@ -234,7 +371,6 @@ export const RoverSurfaceCanvas: React.FC = () => {
           ctx.lineTo(flagScreenX, flagScreenY - 38);
           ctx.stroke();
 
-          // Cloth
           ctx.fillStyle = '#FF8A1F';
           ctx.fillRect(flagScreenX, flagScreenY - 38, 26, 16);
           ctx.fillStyle = '#090A0D';
@@ -243,7 +379,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
         }
       });
 
-      // 7. Render Tire Dust Particles
+      // Tire Dust Particles
       dustParticlesRef.current.forEach(p => {
         const px = viewCenterX + (p.x - currentRover.posX) * PPM;
         const py = groundBaseY - p.y * PPM;
@@ -255,7 +391,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
         ctx.fill();
       });
 
-      // 8. Draw Rover Vehicle Chassis & Rotating Spoked Wheels
+      // Rover Vehicle Chassis & Rotating Spoked Wheels
       ctx.save();
       const roverScreenY = groundBaseY - currentRover.altitude * PPM;
       ctx.translate(viewCenterX, roverScreenY);
@@ -268,11 +404,11 @@ export const RoverSurfaceCanvas: React.FC = () => {
       ctx.lineWidth = 2.5;
       ctx.strokeRect(-28, -20, 56, 16);
 
-      // Mission Insignia Badge
+      // Insignia
       ctx.fillStyle = '#FF8A1F';
       ctx.fillRect(-18, -17, 16, 6);
 
-      // Sensor Mastcam
+      // Mastcam Sensor Head
       ctx.fillStyle = '#475569';
       ctx.fillRect(12, -36, 5, 16);
       ctx.fillStyle = '#38BDF8';
@@ -284,7 +420,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
       ctx.fillStyle = '#1E3A8A';
       ctx.fillRect(-26, -24, 52, 4);
 
-      // Science Drill Arm
+      // Drill Arm
       if (currentRover.isDrilling) {
         ctx.strokeStyle = '#FBBF24';
         ctx.lineWidth = 3.5;
@@ -299,16 +435,15 @@ export const RoverSurfaceCanvas: React.FC = () => {
         }
       }
 
-      // 4 Wheels with Rotating Spokes
+      // 4 Wheels
       const wheelRadius = 8.0;
-      const wheelRotation = (currentRover.posX * PPM) / wheelRadius; // Exact rotational sync
+      const wheelRotation = (currentRover.posX * PPM) / wheelRadius;
 
       [-22, -8, 8, 22].forEach(wx => {
         ctx.save();
         ctx.translate(wx, 3);
         ctx.rotate(wheelRotation);
 
-        // Tire Outer Rim
         ctx.fillStyle = '#0F172A';
         ctx.beginPath();
         ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
@@ -317,7 +452,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
         ctx.lineWidth = 2.0;
         ctx.stroke();
 
-        // 4 Rotating Spokes
+        // 4 Spokes
         ctx.strokeStyle = '#F8FAFC';
         ctx.lineWidth = 1.8;
         ctx.beginPath();
@@ -327,7 +462,6 @@ export const RoverSurfaceCanvas: React.FC = () => {
         ctx.lineTo(0, wheelRadius - 1);
         ctx.stroke();
 
-        // Center Hubcap
         ctx.fillStyle = '#FF8A1F';
         ctx.beginPath();
         ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
@@ -342,7 +476,7 @@ export const RoverSurfaceCanvas: React.FC = () => {
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, []);
+  }, [activeMission, missionState]);
 
   const handlePlantFlag = () => {
     soundEngine.speak('Surface flag planted. Planetary outpost established.');
@@ -361,25 +495,11 @@ export const RoverSurfaceCanvas: React.FC = () => {
     setUiRover({ ...roverRef.current });
   };
 
-  const handleResetRover = () => {
-    const el = getTerrainElevation(0, roverRef.current.surfacePlanetId).elevation;
-    roverRef.current = {
-      ...roverRef.current,
-      posX: 0,
-      altitude: el,
-      vx: 0,
-      pitchDeg: 0,
-      batteryPercent: 100,
-      flagsPlanted: []
-    };
-    setUiRover({ ...roverRef.current });
-  };
-
   return (
     <div ref={containerRef} className="relative flex-1 h-full bg-[#090A0D] overflow-hidden select-none font-mono-num">
       <canvas ref={canvasRef} className="w-full h-full block" />
 
-      {/* Top Rover Status Dashboard */}
+      {/* Top Left: Rover Telemetry Dashboard */}
       <div className="absolute top-3 left-3 flex items-center gap-4 bg-[#151820]/90 border border-[#252B36] p-3 rounded-xl text-xs shadow-xl backdrop-blur-sm">
         <div className="flex items-center gap-1.5 text-[#55B982]">
           <Battery className="w-4 h-4" />
@@ -401,39 +521,66 @@ export const RoverSurfaceCanvas: React.FC = () => {
         </div>
       </div>
 
-      {/* Planet Surface Selector */}
-      <div className="absolute top-3 right-3 flex items-center gap-1 bg-[#151820]/90 border border-[#252B36] p-1.5 rounded-xl text-xs shadow-xl">
-        {(['moon', 'mars', 'titan'] as const).map(p => (
+      {/* Top Center: Mission Level HUD & Countdown Clock */}
+      {activeMission && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-[#151820]/95 border border-[#38BDF8]/40 p-2.5 rounded-xl text-xs shadow-2xl backdrop-blur-md flex items-center gap-5">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-[#FF8A1F]" />
+            <div>
+              <span className="font-bold text-[#E6E8EB] block text-xs">{activeMission.title}</span>
+              <span className="text-[10px] text-[#A4ABB6]">{activeMission.hazard}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-[#0E1015] px-2.5 py-1 rounded-lg border border-[#252B36]">
+            <Clock className={`w-3.5 h-3.5 ${missionTimer < 15 ? 'text-[#D95757] animate-pulse' : 'text-[#79AFC1]'}`} />
+            <span className={`font-bold font-mono-num ${missionTimer < 15 ? 'text-[#D95757]' : 'text-[#E6E8EB]'}`}>
+              {missionTimer}s
+            </span>
+          </div>
+
+          <div className="text-[11px] text-[#CBD5E1]">
+            Target Outpost: <strong>{Math.max(0, Math.round(activeMission.outpostTargetX - uiRover.posX))}m ahead</strong>
+          </div>
+        </div>
+      )}
+
+      {/* Top Right: Mission Levels & Free Roam Switcher */}
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-[#151820]/90 border border-[#252B36] p-1.5 rounded-xl text-xs shadow-xl">
+        <button
+          onClick={() => startLevel(null)}
+          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+            !activeMission ? 'bg-[#FF8A1F] text-[#090A0D]' : 'text-[#A4ABB6] hover:text-[#E6E8EB]'
+          }`}
+        >
+          Free Roam
+        </button>
+
+        {ROVER_MISSIONS.map((m, idx) => (
           <button
-            key={p}
-            onClick={() => {
-              roverRef.current.surfacePlanetId = p;
-              roverRef.current.posX = 0;
-              roverRef.current.altitude = getTerrainElevation(0, p).elevation;
-              roverRef.current.vx = 0;
-              roverRef.current.flagsPlanted = [];
-              setUiRover({ ...roverRef.current });
-            }}
-            className={`px-3 py-1.5 rounded-lg text-xs uppercase font-semibold transition-all ${
-              uiRover.surfacePlanetId === p
+            key={m.id}
+            onClick={() => startLevel(m)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+              activeMission?.id === m.id
                 ? 'bg-[#FF8A1F] text-[#090A0D] shadow-sm'
                 : 'text-[#A4ABB6] hover:text-[#E6E8EB] hover:bg-[#1B1F28]'
             }`}
           >
-            {p}
+            Lvl {idx + 1}
           </button>
         ))}
+
         <button
-          onClick={handleResetRover}
+          onClick={() => startLevel(activeMission)}
           className="p-1.5 rounded-lg text-[#A4ABB6] hover:text-[#E6E8EB] hover:bg-[#1B1F28] ml-1"
-          title="Reset Rover to Origin"
+          title="Restart Mission"
         >
           <RotateCcw className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* Bottom Rover Action & Drive Controls */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#151820]/95 border border-[#252B36] p-2.5 rounded-2xl shadow-2xl backdrop-blur-md">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#151820]/95 border border-[#252B36] p-2.5 rounded-2xl shadow-2xl backdrop-blur-md z-20">
         <button
           onMouseDown={() => { throttleInputRef.current = -1.0; }}
           onMouseUp={() => { throttleInputRef.current = 0; }}
@@ -489,6 +636,84 @@ export const RoverSurfaceCanvas: React.FC = () => {
           <span>Plant Flag</span>
         </button>
       </div>
+
+      {/* Mission Victory Modal */}
+      {missionState === 'victory' && activeMission && (
+        <div className="absolute inset-0 bg-[#090A0D]/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#151820] border border-[#55B982] rounded-2xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="w-14 h-14 rounded-full bg-[#55B982]/20 border border-[#55B982] flex items-center justify-center mx-auto text-[#55B982]">
+              <Trophy className="w-7 h-7" />
+            </div>
+
+            <div>
+              <span className="text-[11px] text-[#55B982] font-bold uppercase tracking-wider block">Mission Accomplished!</span>
+              <h2 className="text-base font-bold text-[#E6E8EB] mt-1">{activeMission.title}</h2>
+              <p className="text-xs text-[#A4ABB6] mt-2">
+                All geological science drill cores extracted and outpost successfully established.
+              </p>
+            </div>
+
+            <div className="bg-[#0E1015] p-3 rounded-xl border border-[#252B36] space-y-1.5 text-xs text-left">
+              <div className="flex justify-between">
+                <span className="text-[#A4ABB6]">Award:</span>
+                <strong className="text-[#FF8A1F]">{activeMission.rewardBadge}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#A4ABB6]">Samples Collected:</span>
+                <strong className="text-[#38BDF8]">{uiRover.sampleCount}/{activeMission.requiredSamples}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#A4ABB6]">Time Remaining:</span>
+                <strong className="text-[#55B982]">{missionTimer}s</strong>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const currIdx = ROVER_MISSIONS.findIndex(m => m.id === activeMission.id);
+                  if (currIdx < ROVER_MISSIONS.length - 1) {
+                    startLevel(ROVER_MISSIONS[currIdx + 1]);
+                  } else {
+                    startLevel(null);
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-[#55B982] hover:bg-[#62C991] text-[#090A0D] font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Next Mission Level</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mission Failed Modal */}
+      {missionState === 'failed' && activeMission && (
+        <div className="absolute inset-0 bg-[#090A0D]/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#151820] border border-[#D95757] rounded-2xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="w-14 h-14 rounded-full bg-[#D95757]/20 border border-[#D95757] flex items-center justify-center mx-auto text-[#D95757]">
+              <XCircle className="w-7 h-7" />
+            </div>
+
+            <div>
+              <span className="text-[11px] text-[#D95757] font-bold uppercase tracking-wider block">Mission Incomplete</span>
+              <h2 className="text-base font-bold text-[#E6E8EB] mt-1">{activeMission.title}</h2>
+              <p className="text-xs text-[#A4ABB6] mt-2">
+                Time limit expired before reaching the target outpost or collecting required samples.
+              </p>
+            </div>
+
+            <button
+              onClick={() => startLevel(activeMission)}
+              className="w-full py-2.5 rounded-xl bg-[#FF8A1F] hover:bg-[#FFA24A] text-[#090A0D] font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Retry Mission</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
