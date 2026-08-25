@@ -99,7 +99,7 @@ export function createInitialState() {
         savedBlueprint = parsed;
       }
     }
-  } catch (e) {
+  } catch {
     // fallback
   }
 

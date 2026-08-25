@@ -48,7 +48,7 @@ export const StagingPanel: React.FC = () => {
   const selectedPartDef = selectedPart ? PARTS_CATALOG[selectedPart.partType] : null;
 
   return (
-    <aside className="w-[320px] bg-[#151820] border-l border-[#252B36] flex flex-col h-full select-none shrink-0 z-20">
+    <aside className="w-[280px] 2xl:w-[320px] bg-[#151820] border-l border-[#252B36] flex flex-col h-full select-none shrink-0 z-20">
       {/* Dynamic Header */}
       <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
         <h2 className="text-xs font-semibold text-[#E6E8EB] tracking-tight uppercase">

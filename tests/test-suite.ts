@@ -1,12 +1,13 @@
-import { PARTS_CATALOG, ROCKET_PRESETS, calculateRocketProperties, getSymmetricPlacements, validateStructuralConnectivity } from '../src/physics/rocket-math';
-import { calculateAtmosphere, solveObliqueShockBeta } from '../src/physics/aerodynamics';
-import { getFlightAccelerations, stepFlightPhysics, initFlightState, type FlightState } from '../src/physics/flight-dynamics';
-import { calculatePairwiseGravity, calculateLagrangePoints, type CelestialBody } from '../src/physics/n-body';
+import { ROCKET_PRESETS, calculateRocketProperties, getSymmetricPlacements, validateStructuralConnectivity } from '../src/physics/rocket-math';
+import { calculateAtmosphere } from '../src/physics/aerodynamics';
+import { stepFlightPhysics, initFlightState } from '../src/physics/flight-dynamics';
+import { calculateLagrangePoints } from '../src/physics/n-body';
+import type { CelestialBody } from '../src/types';
 import { calculatePlanetaryDeflection, DART_DEFAULT_MISSION } from '../src/physics/planetary-defense';
-import { generateWalkerConstellation, CONSTELLATION_PRESETS, GROUND_STATIONS } from '../src/physics/constellations';
+import { generateWalkerConstellation, CONSTELLATION_PRESETS } from '../src/physics/constellations';
 import { stepRoverPhysics, getTerrainElevation, ROVER_MISSIONS } from '../src/physics/rover-physics';
 import { stepRendezvousPhysics, PRESET_STATIONS } from '../src/physics/rendezvous-docking';
-import { CAMPAIGN_MISSIONS } from '../src/components/campaigns/CampaignMissionModal';
+import { CAMPAIGN_MISSIONS } from '../src/components/campaigns/campaign-data';
 
 let passed = 0;
 let failed = 0;
@@ -69,23 +70,31 @@ console.log('\n🪐 Testing Celestial Gravitation & Lagrange Points:');
 const earthBody: CelestialBody = {
   id: 'earth',
   name: 'Earth',
+  type: 'terrestrial',
   mass: 5.972e24,
   radius: 6371,
+  density: 5.51,
   position: { x: 0, y: 0, z: 0 },
   velocity: { vx: 0, vy: 0, vz: 0 },
   color: '#3b82f6',
+  hasRings: false,
+  atmosphereDensity: 1,
   trail: [],
-  isCentral: true
+  isFixed: true
 };
 
 const moonBody: CelestialBody = {
   id: 'moon',
   name: 'Moon',
+  type: 'rocky',
   mass: 7.342e22,
   radius: 1737,
+  density: 3.34,
   position: { x: 384400, y: 0, z: 0 },
   velocity: { vx: 0, vy: 1.022, vz: 0 },
   color: '#94a3b8',
+  hasRings: false,
+  atmosphereDensity: 0,
   trail: []
 };
 
@@ -99,15 +108,26 @@ console.log('\n☄️ Testing Asteroid Impact & DART Deflection:');
 const dart = calculatePlanetaryDeflection(
   {
     diameter: 160,
+    composition: 'silicate',
     density: 2400,
     velocity: 25,
-    impactAngle: 45,
-    targetType: 'sedimentary_rock',
-    location: { name: 'Pacific Ocean', lat: 0, lon: -160, isWater: true, waterDepth: 4000 }
+    entryAngle: 45,
+    targetBodyId: 'earth',
+    targetSurfaceType: 'sedimentary_rock',
+    targetAreaType: 'ocean_deep',
+    geographicTarget: {
+      latitude: 0,
+      longitude: -160,
+      name: 'Pacific Ocean',
+      elevationM: -4000,
+      populationDensityPerKm2: 0,
+      isOcean: true,
+      oceanDepthM: 4000
+    }
   },
   DART_DEFAULT_MISSION
 );
-assert(dart.deltaVMps > 0, `DART kinetic impact yields ${(dart.deltaVMps * 1000).toFixed(2)} mm/s delta-V`);
+assert(dart.deltaVMps > 0, `DART kinetic impact yields ${dart.deltaVMps.toFixed(2)} mm/s delta-V`);
 assert(dart.deflectionDistanceKm > 0, `DART deflection yields ${dart.deflectionDistanceKm.toFixed(1)} km orbital clearance`);
 
 // 7. WALKER DELTA CONSTELLATIONS
@@ -143,7 +163,7 @@ assert(movedRover.vx > 0, `Rover electric motor produced forward velocity (${mov
 // 9. CLOHESSY-WILTSHIRE DOCKING RENDEZVOUS
 console.log('\n🎯 Testing Clohessy-Wiltshire 6-DoF Docking Physics:');
 const station = PRESET_STATIONS[0];
-const steppedStation = stepRendezvousPhysics(station, { fx: 0, fy: 0, fz: -2.0, torque: 0 }, 0, 0.5);
+const steppedStation = stepRendezvousPhysics(station, { fx: 0, fy: 0, fz: -2.0 }, 0, 0.5);
 assert(steppedStation.relativePos.z < station.relativePos.z, 'RCS forward translation reduced closing distance');
 
 // 10. CAMPAIGN MISSION PRESET IDS BINDING

@@ -83,24 +83,17 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Push new blueprint state with Undo/Redo history tracking & localStorage persistence
   const updateBlueprint = useCallback((newBlueprint: RocketBlueprint | ((prev: RocketBlueprint) => RocketBlueprint)) => {
-    setBlueprintState(prev => {
-      const next = typeof newBlueprint === 'function' ? newBlueprint(prev) : newBlueprint;
-      
-      // Update history stack
-      setHistory(h => {
-        const truncated = h.slice(0, historyIndex + 1);
-        return [...truncated, next];
-      });
-      setHistoryIndex(i => i + 1);
+    const next = typeof newBlueprint === 'function' ? newBlueprint(blueprint) : newBlueprint;
+    const nextHistory = [...history.slice(0, historyIndex + 1), next];
 
-      // Auto-save to localStorage
-      try {
-        localStorage.setItem('mission_control_blueprint', JSON.stringify(next));
-      } catch (e) {}
+    setBlueprintState(next);
+    setHistory(nextHistory);
+    setHistoryIndex(nextHistory.length - 1);
 
-      return next;
-    });
-  }, [historyIndex]);
+    try {
+      localStorage.setItem('mission_control_blueprint', JSON.stringify(next));
+    } catch {}
+  }, [blueprint, history, historyIndex]);
 
   const undo = useCallback(() => {
     if (historyIndex > 0) {
@@ -110,7 +103,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setBlueprintState(targetBlueprint);
       try {
         localStorage.setItem('mission_control_blueprint', JSON.stringify(targetBlueprint));
-      } catch (e) {}
+      } catch {}
     }
   }, [history, historyIndex]);
 
@@ -122,7 +115,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setBlueprintState(targetBlueprint);
       try {
         localStorage.setItem('mission_control_blueprint', JSON.stringify(targetBlueprint));
-      } catch (e) {}
+      } catch {}
     }
   }, [history, historyIndex]);
 
@@ -261,7 +254,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const transferRocketToWindTunnel = useCallback(() => {
     setActiveTab('wind-tunnel');
-  }, []);
+  }, [setActiveTab]);
 
   // =====================
   // CELESTIAL SIMULATOR ACTIONS

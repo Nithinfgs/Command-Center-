@@ -2,6 +2,12 @@
 
 > **Mission Control** is an advanced aerospace engineering, computational fluid dynamics (CFD), orbital mechanics, 2D flight dynamics, and planetary impact simulation platform. Built with a high-contrast industrial **Midnight + Signal Orange** aesthetic inspired by modern aerospace command centers and instrumentation.
 
+## Mathlet '26 Competition Mode
+
+The built-in **3-Min Tour** presents the project specifically for the **Mathematics in Space Exploration** theme. It includes a presentation timer, a five-part judging narrative, the core equations, and direct links into the matching interactive modules. The story is structured around the competition's creativity, innovation, relevance, and three-minute presentation criteria.
+
+See [`COMPETITION_PRESENTATION.md`](./COMPETITION_PRESENTATION.md) for the timed speaking script, three-person role split, setup checklist, and recovery plan.
+
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-loquacious--dango--5e5843.netlify.app-FF8A1F?style=for-the-badge&logo=netlify)](https://loquacious-dango-5e5843.netlify.app)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Nithinfgs%2FCommand--Center--181717?style=for-the-badge&logo=github)](https://github.com/Nithinfgs/Command-Center-)
 
@@ -135,6 +141,16 @@ Open your browser and navigate to:
 npm run build
 npm run preview
 ```
+
+### Full Verification
+
+```bash
+npm run test
+npm run lint
+npm run build
+```
+
+The interface remains usable at 1024 px wide and is clearest on a 1280 px or wider laptop or desktop display.
 
 ---
 

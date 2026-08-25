@@ -94,7 +94,7 @@ export const CelestialControls: React.FC = () => {
   };
 
   return (
-    <aside className="w-[330px] bg-[#10131B] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20 font-mono-num">
+    <aside className="w-[290px] 2xl:w-[330px] bg-[#10131B] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20 font-mono-num">
       {/* Header with Quick Guide Button */}
       <div className="p-3 border-b border-[#252B36] flex items-center justify-between bg-[#0B0D13]">
         <div className="flex items-center gap-2">

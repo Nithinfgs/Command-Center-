@@ -28,8 +28,6 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'current' | 'polar'>('current');
 
-  if (!isOpen) return null;
-
   const currentAero = calculateAeroTelemetry(windTunnelState);
   const rocketProps = calculateRocketProperties(blueprint);
   const effectiveAoA = (windTunnelState.windAngle || 0) - (windTunnelState.rocketPitch || 0);
@@ -61,6 +59,8 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
     }
     return sweep;
   }, [windTunnelState]);
+
+  if (!isOpen) return null;
 
   // Export current state as CSV
   const handleExportCSV = () => {
@@ -221,14 +221,19 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="aero-export-title"
+    >
       <div className="bg-[#151820] border border-[#353D4A] rounded-lg max-w-2xl w-full p-4 shadow-2xl flex flex-col max-h-[88vh] select-none text-xs">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#252B36]">
           <div className="flex items-center gap-2">
             <Download className="w-4 h-4 text-[#FF8A1F]" />
             <div>
-              <h3 className="font-semibold text-[#E6E8EB] text-xs uppercase tracking-wider">Aerodynamic Telemetry Export Suite</h3>
+              <h3 id="aero-export-title" className="font-semibold text-[#E6E8EB] text-xs uppercase tracking-wider">Aerodynamic Telemetry Export Suite</h3>
               <p className="text-[11px] text-[#69717E]">
                 CFD simulation datasets, aerodynamic coefficients, and polar sweeps
               </p>
@@ -236,6 +241,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
           </div>
           <button 
             onClick={onClose}
+            aria-label="Close aerodynamic export suite"
             className="text-[#69717E] hover:text-[#E6E8EB] text-xs font-mono p-1 rounded hover:bg-[#1B1F28]"
           >
             ✕

@@ -47,7 +47,7 @@ export const NavBallHud: React.FC = () => {
 
   return (
     <>
-      <aside className="w-[300px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
+      <aside className="w-[270px] 2xl:w-[300px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
         <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Compass className="w-4 h-4 text-[#FF8A1F]" />

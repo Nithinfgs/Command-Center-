@@ -2,94 +2,7 @@ import React from 'react';
 import { Trophy, X, Play } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { soundEngine } from '../../audio/soundEngine';
-
-export interface CampaignMission {
-  id: string;
-  title: string;
-  agency: string;
-  year: string;
-  category: 'lunar' | 'interplanetary' | 'defense' | 'reusable';
-  description: string;
-  objectives: string[];
-  targetTab: 'flight-sandbox' | 'celestial-sim' | 'asteroid-impact' | 'rocket-builder';
-  presetId?: string;
-}
-
-export const CAMPAIGN_MISSIONS: CampaignMission[] = [
-  {
-    id: 'apollo_11',
-    title: 'Apollo 11: First Lunar Landing',
-    agency: 'NASA',
-    year: '1969',
-    category: 'lunar',
-    description: 'Launch the three-stage Saturn V rocket, perform Translunar Injection (TLI), and execute the Eagle lunar descent to the Sea of Tranquility.',
-    objectives: [
-      'Reach 185 km Low Earth Parking Orbit',
-      'Execute TLI burn to lunar trajectory',
-      'Touchdown lunar module at < 2.0 m/s'
-    ],
-    targetTab: 'flight-sandbox',
-    presetId: 'saturn_v'
-  },
-  {
-    id: 'voyager_tour',
-    title: 'Voyager Grand Tour: Gravity Slingshot',
-    agency: 'NASA / JPL',
-    year: '1977',
-    category: 'interplanetary',
-    description: 'Leverage rare planetary alignment to perform consecutive gravitational flybys around Jupiter and Saturn, achieving interstellar escape velocity.',
-    objectives: [
-      'Execute Jupiter hyperbolic flyby',
-      'Perform Oberth maneuver to gain +14 km/s',
-      'Attain hyperbolic excess escape trajectory'
-    ],
-    targetTab: 'celestial-sim'
-  },
-  {
-    id: 'artemis_iii',
-    title: 'Artemis III: Lunar South Pole Outpost',
-    agency: 'NASA / ESA / JAXA',
-    year: '2026',
-    category: 'lunar',
-    description: 'Dock with Lunar Gateway in orbit, transfer crew to Starship HLS, and deploy the first permanent crewed lunar south pole science station.',
-    objectives: [
-      'Rendezvous & dock with Lunar Gateway at 1,500 km',
-      'Descent to Shackleton Crater crater rim',
-      'Plant surface base flag and extract ice samples'
-    ],
-    targetTab: 'flight-sandbox',
-    presetId: 'starship_superheavy'
-  },
-  {
-    id: 'falcon_heavy_dual',
-    title: 'Falcon Heavy: Synchronized Dual Recovery',
-    agency: 'SpaceX',
-    year: '2018',
-    category: 'reusable',
-    description: 'Launch heavy payload, separate dual side boosters, and perform simultaneous synchronized boostback and suicide burn hoverslam landings.',
-    objectives: [
-      'Side booster separation at T+2:30',
-      'Simultaneous 175° boostback burn',
-      'Dual synchronized hoverslam touchdown'
-    ],
-    targetTab: 'flight-sandbox',
-    presetId: 'falcon_heavy'
-  },
-  {
-    id: 'dart_defense',
-    title: 'DART: Planetary Asteroid Intercept',
-    agency: 'NASA / Johns Hopkins APL',
-    year: '2022',
-    category: 'defense',
-    description: 'Target near-Earth binary asteroid Didymos/Dimorphos with hypervelocity kinetic impactor to test momentum transfer and planetary deflection.',
-    objectives: [
-      'Launch 600 kg kinetic impactor',
-      'Impact asteroid at 6.6 km/s with beta recoil >= 2.0',
-      'Divert trajectory by > 50,000 km miss distance'
-    ],
-    targetTab: 'asteroid-impact'
-  }
-];
+import { CAMPAIGN_MISSIONS, type CampaignMission } from './campaign-data';
 
 interface Props {
   isOpen: boolean;
@@ -114,6 +27,9 @@ export const CampaignMissionModal: React.FC<Props> = ({ isOpen, onClose }) => {
     <div 
       onClick={onClose}
       className="fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="campaign-modal-title"
     >
       <div 
         onClick={e => e.stopPropagation()}
@@ -123,7 +39,7 @@ export const CampaignMissionModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <div className="flex items-center gap-2.5">
             <Trophy className="w-5 h-5 text-[#FF8A1F]" />
             <div>
-              <h2 className="font-bold text-sm text-[#E6E8EB] uppercase tracking-wider">
+              <h2 id="campaign-modal-title" className="font-bold text-sm text-[#E6E8EB] uppercase tracking-wider">
                 Historical Spaceflight Campaigns
               </h2>
               <p className="text-[11px] text-[#A4ABB6]">
@@ -133,6 +49,7 @@ export const CampaignMissionModal: React.FC<Props> = ({ isOpen, onClose }) => {
           </div>
           <button 
             onClick={onClose}
+            aria-label="Close campaign library"
             className="p-1.5 rounded-lg hover:bg-[#1B1F28] text-[#69717E] hover:text-[#E6E8EB]"
           >
             <X className="w-4 h-4" />

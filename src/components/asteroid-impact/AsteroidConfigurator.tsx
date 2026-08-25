@@ -28,7 +28,7 @@ export const AsteroidConfigurator: React.FC = () => {
   const isOcean = asteroidConfig.targetSurfaceType === 'water_ocean' || asteroidConfig.targetAreaType === 'ocean_deep' || asteroidConfig.geographicTarget?.isOcean === true;
 
   return (
-    <aside className="w-[320px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
+    <aside className="w-[280px] 2xl:w-[320px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
       <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Target className="w-4 h-4 text-[#FF8A1F]" />

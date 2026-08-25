@@ -28,7 +28,7 @@ export const PartsPalette: React.FC = () => {
   });
 
   return (
-    <aside className="w-[280px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none shrink-0 z-20">
+    <aside className="w-[240px] 2xl:w-[280px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none shrink-0 z-20">
       {/* Search Header */}
       <div className="p-3 border-b border-[#252B36] space-y-2.5">
         <div className="flex items-center justify-between">
