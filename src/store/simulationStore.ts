@@ -63,6 +63,7 @@ export interface GlobalStore {
   loadCelestialPreset: (presetId: string) => void;
   addCustomCelestialBody: (body: Omit<CelestialBody, 'id' | 'trail'>) => void;
   removeCelestialBody: (id: string) => void;
+  updateCelestialBody: (id: string, updates: Partial<CelestialBody>) => void;
 
   // Asteroid Impact Simulator
   asteroidConfig: AsteroidConfig;

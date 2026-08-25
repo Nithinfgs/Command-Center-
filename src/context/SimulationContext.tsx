@@ -289,6 +289,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setSelectedBodyId(prev => prev === id ? null : prev);
   }, []);
 
+  const updateCelestialBody = useCallback((id: string, updates: Partial<CelestialBody>) => {
+    setCelestialBodies(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+  }, []);
+
   // RK4 Celestial N-Body Simulation Loop
   useEffect(() => {
     if (activeTab !== 'celestial-sim' || isCelestialPaused) return;
@@ -530,6 +534,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadCelestialPreset,
     addCustomCelestialBody,
     removeCelestialBody,
+    updateCelestialBody,
     asteroidConfig,
     impactTelemetry,
     isImpactSimulating,
