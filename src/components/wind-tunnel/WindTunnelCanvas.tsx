@@ -1096,22 +1096,37 @@ export const WindTunnelCanvas: React.FC = () => {
     const distToNose = Math.hypot(xb - noseTipOffset, yb);
 
     let speedFactor = 1.0;
-    let tempK = windTunnelState.airTemperature;
     let cp = 0;
 
-    if (distToNose < 50) {
-      const frac = 1 - distToNose / 50;
-      speedFactor *= Math.max(0.2, 1 - Math.pow(frac, 1.2) * 0.8);
-      tempK += (aero.stagnationTemperature - windTunnelState.airTemperature) * frac;
+    if (distToNose < 55) {
+      const frac = 1 - distToNose / 55;
+      speedFactor = Math.max(0.05, 1 - Math.pow(frac, 1.1) * 0.95);
       cp = frac;
     } else {
-      tempK = windTunnelState.airTemperature + mach * 20;
-      cp = (Math.abs(Math.sin(relAoARad)) * 0.4) * (yb < 0 ? 1 : -1);
+      const distFromAxis = Math.abs(yb);
+      const isNearBody = xb >= noseTipOffset && xb <= ((vehicleGeometry.tailY - vehicleGeometry.centerY) * cellSize + 60);
+      if (isNearBody && distFromAxis < 35) {
+        speedFactor = 0.88 + 0.12 * (distFromAxis / 35);
+        cp = -0.2 * (1 - distFromAxis / 35);
+      } else {
+        speedFactor = 1.0;
+        cp = (Math.abs(Math.sin(relAoARad)) * 0.25) * (yb < 0 ? 1 : -1);
+      }
     }
 
     const speedMs = windTunnelState.freestreamSpeed * speedFactor;
     const localMach = mach * speedFactor;
-    const pressureKpa = (windTunnelState.dynamicPressure * cp + windTunnelState.airDensity * 287 * tempK) / 1000;
+
+    // Exact thermodynamic total energy conservation: T_local = T0 - (v_local^2 / (2 * cp_air))
+    const cpAir = 1004.7; // J/(kg*K)
+    const stagT = aero.stagnationTemperature;
+    const vLocalSq = speedMs * speedMs;
+    const tempK = Math.max(windTunnelState.airTemperature, stagT - (vLocalSq / (2 * cpAir)));
+
+    // Isentropic pressure relation: p_local = p_inf * (T_local / T_inf)^(gamma / (gamma - 1))
+    const pInfKpa = (windTunnelState.airDensity * 287.058 * windTunnelState.airTemperature) / 1000;
+    const tempRatio = tempK / Math.max(1, windTunnelState.airTemperature);
+    const pressureKpa = pInfKpa * Math.pow(tempRatio, 3.5);
 
     setMouseProbe({
       worldX: Math.round(mx),
@@ -1174,7 +1189,9 @@ export const WindTunnelCanvas: React.FC = () => {
           </div>
           <div className="bg-[#172131] p-2 rounded border border-[#263548]/40">
             <span className="text-[#64748B] block">Stagnation Temp</span>
-            <span className="text-[#FBBF24] font-mono-num font-semibold text-xs mt-0.5 block">{aero.stagnationTemperature} K</span>
+            <span className="text-[#FBBF24] font-mono-num font-semibold text-xs mt-0.5 block">
+              {aero.stagnationTemperature} K ({Math.round(aero.stagnationTemperature - 273.15)}°C)
+            </span>
           </div>
           <div className="bg-[#172131] p-2 rounded border border-[#263548]/40">
             <span className="text-[#64748B] block">Heat Flux</span>

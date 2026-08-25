@@ -108,10 +108,13 @@ export interface AeroTelemetry {
   dragCoefficient: number; // Cd
   liftCoefficient: number; // Cl
   liftToDragRatio: number; // L/D
-  stagnationTemperature: number; // Kelvin
-  maxHeatFlux: number; // kW/m^2
+  stagnationTemperature: number; // Kelvin (T0)
+  recoveryTemperature: number; // Kelvin (T_aw)
+  stagnationPressureKpa: number; // kPa (p0)
+  maxHeatFlux: number; // kW/m^2 (Sutton-Graves)
+  radiativeEquilibriumTemp: number; // Kelvin (T_eq)
   boundaryLayerThickness: number; // mm
-  shockwaveAngle: number; // degrees
+  shockwaveAngle: number; // degrees (beta)
   aerodynamicMoment: number; // kN*m (pitching moment)
   finControlEffectiveness: number;
   reynoldsNumber: number;

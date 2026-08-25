@@ -1,12 +1,12 @@
-import { PARTS_CATALOG, ROCKET_PRESETS, calculateRocketProperties, getSymmetricPlacements, validateStructuralConnectivity } from './physics/rocket-math';
-import { calculateAtmosphere } from './physics/aerodynamics';
-import { getFlightAccelerations, stepFlightPhysics, initFlightState, type FlightState } from './physics/flight-dynamics';
-import { calculatePairwiseGravity, calculateLagrangePoints, type CelestialBody } from './physics/n-body';
-import { calculatePlanetaryDeflection, DART_DEFAULT_MISSION } from './physics/planetary-defense';
-import { generateWalkerConstellation, CONSTELLATION_PRESETS, GROUND_STATIONS } from './physics/constellations';
-import { stepRoverPhysics, getTerrainElevation, ROVER_MISSIONS } from './physics/rover-physics';
-import { stepRendezvousPhysics, PRESET_STATIONS } from './physics/rendezvous-docking';
-import { CAMPAIGN_MISSIONS } from './components/campaigns/CampaignMissionModal';
+import { PARTS_CATALOG, ROCKET_PRESETS, calculateRocketProperties, getSymmetricPlacements, validateStructuralConnectivity } from '../src/physics/rocket-math';
+import { calculateAtmosphere, solveObliqueShockBeta } from '../src/physics/aerodynamics';
+import { getFlightAccelerations, stepFlightPhysics, initFlightState, type FlightState } from '../src/physics/flight-dynamics';
+import { calculatePairwiseGravity, calculateLagrangePoints, type CelestialBody } from '../src/physics/n-body';
+import { calculatePlanetaryDeflection, DART_DEFAULT_MISSION } from '../src/physics/planetary-defense';
+import { generateWalkerConstellation, CONSTELLATION_PRESETS, GROUND_STATIONS } from '../src/physics/constellations';
+import { stepRoverPhysics, getTerrainElevation, ROVER_MISSIONS } from '../src/physics/rover-physics';
+import { stepRendezvousPhysics, PRESET_STATIONS } from '../src/physics/rendezvous-docking';
+import { CAMPAIGN_MISSIONS } from '../src/components/campaigns/CampaignMissionModal';
 
 let passed = 0;
 let failed = 0;

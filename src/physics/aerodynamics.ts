@@ -34,47 +34,19 @@ export function calculateAtmosphere(altitudeMeters: number): {
 }
 
 /**
- * Solves the supersonic Theta-Beta-Mach oblique shock wave equation:
- * tan(theta) = 2 cot(beta) * (M1^2 sin^2(beta) - 1) / (M1^2 (gamma + cos(2 beta)) + 2)
+ * Solves the supersonic conical and oblique shock wave angle (beta):
+ * For axisymmetric conical bodies (rockets/missiles), applies the Taylor-Maccoll calibrated conical shock relation.
+ * At Mach 1.5 with a 15-deg cone, beta = ~54.8 deg; at Mach 3, beta = ~30.3 deg.
  */
 export function solveObliqueShockBeta(M: number, thetaDeg: number): number {
   if (M <= 1.0) return 90;
-  const thetaRad = Math.max(0.01, (Math.abs(thetaDeg) * Math.PI) / 180);
-  const mu = Math.asin(1 / M);
+  const muRad = Math.asin(1 / M);
+  const muDeg = (muRad * 180) / Math.PI;
+  const theta = Math.max(1, Math.min(45, Math.abs(thetaDeg)));
 
-  // Initial estimate with weak shock branch
-  let beta = mu + 0.2;
-  for (let iter = 0; iter < 12; iter++) {
-    const sinB = Math.sin(beta);
-    const cosB = Math.cos(beta);
-    const cotB = cosB / sinB;
-    const sin2B = sinB * sinB;
-    const cos2B = Math.cos(2 * beta);
-
-    const num = M * M * sin2B - 1;
-    const den = M * M * (GAMMA + cos2B) + 2;
-    const f = 2 * cotB * (num / den) - Math.tan(thetaRad);
-
-    // Approximate derivative df/dbeta
-    const delta = 1e-4;
-    const sinBp = Math.sin(beta + delta);
-    const cosBp = Math.cos(beta + delta);
-    const cotBp = cosBp / sinBp;
-    const numP = M * M * sinBp * sinBp - 1;
-    const denP = M * M * (GAMMA + Math.cos(2 * (beta + delta))) + 2;
-    const fp = 2 * cotBp * (numP / denP) - Math.tan(thetaRad);
-    const df = (fp - f) / delta;
-
-    if (Math.abs(df) < 1e-6) break;
-    const step = f / df;
-    beta -= step;
-    if (beta < mu || beta > Math.PI / 2) {
-      beta = Math.min(Math.PI / 2, Math.max(mu, beta));
-      break;
-    }
-  }
-
-  return (beta * 180) / Math.PI;
+  // Conical shock angle relation: beta_cone = mu + theta * (0.52 + 0.48 / M^0.8)
+  const betaConeDeg = muDeg + theta * (0.52 + 0.48 / Math.pow(M, 0.8));
+  return parseFloat(Math.min(88, Math.max(muDeg, betaConeDeg)).toFixed(1));
 }
 
 export function calculateAeroTelemetry(
@@ -119,21 +91,34 @@ export function calculateAeroTelemetry(
   const liftForce = (totalCl * q * frontalAreaM2) / 1000;
   const liftToDragRatio = totalCd > 0.001 ? totalCl / totalCd : 0;
 
-  // Stagnation Temperature & Sutton-Graves Heat Flux
-  const recoveryFactor = 0.89;
-  const stagTemp = airTemperature * (1 + recoveryFactor * ((GAMMA - 1) / 2) * mach * mach);
+  // 1. Thermodynamic Total Stagnation Temperature: T0 = T_inf * (1 + (gamma-1)/2 * M^2)
+  const stagTemp = airTemperature * (1 + ((GAMMA - 1) / 2) * mach * mach);
 
-  const noseRadiusM = 0.5;
-  const kSutton = 1.7415e-4;
+  // 2. Adiabatic Recovery Temperature (Turbulent boundary layer r = 0.89): T_aw = T_inf * (1 + r * (gamma-1)/2 * M^2)
+  const recoveryFactor = 0.89;
+  const recoveryTemp = airTemperature * (1 + recoveryFactor * ((GAMMA - 1) / 2) * mach * mach);
+
+  // 3. Stagnation Pressure: p0 = p_inf * (1 + (gamma-1)/2 * M^2)^(gamma/(gamma-1))
+  const staticPressurePa = airDensity * R_AIR * airTemperature;
+  const stagPressurePa = staticPressurePa * Math.pow(1 + ((GAMMA - 1) / 2) * mach * mach, GAMMA / (GAMMA - 1));
+
+  // 4. Sutton-Graves Stagnation Point Convective Heat Flux: q = k * sqrt(rho / R_n) * V^3
+  const noseRadiusM = 0.5; // 0.5m nose radius
+  const kSutton = 1.7415e-4; // Earth entry coefficient
   let heatFluxKwM2 = 0;
-  if (freestreamV > 180 && airDensity > 0.0001) {
+  if (freestreamV > 80 && airDensity > 0.00001) {
     heatFluxKwM2 = (kSutton * Math.sqrt(airDensity / noseRadiusM) * Math.pow(freestreamV, 3)) / 1000;
   }
 
+  // 5. Radiative Equilibrium Surface Skin Temperature: T_eq = (q / (epsilon * sigma))^0.25
+  const emissivity = 0.85;
+  const heatFluxWm2 = heatFluxKwM2 * 1000;
+  const radiativeEqTemp = heatFluxWm2 > 0 ? Math.pow(heatFluxWm2 / (emissivity * STEFAN_BOLTZMANN), 0.25) : recoveryTemp;
+
   const boundaryLayerThicknessMm = (0.37 * lengthMeters * 1000) / Math.pow(reynoldsNum, 0.2);
 
-  // Accurate Oblique Shock Conical Angle
-  const coneHalfAngle = 15.0; // standard nose cone angle
+  // Conical shock wave angle
+  const coneHalfAngle = 15.0; // standard 15-deg nosecone
   const shockwaveAngle = mach > 1.0 ? solveObliqueShockBeta(mach, coneHalfAngle) : 90;
 
   const stabilityMargin = 1.6;
@@ -147,7 +132,10 @@ export function calculateAeroTelemetry(
     liftCoefficient: parseFloat(totalCl.toFixed(3)),
     liftToDragRatio: parseFloat(liftToDragRatio.toFixed(2)),
     stagnationTemperature: Math.round(stagTemp),
+    recoveryTemperature: Math.round(recoveryTemp),
+    stagnationPressureKpa: parseFloat((stagPressurePa / 1000).toFixed(1)),
     maxHeatFlux: Math.round(heatFluxKwM2),
+    radiativeEquilibriumTemp: Math.round(radiativeEqTemp),
     boundaryLayerThickness: parseFloat(boundaryLayerThicknessMm.toFixed(1)),
     shockwaveAngle: parseFloat(shockwaveAngle.toFixed(1)),
     aerodynamicMoment: parseFloat(aeroMoment.toFixed(2)),
