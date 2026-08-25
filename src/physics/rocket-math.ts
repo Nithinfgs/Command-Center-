@@ -587,8 +587,8 @@ export function validateStructuralConnectivity(parts: PlacedPart[]): {
         const otherTop = other.y - otherDef.height / 2;
         const otherBottom = other.y + otherDef.height / 2;
 
-        const isXOverlap = partLeft < otherRight + 0.3 && partRight > otherLeft - 0.3;
-        const isYOverlap = partTop < otherBottom + 0.3 && partBottom > otherTop - 0.3;
+        const isXOverlap = partLeft < otherRight + 1.5 && partRight > otherLeft - 1.5;
+        const isYOverlap = partTop < otherBottom + 1.5 && partBottom > otherTop - 1.5;
 
         // Bounding box adjacency tolerance
         if (isXOverlap && isYOverlap) {
@@ -711,51 +711,34 @@ export function calculateRocketProperties(blueprint: RocketBlueprint): RocketAer
   let totalMass = 0;
   let dryMass = 0;
   let totalFuel = 0;
+  let totalThrust = 0;
   let momentX = 0;
   let momentY = 0;
-  let totalThrust = 0;
+  let totalExposedArea = 0;
+  let aeroMomentX = 0;
+  let aeroMomentY = 0;
   let thrustMomentX = 0;
   let thrustMomentY = 0;
 
   const stagePartsMap = new Map<number, PlacedPart[]>();
 
-  // Sort parts from top to bottom for aerodynamic shading calculation
-  const sortedByY = [...blueprint.parts].sort((a, b) => a.y - b.y);
-
-  let totalExposedArea = 0;
-  let aeroMomentX = 0;
-  let aeroMomentY = 0;
-
-  // Track the widest cross-section upstream at each lateral X column
-  const upstreamWidthMap: { x: number; width: number; y: number }[] = [];
-
-  for (const part of sortedByY) {
+  // Map parts and calculate mass properties
+  for (const part of blueprint.parts) {
     const def = PARTS_CATALOG[part.partType];
     if (!def) continue;
 
-    const currentFuel = def.fuelMass * (part.fuelPercentage / 100);
-    const partTotalMass = def.dryMass + currentFuel;
-    totalMass += partTotalMass;
+    const fuelMass = def.fuelMass * ((part.fuelPercentage ?? 100) / 100);
+    const partMass = def.dryMass + fuelMass;
+
+    totalMass += partMass;
     dryMass += def.dryMass;
-    totalFuel += currentFuel;
+    totalFuel += fuelMass;
 
-    momentX += part.x * partTotalMass;
-    momentY += part.y * partTotalMass;
+    momentX += part.x * partMass;
+    momentY += part.y * partMass;
 
-    // Aerodynamic Occlusion Model:
-    // If a part is behind a wider upstream nosecone or tank, reduce its direct frontal drag area
-    let shieldingFactor = 1.0;
-    for (const upstream of upstreamWidthMap) {
-      if (Math.abs(upstream.x - part.x) < 0.5 && upstream.y < part.y) {
-        if (upstream.width >= def.width) {
-          shieldingFactor = 0.25; // 75% shaded by upstream body
-          break;
-        }
-      }
-    }
-    upstreamWidthMap.push({ x: part.x, width: def.width, y: part.y });
-
-    const effectiveDragArea = def.width * def.height * def.dragCoeff * shieldingFactor;
+    const exposedArea = def.width * def.height;
+    const effectiveDragArea = exposedArea * def.dragCoeff;
     totalExposedArea += effectiveDragArea;
     aeroMomentX += part.x * effectiveDragArea;
     aeroMomentY += part.y * effectiveDragArea;
@@ -868,15 +851,15 @@ export const ROCKET_PRESETS: RocketBlueprint[] = [
     name: 'Saturn V (Apollo 11)',
     parts: [
       { instanceId: 's1', partType: 'crew_heavy', x: 0, y: -11, rotation: 0, stage: 3, fuelPercentage: 100 },
-      { instanceId: 's2', partType: 'heatshield_2m', x: 0, y: -9, rotation: 0, stage: 3, fuelPercentage: 100 },
-      { instanceId: 's3', partType: 'decoupler_stack_4m', x: 0, y: -8, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 's4', partType: 'tank_heavy_4m', x: 0, y: -4, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 's5', partType: 'engine_raptor', x: 0, y: 1, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 's6', partType: 'decoupler_stack_4m', x: 0, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 's7', partType: 'tank_titan_4m', x: 0, y: 9, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 's8', partType: 'engine_cluster_quad', x: 0, y: 15.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 's9', partType: 'fin_delta', x: -4, y: 14, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 's10', partType: 'fin_delta', x: 4, y: 14, rotation: 0, stage: 1, fuelPercentage: 100 }
+      { instanceId: 's2', partType: 'heatshield_2m', x: 0, y: -9.5, rotation: 0, stage: 3, fuelPercentage: 100 },
+      { instanceId: 's3', partType: 'decoupler_stack_4m', x: 0, y: -8.5, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 's4', partType: 'tank_heavy_4m', x: 0, y: -5, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 's5', partType: 'engine_raptor', x: 0, y: -0.5, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 's6', partType: 'decoupler_stack_4m', x: 0, y: 1.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 's7', partType: 'tank_titan_4m', x: 0, y: 6.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 's8', partType: 'engine_cluster_quad', x: 0, y: 13, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 's9', partType: 'fin_delta', x: -3, y: 12, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 's10', partType: 'fin_delta', x: 3, y: 12, rotation: 0, stage: 1, fuelPercentage: 100 }
     ],
     staging: [[1], [2], [3]]
   },
@@ -885,17 +868,17 @@ export const ROCKET_PRESETS: RocketBlueprint[] = [
     name: 'Falcon Heavy (3-Core)',
     parts: [
       { instanceId: 'f1', partType: 'pod_mk1', x: 0, y: -8, rotation: 0, stage: 3, fuelPercentage: 100 },
-      { instanceId: 'f2', partType: 'tank_small_2m', x: 0, y: -5.5, rotation: 0, stage: 3, fuelPercentage: 100 },
-      { instanceId: 'f3', partType: 'engine_vacuum_expand', x: 0, y: -2.5, rotation: 0, stage: 3, fuelPercentage: 100 },
-      { instanceId: 'f4', partType: 'decoupler_stack_2m', x: 0, y: -0.5, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 'f5', partType: 'tank_titan_4m', x: 0, y: 5.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'f6', partType: 'engine_cluster_quad', x: 0, y: 12, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'f7', partType: 'srb_heavy', x: -3, y: 5.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'f8', partType: 'nosecone_slant_left', x: -3, y: 0.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'f9', partType: 'srb_heavy', x: 3, y: 5.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'f10', partType: 'nosecone_slant_right', x: 3, y: 0.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'f11', partType: 'landing_leg_heavy', x: -4.5, y: 10.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'f12', partType: 'landing_leg_heavy', x: 4.5, y: 10.5, rotation: 0, stage: 1, fuelPercentage: 100 }
+      { instanceId: 'f2', partType: 'tank_small_2m', x: 0, y: -6, rotation: 0, stage: 3, fuelPercentage: 100 },
+      { instanceId: 'f3', partType: 'engine_vacuum_expand', x: 0, y: -3.5, rotation: 0, stage: 3, fuelPercentage: 100 },
+      { instanceId: 'f4', partType: 'decoupler_stack_2m', x: 0, y: -1.5, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'f5', partType: 'tank_titan_4m', x: 0, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f6', partType: 'engine_cluster_quad', x: 0, y: 10, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f7', partType: 'srb_heavy', x: -3, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f8', partType: 'nosecone_slant_left', x: -3, y: -1.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f9', partType: 'srb_heavy', x: 3, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f10', partType: 'nosecone_slant_right', x: 3, y: -1.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f11', partType: 'landing_leg_heavy', x: -4.5, y: 8, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'f12', partType: 'landing_leg_heavy', x: 4.5, y: 8, rotation: 0, stage: 1, fuelPercentage: 100 }
     ],
     staging: [[1], [2], [3]]
   },
@@ -903,16 +886,16 @@ export const ROCKET_PRESETS: RocketBlueprint[] = [
     id: 'starship_superheavy',
     name: 'Starship / Super Heavy (Full Stack)',
     parts: [
-      { instanceId: 'st1', partType: 'crew_heavy', x: 0, y: -11, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 'st2', partType: 'tank_heavy_4m', x: 0, y: -5, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 'st3', partType: 'engine_raptor', x: 0, y: 0, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'st1', partType: 'crew_heavy', x: 0, y: -10, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'st2', partType: 'tank_heavy_4m', x: 0, y: -6, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'st3', partType: 'engine_raptor', x: 0, y: -1.5, rotation: 0, stage: 2, fuelPercentage: 100 },
       { instanceId: 'st4', partType: 'fin_grid_titanium', x: -2.5, y: -9, rotation: 0, stage: 2, fuelPercentage: 100 },
       { instanceId: 'st5', partType: 'fin_grid_titanium', x: 2.5, y: -9, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 'st6', partType: 'decoupler_stack_4m', x: 0, y: 2, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'st7', partType: 'tank_titan_4m', x: 0, y: 7.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'st8', partType: 'engine_cluster_quad', x: 0, y: 14, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'st9', partType: 'fin_grid_titanium', x: -2.5, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'st10', partType: 'fin_grid_titanium', x: 2.5, y: 3.5, rotation: 0, stage: 1, fuelPercentage: 100 }
+      { instanceId: 'st6', partType: 'decoupler_stack_4m', x: 0, y: 0.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'st7', partType: 'tank_titan_4m', x: 0, y: 5.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'st8', partType: 'engine_cluster_quad', x: 0, y: 12, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'st9', partType: 'fin_grid_titanium', x: -2.5, y: 3, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'st10', partType: 'fin_grid_titanium', x: 2.5, y: 3, rotation: 0, stage: 1, fuelPercentage: 100 }
     ],
     staging: [[1], [2]]
   },
@@ -921,13 +904,13 @@ export const ROCKET_PRESETS: RocketBlueprint[] = [
     name: 'Space Shuttle Stack (STS)',
     parts: [
       { instanceId: 'sh1', partType: 'crew_heavy', x: 0, y: -6, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 'sh2', partType: 'tank_heavy_4m', x: 0, y: 0, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 'sh3', partType: 'engine_raptor', x: 0, y: 5, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 'sh4', partType: 'srb_heavy', x: -3, y: 0, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'sh5', partType: 'nosecone_slant_left', x: -3, y: -5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'sh6', partType: 'srb_heavy', x: 3, y: 0, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'sh7', partType: 'nosecone_slant_right', x: 3, y: -5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'sh8', partType: 'fin_delta', x: 0, y: 4, rotation: 0, stage: 2, fuelPercentage: 100 }
+      { instanceId: 'sh2', partType: 'tank_heavy_4m', x: 0, y: -2, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'sh3', partType: 'engine_raptor', x: 0, y: 2.5, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'sh4', partType: 'srb_heavy', x: -3, y: -2, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sh5', partType: 'nosecone_slant_left', x: -3, y: -7, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sh6', partType: 'srb_heavy', x: 3, y: -2, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sh7', partType: 'nosecone_slant_right', x: 3, y: -7, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sh8', partType: 'fin_delta', x: 0, y: 3, rotation: 0, stage: 2, fuelPercentage: 100 }
     ],
     staging: [[1], [2]]
   },
@@ -937,10 +920,10 @@ export const ROCKET_PRESETS: RocketBlueprint[] = [
     parts: [
       { instanceId: 'el1', partType: 'fairing_2m', x: 0, y: -6, rotation: 0, stage: 2, fuelPercentage: 100 },
       { instanceId: 'el2', partType: 'tank_small_2m', x: 0, y: -2.5, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 'el3', partType: 'engine_vacuum_expand', x: 0, y: 0, rotation: 0, stage: 2, fuelPercentage: 100 },
-      { instanceId: 'el4', partType: 'decoupler_stack_2m', x: 0, y: 1.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'el5', partType: 'tank_med_2m', x: 0, y: 5.5, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'el6', partType: 'engine_merlin_1d', x: 0, y: 10, rotation: 0, stage: 1, fuelPercentage: 100 }
+      { instanceId: 'el3', partType: 'engine_vacuum_expand', x: 0, y: 0.5, rotation: 0, stage: 2, fuelPercentage: 100 },
+      { instanceId: 'el4', partType: 'decoupler_stack_2m', x: 0, y: 2.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'el5', partType: 'tank_med_2m', x: 0, y: 6, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'el6', partType: 'engine_merlin', x: 0, y: 10, rotation: 0, stage: 1, fuelPercentage: 100 }
     ],
     staging: [[1], [2]]
   },
@@ -948,11 +931,11 @@ export const ROCKET_PRESETS: RocketBlueprint[] = [
     id: 'sounding_rocket',
     name: 'Suborbital Sounding Rocket',
     parts: [
-      { instanceId: 'sr1', partType: 'nosecone_2m', x: 0, y: -4, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'sr2', partType: 'tank_small_2m', x: 0, y: -1, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'sr3', partType: 'engine_merlin_1d', x: 0, y: 2, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'sr4', partType: 'fin_delta', x: -2, y: 2, rotation: 0, stage: 1, fuelPercentage: 100 },
-      { instanceId: 'sr5', partType: 'fin_delta', x: 2, y: 2, rotation: 0, stage: 1, fuelPercentage: 100 }
+      { instanceId: 'sr1', partType: 'nosecone_2m', x: 0, y: -4.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sr2', partType: 'tank_small_2m', x: 0, y: -2, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sr3', partType: 'engine_merlin', x: 0, y: 0.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sr4', partType: 'fin_delta', x: -2, y: 0.5, rotation: 0, stage: 1, fuelPercentage: 100 },
+      { instanceId: 'sr5', partType: 'fin_delta', x: 2, y: 0.5, rotation: 0, stage: 1, fuelPercentage: 100 }
     ],
     staging: [[1]]
   },
