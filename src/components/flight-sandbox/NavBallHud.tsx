@@ -14,11 +14,7 @@ import { useSimulation } from '../../context/SimulationContext';
 import { calculateCurrentStageMassAndThrust } from '../../physics/flight-dynamics';
 import { FlightReportModal } from './FlightReportModal';
 
-interface NavBallHudProps {
-  onClose?: () => void;
-}
-
-export const NavBallHud: React.FC<NavBallHudProps> = ({ onClose }) => {
+export const NavBallHud: React.FC = () => {
   const {
     blueprint,
     flightState,
@@ -51,7 +47,7 @@ export const NavBallHud: React.FC<NavBallHudProps> = ({ onClose }) => {
 
   return (
     <>
-      <aside className="w-full lg:w-[300px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
+      <aside className="w-[300px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
         <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Compass className="w-4 h-4 text-[#FF8A1F]" />
@@ -65,14 +61,6 @@ export const NavBallHud: React.FC<NavBallHudProps> = ({ onClose }) => {
             >
               <FileText className="w-3.5 h-3.5 text-[#79AFC1]" />
             </button>
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="lg:hidden p-1 rounded bg-[#1B1F28] text-[#A4ABB6] hover:text-[#E6E8EB] text-xs font-bold px-2 py-0.5"
-              >
-                ✕ Done
-              </button>
-            )}
             <span className={`text-[10px] px-2 py-0.5 rounded font-mono-num font-semibold ${
               flightState.isCrashed
                 ? 'bg-[#D95757]/20 text-[#D95757] border border-[#D95757]/40'

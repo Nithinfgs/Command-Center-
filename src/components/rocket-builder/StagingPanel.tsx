@@ -12,11 +12,7 @@ import {
 import { useSimulation } from '../../context/SimulationContext';
 import { calculateRocketProperties, PARTS_CATALOG } from '../../physics/rocket-math';
 
-interface StagingPanelProps {
-  onClose?: () => void;
-}
-
-export const StagingPanel: React.FC<StagingPanelProps> = ({ onClose }) => {
+export const StagingPanel: React.FC = () => {
   const { 
     blueprint, 
     setPartStage, 
@@ -52,31 +48,21 @@ export const StagingPanel: React.FC<StagingPanelProps> = ({ onClose }) => {
   const selectedPartDef = selectedPart ? PARTS_CATALOG[selectedPart.partType] : null;
 
   return (
-    <aside className="w-full lg:w-[320px] bg-[#151820] border-l border-[#252B36] flex flex-col h-full select-none shrink-0 z-20">
+    <aside className="w-[320px] bg-[#151820] border-l border-[#252B36] flex flex-col h-full select-none shrink-0 z-20">
       {/* Dynamic Header */}
       <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
         <h2 className="text-xs font-semibold text-[#E6E8EB] tracking-tight uppercase">
           {selectedPart ? 'Component Inspector' : 'Vehicle Staging & Systems'}
         </h2>
-        <div className="flex items-center gap-2">
-          {selectedPart && (
-            <button
-              onClick={() => setSelectedPartInstanceId(null)}
-              className="text-[#69717E] hover:text-[#E6E8EB] p-1 rounded hover:bg-[#1B1F28]"
-              title="Deselect"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="lg:hidden p-1 rounded bg-[#1B1F28] text-[#A4ABB6] hover:text-[#E6E8EB] text-xs font-bold px-2 py-0.5"
-            >
-              ✕ Done
-            </button>
-          )}
-        </div>
+        {selectedPart && (
+          <button
+            onClick={() => setSelectedPartInstanceId(null)}
+            className="text-[#69717E] hover:text-[#E6E8EB] p-1 rounded hover:bg-[#1B1F28]"
+            title="Deselect"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">

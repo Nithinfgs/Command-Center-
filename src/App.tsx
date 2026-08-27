@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { SimulationProvider, useSimulation } from './context/SimulationContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Header } from './components/layout/Header';
@@ -18,18 +18,21 @@ import { CockpitHudView } from './components/flight-sandbox/CockpitHudView';
 import { RoverSurfaceCanvas } from './components/flight-sandbox/RoverSurfaceCanvas';
 import { ConstellationView } from './components/constellation/ConstellationView';
 import { GlobeImpactCanvas3D } from './components/asteroid-impact/GlobeImpactCanvas3D';
-import { PlusCircle, Layers, Sliders, Activity, Compass, Settings, BarChart2 } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { activeTab, blueprint } = useSimulation();
-  const [use3DGlobe, setUse3DGlobe] = useState(false);
-  const [isCockpitMode, setIsCockpitMode] = useState(false);
+  const { activeTab } = useSimulation();
+  const [use3DGlobe, setUse3DGlobe] = React.useState(false);
+  const [isCockpitMode, setIsCockpitMode] = React.useState(false);
 
-  // Mobile Drawer State
-  const [mobileDrawer, setMobileDrawer] = useState<'parts' | 'staging' | 'controls' | null>(null);
-  const [showMobileMetrics, setShowMobileMetrics] = useState(false);
+  // Mobile-specific layout states (< 1024px)
+  const [mobileBuilderTab, setMobileBuilderTab] = React.useState<'canvas' | 'parts' | 'staging'>('canvas');
+  const [mobileShowControls, setMobileShowControls] = React.useState(false);
 
-  const closeMobileDrawer = () => setMobileDrawer(null);
+  // Auto-close mobile drawer when switching tabs
+  React.useEffect(() => {
+    setMobileShowControls(false);
+    setMobileBuilderTab('canvas');
+  }, [activeTab]);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#090A0D] text-[#E6E8EB] overflow-hidden select-none">
@@ -38,185 +41,130 @@ const MainLayout: React.FC = () => {
 
       {/* Main Simulation Viewport */}
       <main className="flex-1 flex flex-col overflow-hidden relative" role="main" aria-label="Simulation Viewport">
+        {/* ===================== ROCKET BUILDER ===================== */}
         {activeTab === 'rocket-builder' && (
           <ErrorBoundary fallbackTitle="Rocket Builder Module">
             <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+              {/* Mobile Builder View Switcher (< 1024px) */}
+              <div className="lg:hidden flex items-center justify-between px-3 py-1.5 bg-[#151820] border-b border-[#252B36] z-20 shrink-0">
+                <div className="flex items-center gap-1 bg-[#0E1015] p-1 rounded-lg border border-[#252B36] w-full justify-around">
+                  <button
+                    onClick={() => setMobileBuilderTab('canvas')}
+                    className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all text-center ${
+                      mobileBuilderTab === 'canvas' ? 'bg-[#FF8A1F] text-[#090A0D]' : 'text-[#A4ABB6] hover:text-[#E6E8EB]'
+                    }`}
+                  >
+                    📐 Rocket View
+                  </button>
+                  <button
+                    onClick={() => setMobileBuilderTab('parts')}
+                    className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all text-center ${
+                      mobileBuilderTab === 'parts' ? 'bg-[#FF8A1F] text-[#090A0D]' : 'text-[#A4ABB6] hover:text-[#E6E8EB]'
+                    }`}
+                  >
+                    🎨 Parts Library
+                  </button>
+                  <button
+                    onClick={() => setMobileBuilderTab('staging')}
+                    className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all text-center ${
+                      mobileBuilderTab === 'staging' ? 'bg-[#FF8A1F] text-[#090A0D]' : 'text-[#A4ABB6] hover:text-[#E6E8EB]'
+                    }`}
+                  >
+                    🚀 Staging Order
+                  </button>
+                </div>
+              </div>
+
+              {/* Viewport Content */}
               <div className="flex-1 flex overflow-hidden relative">
-                {/* Desktop Side-by-Side: Parts */}
-                <div className="hidden lg:flex h-full">
+                {/* Parts Palette: Always on desktop, conditional on mobile */}
+                <div className={`h-full ${mobileBuilderTab === 'parts' ? 'absolute inset-0 z-30 flex w-full bg-[#151820]' : 'hidden lg:flex'}`}>
                   <PartsPalette />
                 </div>
 
-                {/* 100% Width Canvas for Mobile & Desktop */}
-                <div className="flex-1 h-full relative overflow-hidden">
+                {/* Main Canvas: Takes full width on mobile unless parts/staging is active */}
+                <div className={`flex-1 flex h-full overflow-hidden ${mobileBuilderTab !== 'canvas' ? 'hidden lg:flex' : 'flex'}`}>
                   <RocketBuilderCanvas />
                 </div>
 
-                {/* Desktop Side-by-Side: Staging */}
-                <div className="hidden lg:flex h-full">
+                {/* Staging Panel: Always on desktop, conditional on mobile */}
+                <div className={`h-full ${mobileBuilderTab === 'staging' ? 'absolute inset-0 z-30 flex w-full bg-[#151820]' : 'hidden lg:flex'}`}>
                   <StagingPanel />
                 </div>
               </div>
 
-              {/* Desktop Metrics HUD / Optional Mobile HUD */}
-              <div className={`shrink-0 ${showMobileMetrics ? 'block' : 'hidden lg:block'}`}>
-                <RocketMetricsHud />
-              </div>
-
-              {/* Mobile Phone Floating Action Bar */}
-              <div className="lg:hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 bg-[#151820]/95 backdrop-blur-md border border-[#353D4A] px-2 py-1.5 rounded-full shadow-2xl">
-                <button
-                  onClick={() => setMobileDrawer('parts')}
-                  className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#FF8A1F] text-[#090A0D] text-xs font-bold shadow-sm"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Parts (28)</span>
-                </button>
-                <button
-                  onClick={() => setMobileDrawer('staging')}
-                  className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#1B1F28] hover:bg-[#252B36] text-[#E6E8EB] text-xs font-semibold border border-[#252B36]"
-                >
-                  <Layers className="w-3.5 h-3.5 text-[#38BDF8]" />
-                  <span>Staging ({blueprint.parts.length})</span>
-                </button>
-                <button
-                  onClick={() => setShowMobileMetrics(!showMobileMetrics)}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                    showMobileMetrics 
-                      ? 'bg-[#38BDF8]/20 border-[#38BDF8] text-[#38BDF8]' 
-                      : 'bg-[#1B1F28] border-[#252B36] text-[#A4ABB6]'
-                  }`}
-                  title="Toggle Delta-V & TWR Metrics"
-                >
-                  <BarChart2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Mobile Drawers (Parts & Staging) */}
-              {mobileDrawer === 'parts' && (
-                <div 
-                  onClick={closeMobileDrawer}
-                  className="lg:hidden fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-                >
-                  <div 
-                    onClick={e => e.stopPropagation()}
-                    className="w-full sm:max-w-md h-[80vh] bg-[#151820] border-t sm:border border-[#353D4A] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-                  >
-                    <PartsPalette onClose={closeMobileDrawer} />
-                  </div>
-                </div>
-              )}
-
-              {mobileDrawer === 'staging' && (
-                <div 
-                  onClick={closeMobileDrawer}
-                  className="lg:hidden fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-                >
-                  <div 
-                    onClick={e => e.stopPropagation()}
-                    className="w-full sm:max-w-md h-[80vh] bg-[#151820] border-t sm:border border-[#353D4A] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-                  >
-                    <StagingPanel onClose={closeMobileDrawer} />
-                  </div>
-                </div>
-              )}
+              {/* Metrics HUD at Bottom */}
+              <RocketMetricsHud />
             </div>
           </ErrorBoundary>
         )}
 
+        {/* ===================== CFD WIND TUNNEL ===================== */}
         {activeTab === 'wind-tunnel' && (
           <ErrorBoundary fallbackTitle="CFD Wind Tunnel Module">
             <div className="flex-1 flex h-full overflow-hidden relative">
-              {/* Desktop Side-by-Side */}
-              <div className="hidden lg:flex h-full">
+              {/* Mobile Controls Toggle Button */}
+              <button
+                onClick={() => setMobileShowControls(!mobileShowControls)}
+                className="lg:hidden absolute bottom-4 left-4 z-30 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#FF8A1F] text-[#090A0D] font-bold text-xs shadow-lg shadow-[#FF8A1F]/30 active:scale-95 transition-all"
+              >
+                <span>⚙️</span>
+                <span>{mobileShowControls ? 'Hide Controls' : 'CFD Controls & Mach'}</span>
+              </button>
+
+              {/* Controls Panel */}
+              <div className={`h-full z-20 ${mobileShowControls ? 'absolute inset-y-0 left-0 max-w-[85vw] shadow-2xl bg-[#151820] flex' : 'hidden lg:flex'}`}>
                 <WindTunnelControls />
               </div>
 
-              {/* Full Width Streamlines Canvas */}
-              <div className="flex-1 h-full relative overflow-hidden">
-                <WindTunnelCanvas />
-              </div>
-
-              {/* Mobile Floating Action Button */}
-              <div className="lg:hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
-                <button
-                  onClick={() => setMobileDrawer('controls')}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#FF8A1F] text-[#090A0D] text-xs font-bold shadow-2xl"
-                >
-                  <Sliders className="w-4 h-4" />
-                  <span>Mach & Aero Controls</span>
-                </button>
-              </div>
-
-              {/* Mobile Controls Drawer */}
-              {mobileDrawer === 'controls' && (
-                <div 
-                  onClick={closeMobileDrawer}
-                  className="lg:hidden fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-                >
-                  <div 
-                    onClick={e => e.stopPropagation()}
-                    className="w-full sm:max-w-md h-[80vh] bg-[#151820] border-t sm:border border-[#353D4A] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-                  >
-                    <WindTunnelControls onClose={closeMobileDrawer} />
-                  </div>
-                </div>
-              )}
+              {/* Supersonic Streamlines Canvas */}
+              <WindTunnelCanvas />
             </div>
           </ErrorBoundary>
         )}
 
+        {/* ===================== CELESTIAL SIMULATOR ===================== */}
         {activeTab === 'celestial-sim' && (
           <ErrorBoundary fallbackTitle="Celestial N-Body Simulator">
             <div className="flex-1 flex h-full overflow-hidden relative">
-              {/* Desktop Side-by-Side */}
-              <div className="hidden lg:flex h-full">
+              {/* Mobile Controls Toggle Button */}
+              <button
+                onClick={() => setMobileShowControls(!mobileShowControls)}
+                className="lg:hidden absolute bottom-4 left-4 z-30 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#38BDF8] text-[#090A0D] font-bold text-xs shadow-lg shadow-[#38BDF8]/30 active:scale-95 transition-all"
+              >
+                <span>🪐</span>
+                <span>{mobileShowControls ? 'Hide Orbits Panel' : 'Planets & Maneuvers'}</span>
+              </button>
+
+              {/* Controls Panel */}
+              <div className={`h-full z-20 ${mobileShowControls ? 'absolute inset-y-0 left-0 max-w-[85vw] shadow-2xl bg-[#151820] flex' : 'hidden lg:flex'}`}>
                 <CelestialControls />
               </div>
 
-              {/* Full Width 3D Orbits Canvas */}
-              <div className="flex-1 h-full relative overflow-hidden">
-                <CelestialCanvas3D />
-              </div>
-
-              {/* Mobile Floating Action Button */}
-              <div className="lg:hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
-                <button
-                  onClick={() => setMobileDrawer('controls')}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#38BDF8] text-[#090A0D] text-xs font-bold shadow-2xl"
-                >
-                  <Activity className="w-4 h-4" />
-                  <span>Orbits & Maneuvers</span>
-                </button>
-              </div>
-
-              {/* Mobile Controls Drawer */}
-              {mobileDrawer === 'controls' && (
-                <div 
-                  onClick={closeMobileDrawer}
-                  className="lg:hidden fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-                >
-                  <div 
-                    onClick={e => e.stopPropagation()}
-                    className="w-full sm:max-w-md h-[80vh] bg-[#151820] border-t sm:border border-[#353D4A] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-                  >
-                    <CelestialControls onClose={closeMobileDrawer} />
-                  </div>
-                </div>
-              )}
+              {/* 3D Photorealistic Celestial Canvas */}
+              <CelestialCanvas3D />
             </div>
           </ErrorBoundary>
         )}
 
+        {/* ===================== ASTEROID IMPACT ===================== */}
         {activeTab === 'asteroid-impact' && (
           <ErrorBoundary fallbackTitle="Kinetic Impact Simulator">
             <div className="flex-1 flex h-full overflow-hidden relative">
-              {/* Desktop Side-by-Side */}
-              <div className="hidden lg:flex h-full">
+              {/* Mobile Controls Toggle Button */}
+              <button
+                onClick={() => setMobileShowControls(!mobileShowControls)}
+                className="lg:hidden absolute bottom-4 left-4 z-30 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#F87171] text-[#090A0D] font-bold text-xs shadow-lg shadow-[#F87171]/30 active:scale-95 transition-all"
+              >
+                <span>☄️</span>
+                <span>{mobileShowControls ? 'Hide Impact Setup' : 'Impact Configurator'}</span>
+              </button>
+
+              {/* Configurator Panel */}
+              <div className={`h-full z-20 ${mobileShowControls ? 'absolute inset-y-0 left-0 max-w-[85vw] shadow-2xl bg-[#151820] flex' : 'hidden lg:flex'}`}>
                 <AsteroidConfigurator />
               </div>
 
-              {/* Full Width Impact Map / 3D Globe Canvas */}
               <div className="flex-1 flex flex-col h-full relative">
                 <div className="absolute top-3 right-3 z-30 flex items-center bg-[#151820]/90 border border-[#252B36] p-1 rounded-lg text-xs">
                   <button
@@ -238,45 +186,28 @@ const MainLayout: React.FC = () => {
                 </div>
                 {use3DGlobe ? <GlobeImpactCanvas3D /> : <ImpactCanvas />}
               </div>
-
-              {/* Mobile Floating Action Button */}
-              <div className="lg:hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
-                <button
-                  onClick={() => setMobileDrawer('controls')}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#FF8A1F] text-[#090A0D] text-xs font-bold shadow-2xl"
-                >
-                  <Settings className="w-4 h-4" />
-                  <span>Asteroid Settings</span>
-                </button>
-              </div>
-
-              {/* Mobile Controls Drawer */}
-              {mobileDrawer === 'controls' && (
-                <div 
-                  onClick={closeMobileDrawer}
-                  className="lg:hidden fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-                >
-                  <div 
-                    onClick={e => e.stopPropagation()}
-                    className="w-full sm:max-w-md h-[80vh] bg-[#151820] border-t sm:border border-[#353D4A] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-                  >
-                    <AsteroidConfigurator onClose={closeMobileDrawer} />
-                  </div>
-                </div>
-              )}
             </div>
           </ErrorBoundary>
         )}
 
+        {/* ===================== FLIGHT SANDBOX ===================== */}
         {activeTab === 'flight-sandbox' && (
           <ErrorBoundary fallbackTitle="Flight Dynamics Sandbox">
             <div className="flex-1 flex h-full overflow-hidden relative">
-              {/* Desktop Side-by-Side */}
-              <div className="hidden lg:flex h-full">
+              {/* Mobile Flight Controls Toggle Button */}
+              <button
+                onClick={() => setMobileShowControls(!mobileShowControls)}
+                className="lg:hidden absolute bottom-4 left-4 z-30 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#55B982] text-[#090A0D] font-bold text-xs shadow-lg shadow-[#55B982]/30 active:scale-95 transition-all"
+              >
+                <span>🚀</span>
+                <span>{mobileShowControls ? 'Hide Flight HUD' : 'NavBall & Throttle'}</span>
+              </button>
+
+              {/* NavBall HUD Panel */}
+              <div className={`h-full z-20 ${mobileShowControls ? 'absolute inset-y-0 left-0 max-w-[90vw] shadow-2xl bg-[#151820] flex' : 'hidden lg:flex'}`}>
                 <NavBallHud />
               </div>
 
-              {/* Full Width Flight Simulation Canvas */}
               <div className="flex-1 flex flex-col h-full relative">
                 <div className="absolute top-3 right-3 z-30 flex items-center bg-[#151820]/90 border border-[#252B36] p-1 rounded-lg text-xs">
                   <button
@@ -298,42 +229,18 @@ const MainLayout: React.FC = () => {
                 </div>
                 {isCockpitMode ? <CockpitHudView /> : <FlightCanvas />}
               </div>
-
-              {/* Mobile Floating Action Button */}
-              <div className="lg:hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
-                <button
-                  onClick={() => setMobileDrawer('controls')}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#FF8A1F] text-[#090A0D] text-xs font-bold shadow-2xl"
-                >
-                  <Compass className="w-4 h-4" />
-                  <span>Flight Controls & Telemetry</span>
-                </button>
-              </div>
-
-              {/* Mobile Controls Drawer */}
-              {mobileDrawer === 'controls' && (
-                <div 
-                  onClick={closeMobileDrawer}
-                  className="lg:hidden fixed inset-0 bg-[#090A0D]/85 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-                >
-                  <div 
-                    onClick={e => e.stopPropagation()}
-                    className="w-full sm:max-w-md h-[80vh] bg-[#151820] border-t sm:border border-[#353D4A] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-                  >
-                    <NavBallHud onClose={closeMobileDrawer} />
-                  </div>
-                </div>
-              )}
             </div>
           </ErrorBoundary>
         )}
 
+        {/* ===================== CONSTELLATIONS ===================== */}
         {activeTab === 'constellation' && (
           <ErrorBoundary fallbackTitle="Satellite Constellations">
             <ConstellationView />
           </ErrorBoundary>
         )}
 
+        {/* ===================== ROVER EXPLORATION ===================== */}
         {activeTab === 'rover-surface' && (
           <ErrorBoundary fallbackTitle="Planetary Surface Exploration">
             <RoverSurfaceCanvas />
