@@ -110,7 +110,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setBlueprintState(targetBlueprint);
       try {
         localStorage.setItem('mission_control_blueprint', JSON.stringify(targetBlueprint));
-      } catch (e) {}
+      } catch {}
     }
   }, [history, historyIndex]);
 
@@ -122,7 +122,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setBlueprintState(targetBlueprint);
       try {
         localStorage.setItem('mission_control_blueprint', JSON.stringify(targetBlueprint));
-      } catch (e) {}
+      } catch {}
     }
   }, [history, historyIndex]);
 
@@ -261,7 +261,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const transferRocketToWindTunnel = useCallback(() => {
     setActiveTab('wind-tunnel');
-  }, []);
+  }, [setActiveTab]);
 
   // =====================
   // CELESTIAL SIMULATOR ACTIONS

@@ -28,8 +28,6 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'current' | 'polar'>('current');
 
-  if (!isOpen) return null;
-
   const currentAero = calculateAeroTelemetry(windTunnelState);
   const rocketProps = calculateRocketProperties(blueprint);
   const effectiveAoA = (windTunnelState.windAngle || 0) - (windTunnelState.rocketPitch || 0);
@@ -61,6 +59,8 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
     }
     return sweep;
   }, [windTunnelState]);
+
+  if (!isOpen) return null;
 
   // Export current state as CSV
   const handleExportCSV = () => {
