@@ -301,50 +301,66 @@ export const Header: React.FC = () => {
             </div>
 
             <div className="space-y-3 text-xs text-[#A4ABB6] leading-relaxed overflow-y-auto pr-1">
-              {/* 1. Educational Disclaimer */}
+              {/* 1. Sole Ownership, Intellectual Property & Anti-Plagiarism Protection */}
+              <div className="bg-[#1B1F28] p-3.5 rounded-lg border border-[#FF8A1F]/60 space-y-1.5 shadow-md shadow-[#FF8A1F]/10">
+                <span className="font-bold text-[#FF8A1F] block text-xs uppercase tracking-wide flex items-center gap-1.5">
+                  <span>👑</span> 1. Sole Ownership, Authorship & Anti-Plagiarism Protection
+                </span>
+                <p className="text-[#E6E8EB] font-medium">
+                  <strong>Nithin Selvaraj</strong> is the <strong>sole author, creator, architect, and exclusive intellectual property owner</strong> of Rocket Command Center (&ldquo;the Application&rdquo;).
+                </p>
+                <p>
+                  &bull; <strong>Mandatory Attribution:</strong> Any reference, educational presentation, or permitted display must explicitly credit <strong>Nithin Selvaraj</strong> as the sole creator and developer.
+                </p>
+                <p>
+                  &bull; <strong>Replication & Submission Prohibition:</strong> This application, its source code, physics engines, UI architectures, mathematical models, and CAD systems are the original work of Nithin Selvaraj. It is <strong>strictly prohibited</strong> for any other individual, team, institution, or third party to replicate, duplicate, clone, misattribute, or submit this project (in whole or in part) under any different name or authorship for competitions, hackathons, academic grading, or commercial distribution.
+                </p>
+              </div>
+
+              {/* 2. Educational Disclaimer */}
               <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
-                <span className="font-bold text-[#FF8A1F] block text-[11px] uppercase tracking-wide">
-                  1. Educational Mathematical Simulation & Non-Certified Notice
+                <span className="font-bold text-[#38BDF8] block text-[11px] uppercase tracking-wide">
+                  2. Educational Mathematical Simulation & Non-Certified Notice
                 </span>
                 <p>
                   This software is an <strong>educational mathematical simulator</strong> designed for academic instruction, orbital mechanics exploration, and aerospace concepts. It is <strong>NOT</strong> flight-certified, safety-certified, or peer-reviewed for actual avionics, spacecraft navigation, or real-world launch vehicle operations. All numerical solvers (RK4 spherical flight dynamics, Rankine-Hugoniot shock relations, Collins & Ames crater scaling) are educational approximations.
                 </p>
               </div>
 
-              {/* 2. Limitation of Liability & Safe Harbor */}
+              {/* 3. Limitation of Liability & Safe Harbor */}
               <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
                 <span className="font-bold text-[#F87171] block text-[11px] uppercase tracking-wide">
-                  2. Limitation of Liability & Safe Harbor (AS-IS License)
+                  3. Limitation of Liability & Safe Harbor (AS-IS License)
                 </span>
                 <p>
-                  THE SOFTWARE IS PROVIDED &ldquo;AS IS&rdquo;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR ACCURACY. IN NO EVENT SHALL THE AUTHORS, CREATORS, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR LIABILITY ARISING OUT OF THE USE OF THIS SIMULATION.
+                  THE SOFTWARE IS PROVIDED &ldquo;AS IS&rdquo;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR ACCURACY. IN NO EVENT SHALL NITHIN SELVARAJ OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR LIABILITY ARISING OUT OF THE USE OF THIS SIMULATION.
                 </p>
               </div>
 
-              {/* 3. Non-Proliferation & ITAR/EAR Exemption */}
+              {/* 4. Non-Proliferation & ITAR/EAR Exemption */}
               <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
                 <span className="font-bold text-[#FBBF24] block text-[11px] uppercase tracking-wide">
-                  3. Non-Proliferation & Public Domain Academic Exemption
+                  4. Non-Proliferation & Public Domain Academic Exemption
                 </span>
                 <p>
                   All equations, staging models, aerodynamic relations, and orbital parameters implemented in this software are derived strictly from publicly available textbooks, NASA technical reports, and open educational literature. This application contains zero classified, export-controlled, or ITAR/EAR-restricted missile guidance technology.
                 </p>
               </div>
 
-              {/* 4. Client-Side Privacy Policy */}
+              {/* 5. Client-Side Privacy Policy */}
               <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
                 <span className="font-bold text-[#55B982] block text-[11px] uppercase tracking-wide">
-                  4. Privacy Policy & 100% Client-Side Data Protection
+                  5. Privacy Policy & 100% Client-Side Data Protection
                 </span>
                 <p>
                   Rocket Command Center is <strong>100% self-contained and client-side</strong>. It does NOT collect, track, or transmit personal data, telemetry, cookies, or user identifiers to external servers. All rocket designs and configurations are stored solely in your local browser storage (<code className="text-[#38BDF8]">localStorage</code>).
                 </p>
               </div>
 
-              {/* 5. Attributions & Open Science */}
+              {/* 6. Attributions & Open Science */}
               <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
-                <span className="font-bold text-[#38BDF8] block text-[11px] uppercase tracking-wide">
-                  5. Attributions & Open Science Datasets
+                <span className="font-bold text-[#A78BFA] block text-[11px] uppercase tracking-wide">
+                  6. Attributions & Open Science Datasets
                 </span>
                 <p>
                   Planetary textures, topographic normal maps, and Keplerian orbital elements are provided courtesy of NASA Goddard Space Flight Center, NASA Jet Propulsion Laboratory (JPL), and the United States Geological Survey (USGS).
@@ -353,12 +369,12 @@ export const Header: React.FC = () => {
             </div>
 
             <div className="pt-3 border-t border-[#252B36] flex items-center justify-between shrink-0">
-              <span className="text-[10px] text-[#69717E]">
-                Rocket Command Center v3.0 &bull; MIT Educational License &bull; 100% Offline
+              <span className="text-[10px] text-[#A4ABB6]">
+                &copy; {new Date().getFullYear()} <strong>Nithin Selvaraj</strong> &bull; All Rights Reserved &bull; Sole Creator
               </span>
               <button
                 onClick={() => setShowDisclosureModal(false)}
-                className="px-4 py-1.5 rounded-lg bg-[#38BDF8] text-[#090A0D] font-bold text-xs hover:bg-[#38BDF8]/90 transition-all"
+                className="px-4 py-1.5 rounded-lg bg-[#FF8A1F] text-[#090A0D] font-bold text-xs hover:bg-[#FFA24A] transition-all"
               >
                 Acknowledge & Close
               </button>
