@@ -70,11 +70,16 @@ export const Header: React.FC = () => {
     <header className="bg-[#0E1015] border-b border-[#252B36] px-3 sm:px-4 h-13 flex items-center justify-between select-none z-30 shrink-0 gap-2 overflow-x-auto no-scrollbar" role="banner">
       {/* Brand & Active Vehicle Subtitle */}
       <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+        <img 
+          src="/logo.jpg" 
+          alt="Rocket Command Center Logo" 
+          className="w-7 h-7 rounded-lg border border-[#FF8A1F]/40 shadow-sm shadow-[#FF8A1F]/20 object-cover"
+        />
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#FF8A1F]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#FF8A1F] animate-pulse" />
             <span className="font-bold text-xs tracking-wider text-[#E6E8EB] uppercase whitespace-nowrap">
-              Mission Control
+              Rocket Command Center
             </span>
           </div>
           <button 
