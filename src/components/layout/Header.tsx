@@ -175,10 +175,10 @@ export const Header: React.FC = () => {
         <button
           onClick={() => setShowDisclosureModal(true)}
           className="flex items-center gap-1 px-2 py-1.5 rounded bg-[#151820] hover:bg-[#1B1F28] border border-[#38BDF8]/30 text-[#38BDF8] hover:text-[#7DD3FC] transition-colors font-medium text-[11px]"
-          title="Technical Notes & Judging Disclosures"
+          title="Terms of Service, Legal Protection & Educational Disclosures"
         >
           <Info className="w-3.5 h-3.5" />
-          <span>Judging Info</span>
+          <span>Legal & Terms</span>
         </button>
 
         <button
@@ -273,7 +273,7 @@ export const Header: React.FC = () => {
         onClose={() => setShowCampaignModal(false)}
       />
 
-      {/* Judging & Technical Simulator Disclosures Modal */}
+      {/* Terms of Service, Privacy & Legal Disclosures Modal */}
       {showDisclosureModal && (
         <div 
           onClick={() => setShowDisclosureModal(false)}
@@ -283,13 +283,13 @@ export const Header: React.FC = () => {
         >
           <div 
             onClick={e => e.stopPropagation()}
-            className="bg-[#151820] border border-[#353D4A] rounded-xl max-w-xl w-full p-5 shadow-2xl space-y-4"
+            className="bg-[#151820] border border-[#353D4A] rounded-xl max-w-2xl w-full p-5 shadow-2xl space-y-4 max-h-[90vh] flex flex-col"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-[#252B36]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#252B36] shrink-0">
               <div className="flex items-center gap-2 text-[#38BDF8]">
                 <Info className="w-5 h-5" />
                 <h3 className="font-bold text-xs text-[#E6E8EB] uppercase tracking-wider">
-                  Technical Architecture & Judging Disclosures
+                  Terms of Service, Legal Protection & System Disclosures
                 </h3>
               </div>
               <button 
@@ -300,39 +300,65 @@ export const Header: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-3 text-xs text-[#A4ABB6] leading-relaxed">
+            <div className="space-y-3 text-xs text-[#A4ABB6] leading-relaxed overflow-y-auto pr-1">
+              {/* 1. Educational Disclaimer */}
               <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
                 <span className="font-bold text-[#FF8A1F] block text-[11px] uppercase tracking-wide">
-                  1. Educational Mathematical Simulation Disclaimer
+                  1. Educational Mathematical Simulation & Non-Certified Notice
                 </span>
                 <p>
-                  This platform is an <strong>educational mathematical simulator</strong>, not a flight-certified, safety-certified, or peer-reviewed aerospace analysis package. Numerical solvers (Runge-Kutta 4th Order spherical flight dynamics, compressible shockwave relations, Collins & Ames impact cratering scaling, and Clohessy-Wiltshire relative motion) represent educational numerical approximations.
+                  This software is an <strong>educational mathematical simulator</strong> designed for academic instruction, orbital mechanics exploration, and aerospace concepts. It is <strong>NOT</strong> flight-certified, safety-certified, or peer-reviewed for actual avionics, spacecraft navigation, or real-world launch vehicle operations. All numerical solvers (RK4 spherical flight dynamics, Rankine-Hugoniot shock relations, Collins & Ames crater scaling) are educational approximations.
                 </p>
               </div>
 
+              {/* 2. Limitation of Liability & Safe Harbor */}
               <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
-                <span className="font-bold text-[#38BDF8] block text-[11px] uppercase tracking-wide">
-                  2. CFD Telemetry & Polar Data Export Notice
+                <span className="font-bold text-[#F87171] block text-[11px] uppercase tracking-wide">
+                  2. Limitation of Liability & Safe Harbor (AS-IS License)
                 </span>
                 <p>
-                  Full aerodynamic polar curves, aerodynamic coefficients ($C_d, C_l, L/D$), and shockwave stagnation properties can be exported directly via the <strong>CFD Aero</strong> tab using CSV/JSON download or 1-click clipboard copy. If evaluating in an automated sandbox environment, manual CSV/JSON verification in standard browsers is supported.
+                  THE SOFTWARE IS PROVIDED &ldquo;AS IS&rdquo;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR ACCURACY. IN NO EVENT SHALL THE AUTHORS, CREATORS, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR LIABILITY ARISING OUT OF THE USE OF THIS SIMULATION.
                 </p>
               </div>
 
+              {/* 3. Non-Proliferation & ITAR/EAR Exemption */}
+              <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
+                <span className="font-bold text-[#FBBF24] block text-[11px] uppercase tracking-wide">
+                  3. Non-Proliferation & Public Domain Academic Exemption
+                </span>
+                <p>
+                  All equations, staging models, aerodynamic relations, and orbital parameters implemented in this software are derived strictly from publicly available textbooks, NASA technical reports, and open educational literature. This application contains zero classified, export-controlled, or ITAR/EAR-restricted missile guidance technology.
+                </p>
+              </div>
+
+              {/* 4. Client-Side Privacy Policy */}
               <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
                 <span className="font-bold text-[#55B982] block text-[11px] uppercase tracking-wide">
-                  3. Desktop-First Aerospace Workstation
+                  4. Privacy Policy & 100% Client-Side Data Protection
                 </span>
                 <p>
-                  The interface is engineered <strong>desktop-first</strong>. It is usable at 1024 px and optimal at 1280 px or wider for dual-viewport telemetry, 3D orbits, and live CAD staging hierarchies.
+                  Rocket Command Center is <strong>100% self-contained and client-side</strong>. It does NOT collect, track, or transmit personal data, telemetry, cookies, or user identifiers to external servers. All rocket designs and configurations are stored solely in your local browser storage (<code className="text-[#38BDF8]">localStorage</code>).
+                </p>
+              </div>
+
+              {/* 5. Attributions & Open Science */}
+              <div className="bg-[#0E1015] p-3 rounded-lg border border-[#252B36] space-y-1">
+                <span className="font-bold text-[#38BDF8] block text-[11px] uppercase tracking-wide">
+                  5. Attributions & Open Science Datasets
+                </span>
+                <p>
+                  Planetary textures, topographic normal maps, and Keplerian orbital elements are provided courtesy of NASA Goddard Space Flight Center, NASA Jet Propulsion Laboratory (JPL), and the United States Geological Survey (USGS).
                 </p>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-[#252B36] flex justify-end">
+            <div className="pt-3 border-t border-[#252B36] flex items-center justify-between shrink-0">
+              <span className="text-[10px] text-[#69717E]">
+                Rocket Command Center v3.0 &bull; MIT Educational License &bull; 100% Offline
+              </span>
               <button
                 onClick={() => setShowDisclosureModal(false)}
-                className="px-4 py-2 rounded-lg bg-[#38BDF8] text-[#090A0D] font-bold text-xs hover:bg-[#38BDF8]/90 transition-all"
+                className="px-4 py-1.5 rounded-lg bg-[#38BDF8] text-[#090A0D] font-bold text-xs hover:bg-[#38BDF8]/90 transition-all"
               >
                 Acknowledge & Close
               </button>
