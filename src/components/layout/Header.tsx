@@ -67,13 +67,13 @@ export const Header: React.FC = () => {
   }, [showPresetModal]);
 
   return (
-    <header className="bg-[#0E1015] border-b border-[#252B36] px-4 h-13 flex items-center justify-between select-none z-30 shrink-0" role="banner">
+    <header className="bg-[#0E1015] border-b border-[#252B36] px-3 sm:px-4 h-13 flex items-center justify-between select-none z-30 shrink-0 gap-2 overflow-x-auto no-scrollbar" role="banner">
       {/* Brand & Active Vehicle Subtitle */}
-      <div className="flex items-center gap-3.5">
+      <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#FF8A1F]" />
-            <span className="font-bold text-xs tracking-wider text-[#E6E8EB] uppercase">
+            <span className="font-bold text-xs tracking-wider text-[#E6E8EB] uppercase whitespace-nowrap">
               Mission Control
             </span>
           </div>
@@ -82,15 +82,15 @@ export const Header: React.FC = () => {
             aria-label="Select Rocket Preset"
             className="flex items-center gap-1 text-[11px] text-[#A4ABB6] hover:text-[#FF8A1F] transition-colors text-left font-mono-num"
           >
-            <span className="uppercase tracking-tight font-medium truncate max-w-[180px]">{blueprint.name}</span>
-            <span className="text-[10px] text-[#69717E]">({blueprint.parts.length} parts)</span>
+            <span className="uppercase tracking-tight font-medium truncate max-w-[120px] sm:max-w-[180px]">{blueprint.name}</span>
+            <span className="text-[10px] text-[#69717E] hidden sm:inline">({blueprint.parts.length}p)</span>
             <ChevronDown className="w-2.5 h-2.5 text-[#69717E]" />
           </button>
         </div>
       </div>
 
-      {/* Primary Mode Navigation with Thin Orange Line */}
-      <nav className="flex items-center h-full gap-5" aria-label="Main Navigation">
+      {/* Primary Mode Navigation with Horizontal Swipe Support */}
+      <nav className="flex items-center h-full gap-2.5 sm:gap-4 md:gap-5 overflow-x-auto no-scrollbar px-1 shrink-0" aria-label="Main Navigation">
         {navTabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -99,14 +99,14 @@ export const Header: React.FC = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative flex items-center gap-1.5 h-full text-xs transition-colors ${
+              className={`relative flex items-center gap-1.5 h-full text-xs transition-colors shrink-0 px-1 ${
                 isActive
                   ? 'text-[#E6E8EB] font-semibold'
                   : 'text-[#A4ABB6] hover:text-[#E6E8EB] font-medium'
               }`}
             >
               <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#FF8A1F]' : 'text-[#69717E]'}`} />
-              <span className="tracking-tight uppercase text-[11px]">{tab.label}</span>
+              <span className="tracking-tight uppercase text-[11px] whitespace-nowrap">{tab.label}</span>
               {isActive && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#FF8A1F]" />
               )}
@@ -116,13 +116,13 @@ export const Header: React.FC = () => {
       </nav>
 
       {/* Action Suite & Launch Primary Button */}
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex items-center gap-1.5 sm:gap-2 text-xs shrink-0">
         <button
           onClick={() => setShowCampaignModal(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-[#151820] hover:bg-[#1B1F28] border border-[#FF8A1F]/40 text-[#FF8A1F] hover:text-[#FFA24A] transition-colors font-semibold text-[11px]"
+          className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded bg-[#151820] hover:bg-[#1B1F28] border border-[#FF8A1F]/40 text-[#FF8A1F] hover:text-[#FFA24A] transition-colors font-semibold text-[11px] whitespace-nowrap"
         >
           <Trophy className="w-3.5 h-3.5" />
-          <span>Campaigns</span>
+          <span className="hidden sm:inline">Campaigns</span>
         </button>
 
         <button
