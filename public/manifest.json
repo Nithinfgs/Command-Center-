@@ -1,0 +1,23 @@
+{
+  "name": "Rocket Command Center",
+  "short_name": "Rocket CC",
+  "description": "High-Performance Aerospace Engineering & Mathematical Simulator by Nithin Selvaraj",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#090A0D",
+  "theme_color": "#090A0D",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg"
+    }
+  ]
+}
