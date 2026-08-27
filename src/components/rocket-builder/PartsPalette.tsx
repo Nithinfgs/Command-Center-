@@ -4,7 +4,11 @@ import { PARTS_CATALOG } from '../../physics/rocket-math';
 import { useSimulation } from '../../context/SimulationContext';
 import { PartThumbnail } from './PartThumbnail';
 
-export const PartsPalette: React.FC = () => {
+interface PartsPaletteProps {
+  onClose?: () => void;
+}
+
+export const PartsPalette: React.FC<PartsPaletteProps> = ({ onClose }) => {
   const { selectedCatalogPartType, setSelectedCatalogPartType, addPartToBlueprint } = useSimulation();
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,14 +32,24 @@ export const PartsPalette: React.FC = () => {
   });
 
   return (
-    <aside className="w-[280px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none shrink-0 z-20">
+    <aside className="w-full lg:w-[280px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none shrink-0 z-20">
       {/* Search Header */}
       <div className="p-3 border-b border-[#252B36] space-y-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-semibold text-[#E6E8EB] tracking-tight uppercase">Component Library</h2>
-          <span className="text-[11px] font-mono-num text-[#69717E]">
-            {filteredParts.length} items
-          </span>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xs font-semibold text-[#E6E8EB] tracking-tight uppercase">Component Library</h2>
+            <span className="text-[11px] font-mono-num text-[#69717E]">
+              ({filteredParts.length})
+            </span>
+          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1 rounded bg-[#1B1F28] text-[#A4ABB6] hover:text-[#E6E8EB] text-xs font-bold px-2 py-0.5"
+            >
+              ✕ Done
+            </button>
+          )}
         </div>
 
         <div className="relative">

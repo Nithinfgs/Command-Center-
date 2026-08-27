@@ -32,7 +32,11 @@ export const PLANET_PHOTOS: Record<string, { image: string; icon: string; bg: st
   black_hole: { image: '', icon: '🕳️', bg: 'bg-purple-900/30', border: 'border-purple-500' }
 };
 
-export const CelestialControls: React.FC = () => {
+interface CelestialControlsProps {
+  onClose?: () => void;
+}
+
+export const CelestialControls: React.FC<CelestialControlsProps> = ({ onClose }) => {
   const {
     celestialBodies,
     selectedBodyId,
@@ -94,21 +98,31 @@ export const CelestialControls: React.FC = () => {
   };
 
   return (
-    <aside className="w-[330px] bg-[#10131B] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20 font-mono-num">
+    <aside className="w-full lg:w-[330px] bg-[#10131B] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20 font-mono-num">
       {/* Header with Quick Guide Button */}
       <div className="p-3 border-b border-[#252B36] flex items-center justify-between bg-[#0B0D13]">
         <div className="flex items-center gap-2">
           <Orbit className="w-4 h-4 text-[#FF8A1F]" />
           <h2 className="font-semibold text-[#E6E8EB] text-xs tracking-tight uppercase">Orbital Mechanics</h2>
         </div>
-        <button
-          onClick={() => setShowGuideModal(true)}
-          className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#38BDF8]/15 border border-[#38BDF8]/40 text-[#38BDF8] text-[10px] font-semibold hover:bg-[#38BDF8]/25 transition-all"
-          title="Explain how orbits work in plain English"
-        >
-          <HelpCircle className="w-3 h-3" />
-          <span>How It Works</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowGuideModal(true)}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#38BDF8]/15 border border-[#38BDF8]/40 text-[#38BDF8] text-[10px] font-semibold hover:bg-[#38BDF8]/25 transition-all"
+            title="Explain how orbits work in plain English"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>Guide</span>
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1 rounded bg-[#1B1F28] text-[#A4ABB6] hover:text-[#E6E8EB] text-xs font-bold px-2 py-0.5"
+            >
+              ✕ Done
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3.5">

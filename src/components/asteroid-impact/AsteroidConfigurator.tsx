@@ -16,7 +16,11 @@ import {
 import { PlanetaryDefensePanel } from './PlanetaryDefensePanel';
 import type { AsteroidComposition } from '../../types';
 
-export const AsteroidConfigurator: React.FC = () => {
+interface AsteroidConfiguratorProps {
+  onClose?: () => void;
+}
+
+export const AsteroidConfigurator: React.FC<AsteroidConfiguratorProps> = ({ onClose }) => {
   const {
     asteroidConfig,
     impactTelemetry,
@@ -28,15 +32,25 @@ export const AsteroidConfigurator: React.FC = () => {
   const isOcean = asteroidConfig.targetSurfaceType === 'water_ocean' || asteroidConfig.targetAreaType === 'ocean_deep' || asteroidConfig.geographicTarget?.isOcean === true;
 
   return (
-    <aside className="w-[320px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
+    <aside className="w-full lg:w-[320px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
       <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Target className="w-4 h-4 text-[#FF8A1F]" />
           <h2 className="font-semibold text-[#E6E8EB] text-xs tracking-tight uppercase">Kinetic Impact Dynamics</h2>
         </div>
-        <span className="text-[10px] text-[#FF8A1F] bg-[#FF8A1F]/10 px-2 py-0.5 rounded font-mono-num font-medium">
-          Ready
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-[#FF8A1F] bg-[#FF8A1F]/10 px-2 py-0.5 rounded font-mono-num font-medium">
+            Ready
+          </span>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1 rounded bg-[#1B1F28] text-[#A4ABB6] hover:text-[#E6E8EB] text-xs font-bold px-2 py-0.5"
+            >
+              ✕ Done
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">

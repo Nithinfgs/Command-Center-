@@ -4,7 +4,11 @@ import { useSimulation } from '../../context/SimulationContext';
 import { calculateAeroTelemetry } from '../../physics/aerodynamics';
 import { ExportReportModal } from './ExportReportModal';
 
-export const WindTunnelControls: React.FC = () => {
+interface WindTunnelControlsProps {
+  onClose?: () => void;
+}
+
+export const WindTunnelControls: React.FC<WindTunnelControlsProps> = ({ onClose }) => {
   const { windTunnelState, setWindTunnelState } = useSimulation();
   const [showExportModal, setShowExportModal] = useState(false);
 
@@ -23,20 +27,30 @@ export const WindTunnelControls: React.FC = () => {
   const effectiveAoA = windAngle - rocketPitch;
 
   return (
-    <aside className="w-[300px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
+    <aside className="w-full lg:w-[300px] bg-[#151820] border-r border-[#252B36] flex flex-col h-full select-none text-xs shrink-0 z-20">
       <div className="p-3 border-b border-[#252B36] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Wind className="w-4 h-4 text-[#FF8A1F]" />
           <h2 className="font-semibold text-[#E6E8EB] text-xs tracking-tight uppercase">CFD Aerodynamics</h2>
         </div>
-        <button
-          onClick={() => setShowExportModal(true)}
-          className="flex items-center gap-1 px-2 py-1 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#79AFC1] hover:text-[#E6E8EB] text-[10px] font-medium transition-colors"
-          title="Export Telemetry Data (CSV / JSON / Polar Curve)"
-        >
-          <Download className="w-3 h-3" />
-          <span>Export Data</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="flex items-center gap-1 px-2 py-1 rounded bg-[#1B1F28] hover:bg-[#222733] border border-[#252B36] text-[#79AFC1] hover:text-[#E6E8EB] text-[10px] font-medium transition-colors"
+            title="Export Telemetry Data (CSV / JSON / Polar Curve)"
+          >
+            <Download className="w-3 h-3" />
+            <span>Export</span>
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1 rounded bg-[#1B1F28] text-[#A4ABB6] hover:text-[#E6E8EB] text-xs font-bold px-2 py-0.5"
+            >
+              ✕ Done
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
