@@ -274,13 +274,17 @@ export const RocketBuilderCanvas: React.FC = () => {
 
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
-    canvas.width = width * window.devicePixelRatio;
-    canvas.height = height * window.devicePixelRatio;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+    }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    ctx.save();
+    ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
     // Void Background
@@ -453,9 +457,8 @@ export const RocketBuilderCanvas: React.FC = () => {
         ctx.fillStyle = '#FF8A1F';
         ctx.font = 'bold 10px monospace';
         ctx.textAlign = 'left';
-        ctx.fillText('CoT', 11, 3);
-        ctx.restore();
       }
+      ctx.restore();
     }
   }, [blueprint, selectedPartInstanceId, hoveredPartId, zoom, pan, showCoM, showCoP, showCoT, metrics, connectivity, worldToScreen]);
 

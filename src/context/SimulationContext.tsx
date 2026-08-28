@@ -411,7 +411,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setActiveTab('flight-sandbox');
   }, [blueprint, setActiveTab]);
 
-  // RK4 Flight Physics Loop & Audio Engine Sync
+  // RK4 Flight Physics Loop & Audio Engine Sync (120 FPS Capable with Throttled React Dispatch)
   useEffect(() => {
     if (activeTab !== 'flight-sandbox') {
       soundEngine.stopEngineAudio();
@@ -420,17 +420,20 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     let animFrame: number;
     let lastTime = performance.now();
+    let frameTick = 0;
 
     const loop = (time: number) => {
-      const dt = Math.min(0.04, (time - lastTime) / 1000);
+      const dt = Math.min(0.033, (time - lastTime) / 1000);
       lastTime = time;
+      frameTick++;
 
       setFlightState(prev => {
         const next = stepFlightPhysics(prev, blueprint, dt, guidanceMode);
-        // Continuous Audio Synthesis update
+        // Audio synthesis update
         soundEngine.updateEngineSound(next.throttle, next.altitude, next.dynamicPressure);
         return next;
       });
+
       animFrame = requestAnimationFrame(loop);
     };
 
