@@ -62,7 +62,7 @@ export const CelestialCanvas3D: React.FC = () => {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -77,7 +77,7 @@ export const CelestialCanvas3D: React.FC = () => {
     const jupiterMap = createJupiterTexture();
 
     // Starfield Background (Deep Space)
-    const starCount = 4500;
+    const starCount = 3000;
     const starGeo = new THREE.BufferGeometry();
     const starPos = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount * 3; i += 3) {
@@ -97,9 +97,9 @@ export const CelestialCanvas3D: React.FC = () => {
     sunLight.position.set(0, 0, 0);
     scene.add(sunLight);
 
-    // Spacetime Metric Curvature Grid
+    // Spacetime Metric Curvature Grid (Optimized 36x36 divs)
     const gridSize = 2200;
-    const gridDivs = 56;
+    const gridDivs = 36;
     const gridPlaneGeo = new THREE.PlaneGeometry(gridSize, gridSize, gridDivs, gridDivs);
     gridPlaneGeo.rotateX(-Math.PI / 2);
 
@@ -114,13 +114,34 @@ export const CelestialCanvas3D: React.FC = () => {
     scene.add(gridMesh);
     gridMeshRef.current = gridMesh;
 
-    // Lagrange Points Overlay
+    // Lagrange Points Pre-Allocated Pool
     const lagrangeGroup = new THREE.Group();
+    const lpMeshes: THREE.Mesh[] = [];
+    const lpGeo = new THREE.OctahedronGeometry(3.5, 0);
+    const lpMat = new THREE.MeshBasicMaterial({ color: '#A855F7', wireframe: true });
+    for (let i = 0; i < 5; i++) {
+      const m = new THREE.Mesh(lpGeo, lpMat);
+      m.visible = false;
+      lagrangeGroup.add(m);
+      lpMeshes.push(m);
+    }
     scene.add(lagrangeGroup);
     lagrangeGroupRef.current = lagrangeGroup;
 
-    // Orbital Nodes & Apoapsis / Periapsis Badges Group
+    // Orbital Nodes Pre-Allocated Pool (Apoapsis & Periapsis)
     const nodesGroup = new THREE.Group();
+    const apGeo = new THREE.SphereGeometry(3.0, 8, 8);
+    const apMat = new THREE.MeshBasicMaterial({ color: '#F59E0B' });
+    const apMesh = new THREE.Mesh(apGeo, apMat);
+    apMesh.visible = false;
+    nodesGroup.add(apMesh);
+
+    const peGeo = new THREE.SphereGeometry(3.0, 8, 8);
+    const peMat = new THREE.MeshBasicMaterial({ color: '#38BDF8' });
+    const peMesh = new THREE.Mesh(peGeo, peMat);
+    peMesh.visible = false;
+    nodesGroup.add(peMesh);
+
     scene.add(nodesGroup);
     nodesGroupRef.current = nodesGroup;
 
@@ -193,9 +214,11 @@ export const CelestialCanvas3D: React.FC = () => {
     dom.addEventListener('wheel', handleWheel, { passive: false });
 
     let animId: number;
+    let frameCount = 0;
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
+      frameCount++;
 
       // Camera Orbit Position
       const { radius, theta, phi, target } = cameraState.current;
@@ -206,10 +229,10 @@ export const CelestialCanvas3D: React.FC = () => {
 
       const bodies = bodiesRef.current;
 
-      // Update Spacetime Deformation Grid
+      // Update Spacetime Deformation Grid (Throttled every 2 frames)
       if (gridMeshRef.current) {
         gridMeshRef.current.visible = showGridRef.current;
-        if (showGridRef.current) {
+        if (showGridRef.current && frameCount % 2 === 0) {
           const geo = gridMeshRef.current.geometry as THREE.PlaneGeometry;
           const posAttr = geo.attributes.position;
           const v = new THREE.Vector3();
@@ -233,13 +256,13 @@ export const CelestialCanvas3D: React.FC = () => {
           group = new THREE.Group();
 
           const visualRadius = Math.max(4, Math.log10(body.radius) * 2.8);
-          const sphereGeo = new THREE.SphereGeometry(visualRadius, 32, 32);
+          const sphereGeo = new THREE.SphereGeometry(visualRadius, 24, 24);
 
           let sphereMat: THREE.Material;
 
           if (body.type === 'star') {
             sphereMat = new THREE.MeshBasicMaterial({ color: body.color });
-            const glowGeo = new THREE.SphereGeometry(visualRadius * 1.35, 24, 24);
+            const glowGeo = new THREE.SphereGeometry(visualRadius * 1.35, 16, 16);
             const glowMat = new THREE.MeshBasicMaterial({ color: '#F59E0B', transparent: true, opacity: 0.35 });
             group.add(new THREE.Mesh(glowGeo, glowMat));
           } else if (body.id === 'earth') {
@@ -251,7 +274,7 @@ export const CelestialCanvas3D: React.FC = () => {
               shininess: 15
             });
             // Clouds
-            const cGeo = new THREE.SphereGeometry(visualRadius * 1.01, 32, 32);
+            const cGeo = new THREE.SphereGeometry(visualRadius * 1.01, 24, 24);
             const cMat = new THREE.MeshStandardMaterial({
               map: earthCloudsMap,
               transparent: true,
@@ -280,7 +303,7 @@ export const CelestialCanvas3D: React.FC = () => {
           if (body.hasRings || body.id === 'saturn') {
             const ringMin = visualRadius * 1.5;
             const ringMax = visualRadius * 2.8;
-            const ringGeo = new THREE.RingGeometry(ringMin, ringMax, 48);
+            const ringGeo = new THREE.RingGeometry(ringMin, ringMax, 36);
             ringGeo.rotateX(Math.PI * 0.4);
             const ringMat = new THREE.MeshBasicMaterial({
               color: body.ringColor || '#CA8A04',
@@ -293,7 +316,7 @@ export const CelestialCanvas3D: React.FC = () => {
           }
 
           // Selection Indicator Ring
-          const selRingGeo = new THREE.RingGeometry(visualRadius * 1.4, visualRadius * 1.65, 32);
+          const selRingGeo = new THREE.RingGeometry(visualRadius * 1.4, visualRadius * 1.65, 24);
           const selRingMat = new THREE.MeshBasicMaterial({ color: '#FBBF24', side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
           const selRingMesh = new THREE.Mesh(selRingGeo, selRingMat);
           selRingMesh.name = 'selectionRing';
@@ -361,62 +384,48 @@ export const CelestialCanvas3D: React.FC = () => {
         }
       });
 
-      // Render Lagrange Equilibrium Points
-      if (lagrangeGroupRef.current) {
-        const lGroup = lagrangeGroupRef.current;
-        while (lGroup.children.length > 0) {
-          lGroup.remove(lGroup.children[0]);
-        }
+      // Render Lagrange Equilibrium Points (Zero Allocation)
+      const primary = bodies.find(b => b.isFixed || b.type === 'star') || bodies[0];
+      const secondary = bodies.find(b => b.id === selectedIdRef.current && b.id !== primary.id) ||
+                        bodies.find(b => b.id !== primary.id);
 
-        const primary = bodies.find(b => b.isFixed || b.type === 'star') || bodies[0];
-        const secondary = bodies.find(b => b.id === selectedIdRef.current && b.id !== primary.id) ||
-                          bodies.find(b => b.id !== primary.id);
-
-        if (primary && secondary) {
-          const lPoints = calculateLagrangePoints(primary, secondary);
-          lPoints.forEach(lp => {
-            const pGeo = new THREE.OctahedronGeometry(3.5, 0);
-            const pMat = new THREE.MeshBasicMaterial({ color: '#A855F7', wireframe: true });
-            const pMesh = new THREE.Mesh(pGeo, pMat);
-            pMesh.position.set(lp.x, 0, lp.z);
-            lGroup.add(pMesh);
-          });
-        }
+      if (primary && secondary && lpMeshes.length >= 5) {
+        const lPoints = calculateLagrangePoints(primary, secondary);
+        lPoints.forEach((lp, idx) => {
+          if (lpMeshes[idx]) {
+            lpMeshes[idx].position.set(lp.x, 0, lp.z);
+            lpMeshes[idx].visible = true;
+          }
+        });
+      } else {
+        lpMeshes.forEach(m => { m.visible = false; });
       }
 
-      // Render Apoapsis / Periapsis markers for selected body
-      if (nodesGroupRef.current) {
-        const nGroup = nodesGroupRef.current;
-        while (nGroup.children.length > 0) {
-          nGroup.remove(nGroup.children[0]);
+      // Render Apoapsis / Periapsis markers (Zero Allocation)
+      const selBody = bodies.find(b => b.id === selectedIdRef.current);
+      const prim = bodies.find(b => b.isFixed || b.type === 'star') || bodies[0];
+
+      if (selBody && prim && selBody.id !== prim.id) {
+        const elem = calculateOrbitalElements(selBody, prim);
+        if (elem && elem.semiMajorAxis > 0) {
+          const apDist = elem.apoapsis * 0.001;
+          const peDist = elem.periapsis * 0.001;
+          const dirX = selBody.position.x - prim.position.x;
+          const dirZ = selBody.position.z - prim.position.z;
+          const len = Math.hypot(dirX, dirZ) || 1;
+
+          apMesh.position.set(prim.position.x - (dirX / len) * apDist, 0, prim.position.z - (dirZ / len) * apDist);
+          apMesh.visible = true;
+
+          peMesh.position.set(prim.position.x + (dirX / len) * peDist, 0, prim.position.z + (dirZ / len) * peDist);
+          peMesh.visible = true;
+        } else {
+          apMesh.visible = false;
+          peMesh.visible = false;
         }
-
-        const selBody = bodies.find(b => b.id === selectedIdRef.current);
-        const prim = bodies.find(b => b.isFixed || b.type === 'star') || bodies[0];
-
-        if (selBody && prim && selBody.id !== prim.id) {
-          const elem = calculateOrbitalElements(selBody, prim);
-          if (elem && elem.semiMajorAxis > 0) {
-            // Apoapsis Marker (Amber)
-            const apGeo = new THREE.SphereGeometry(3.0, 8, 8);
-            const apMat = new THREE.MeshBasicMaterial({ color: '#F59E0B' });
-            const apMesh = new THREE.Mesh(apGeo, apMat);
-            const apDist = elem.apoapsis * 0.001; // Scaled
-            const dirX = selBody.position.x - prim.position.x;
-            const dirZ = selBody.position.z - prim.position.z;
-            const len = Math.hypot(dirX, dirZ) || 1;
-            apMesh.position.set(prim.position.x - (dirX / len) * apDist, 0, prim.position.z - (dirZ / len) * apDist);
-            nGroup.add(apMesh);
-
-            // Periapsis Marker (Cyan)
-            const peGeo = new THREE.SphereGeometry(3.0, 8, 8);
-            const peMat = new THREE.MeshBasicMaterial({ color: '#38BDF8' });
-            const peMesh = new THREE.Mesh(peGeo, peMat);
-            const peDist = elem.periapsis * 0.001;
-            peMesh.position.set(prim.position.x + (dirX / len) * peDist, 0, prim.position.z + (dirZ / len) * peDist);
-            nGroup.add(peMesh);
-          }
-        }
+      } else {
+        apMesh.visible = false;
+        peMesh.visible = false;
       }
 
       renderer.render(scene, camera);

@@ -171,12 +171,14 @@ export const FlightCanvas: React.FC = () => {
 
       const width = canvas.parentElement?.clientWidth || 800;
       const height = canvas.parentElement?.clientHeight || 600;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+      }
 
       ctx.save();
       ctx.scale(dpr, dpr);

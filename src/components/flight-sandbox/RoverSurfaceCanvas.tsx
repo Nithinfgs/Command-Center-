@@ -208,20 +208,21 @@ export const RoverSurfaceCanvas: React.FC = () => {
 
       // React UI state sync
       uiCounter++;
-      if (uiCounter % 4 === 0) {
+      if (uiCounter % 10 === 0) {
         setUiRover({ ...roverRef.current });
       }
 
       // Canvas dimensions
       const width = container.clientWidth;
       const height = container.clientHeight;
-      if (canvas.width !== width * window.devicePixelRatio || canvas.height !== height * window.devicePixelRatio) {
-        canvas.width = width * window.devicePixelRatio;
-        canvas.height = height * window.devicePixelRatio;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
       }
 
       ctx.save();
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, height);
 
       // Sky Background

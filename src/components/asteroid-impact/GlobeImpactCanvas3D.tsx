@@ -25,7 +25,7 @@ export const GlobeImpactCanvas3D: React.FC = () => {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -45,7 +45,7 @@ export const GlobeImpactCanvas3D: React.FC = () => {
     const earthCloudsMap = textureLoader.load('/textures/earth_clouds.png');
 
     const globeRadius = 4.5;
-    const earthGeo = new THREE.SphereGeometry(globeRadius, 64, 64);
+    const earthGeo = new THREE.SphereGeometry(globeRadius, 48, 48);
     const earthMat = new THREE.MeshPhongMaterial({
       map: earthDayMap,
       normalMap: earthNormalMap,
